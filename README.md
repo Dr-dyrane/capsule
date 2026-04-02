@@ -101,6 +101,8 @@ cp .env.example .env.local   # Add Supabase + OpenAI keys
 npm run dev
 ```
 
+https://capsule.dyrane.tech/
+
 ---
 
 ## License
