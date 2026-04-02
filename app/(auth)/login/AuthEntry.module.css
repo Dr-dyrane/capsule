@@ -1,0 +1,234 @@
+.stack {
+  display: grid;
+  gap: 16px;
+}
+
+.googleButton {
+  min-height: 54px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 20px;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-md);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple);
+}
+
+.googleButton:hover,
+.googleButton:focus-visible {
+  transform: translateY(-1px);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-lg);
+}
+
+.googleButton:active {
+  transform: scale(0.98);
+}
+
+.googleButton:disabled {
+  opacity: 0.72;
+}
+
+.googleMark {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: color-mix(in srgb, var(--text-tertiary) 24%, transparent);
+}
+
+.divider span {
+  position: relative;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--surface-1) 92%, transparent);
+}
+
+.entryForm,
+.form,
+.stepPane {
+  display: grid;
+  gap: 12px;
+}
+
+.label {
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.input {
+  min-height: 56px;
+  width: 100%;
+  padding: 0 18px;
+  border: 0 solid transparent;
+  border-radius: 18px;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-tertiary) 35%, transparent);
+  transition:
+    box-shadow 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input:focus-visible {
+  outline: none;
+  background: var(--surface-3);
+  box-shadow: var(--focus-glow);
+}
+
+.primaryAction {
+  min-height: 50px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-on-accent);
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: var(--shadow-md);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  transition:
+    transform 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple);
+}
+
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.primaryAction:active {
+  transform: scale(0.98);
+}
+
+.inlineLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.inlineSwitch {
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 150ms var(--ease-apple);
+}
+
+.inlineSwitch:hover,
+.inlineSwitch:focus-visible {
+  color: var(--text-primary);
+}
+
+.inlineError,
+.oauthError {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  color: var(--text-primary);
+  background: var(--destructive-surface);
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.stepHeader {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 22px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.backButton {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  color: var(--text-secondary);
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.backButton:hover,
+.backButton:focus-visible {
+  color: var(--text-primary);
+}
+
+.stepTitle {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.emailChip {
+  width: fit-content;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-sm);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (max-width: 639px) {
+  .inlineLinks {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}

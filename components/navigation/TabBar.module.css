@@ -1,0 +1,61 @@
+.tabBar {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 50;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 94%, transparent), var(--surface-1));
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+}
+
+.item {
+  flex: 1;
+  min-height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 18px;
+  color: var(--text-tertiary);
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple);
+}
+
+.item:hover,
+.item:focus-visible {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+
+.item:active {
+  transform: scale(0.96);
+}
+
+.itemActive {
+  color: var(--text-primary);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-md);
+}
+
+.label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 768px) {
+  .tabBar {
+    display: none;
+  }
+}

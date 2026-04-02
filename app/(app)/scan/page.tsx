@@ -3,10 +3,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { uploadNote } from '@/app/actions/upload'
-import { Camera, Upload, Loader2 } from 'lucide-react'
+import { Camera, CircleAlert, Loader2, ScanLine, Upload } from 'lucide-react'
+
+import shellStyles from '../AppScreen.module.css'
+import styles from './ScanPage.module.css'
 
 export default function ScanPage() {
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const router = useRouter()
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -14,6 +18,7 @@ export default function ScanPage() {
     if (!file) return
 
     setIsUploading(true)
+    setUploadError(null)
     const formData = new FormData()
     formData.append('file', file)
 
@@ -22,59 +27,93 @@ export default function ScanPage() {
       router.push(`/scan/${session.id}`)
     } catch (error) {
       console.error(error)
-      alert('Upload failed. Please try again.')
+      setUploadError('Upload failed. Please try again.')
       setIsUploading(false)
     }
   }
 
   return (
-    <div className="page-container animate-fade-in">
-      <header className="page-header">
-        <h1 className="title-large">Scan</h1>
-        <p className="subhead">Distill your medical notes into cards.</p>
+    <div className={shellStyles.screen}>
+      <header className={shellStyles.header}>
+        <div className={shellStyles.eyebrow}>
+          <ScanLine size={14} aria-hidden="true" />
+          <span>Capture</span>
+        </div>
+        <h1 className={shellStyles.title}>Scan a page into a clean card flow.</h1>
+        <p className={shellStyles.copy}>
+          One note in. Structured points and quick-scan cards out.
+        </p>
       </header>
-      
-      <div className="upload-grid">
-        <label className="upload-card glass surface-1 animate-slide-up">
-          <input 
-            type="file" 
-            accept="image/*" 
-            capture="environment" 
-            onChange={handleUpload} 
+
+      {uploadError ? (
+        <div className={styles.errorBanner} role="alert">
+          <CircleAlert size={18} aria-hidden="true" />
+          <span>{uploadError}</span>
+        </div>
+      ) : null}
+
+      <div className={styles.grid}>
+        <label className={styles.card}>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleUpload}
             disabled={isUploading}
-            className="hidden-input"
+            className={styles.input}
           />
-          <div className="upload-content">
-            <div className="icon-circle accent">
+          <div className={styles.topRow}>
+            <div className={`${styles.iconWrap} ${styles.accentIcon}`}>
               <Camera size={32} strokeWidth={2.5} />
             </div>
-            <p className="title-2">Take Photo</p>
-            <p className="caption">Use your camera to scan notes</p>
+            <div className={styles.badge}>Recommended</div>
+          </div>
+          <div className={styles.body}>
+            <p className={styles.title}>Take photo</p>
+            <p className={styles.copy}>Use your camera for a fast one-page capture.</p>
+            <div className={styles.meta}>
+              <span className={styles.metaChip}>One sheet at a time</span>
+              <span className={styles.metaChip}>Best on good light</span>
+            </div>
           </div>
         </label>
 
-        <label className="upload-card glass surface-1 animate-slide-up" style={{ animationDelay: '100ms' }}>
-          <input 
-            type="file" 
-            accept="image/*" 
-            onChange={handleUpload} 
+        <label className={styles.card}>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleUpload}
             disabled={isUploading}
-            className="hidden-input"
+            className={styles.input}
           />
-          <div className="upload-content">
-            <div className="icon-circle surface-2">
+          <div className={styles.topRow}>
+            <div className={styles.iconWrap}>
               <Upload size={32} strokeWidth={2.5} />
             </div>
-            <p className="title-2">Upload File</p>
-            <p className="caption">Select from your photo library</p>
+            <div className={styles.badge}>Gallery</div>
+          </div>
+          <div className={styles.body}>
+            <p className={styles.title}>Upload file</p>
+            <p className={styles.copy}>Choose an image you already captured and keep moving.</p>
+            <div className={styles.meta}>
+              <span className={styles.metaChip}>Photos or screenshots</span>
+              <span className={styles.metaChip}>Works with notes pages</span>
+            </div>
           </div>
         </label>
       </div>
 
+      <div className={styles.supportPanel}>
+        Clean single-page photos work best. Keep the page flat, bright, and easy to crop at a glance.
+      </div>
+
       {isUploading && (
-        <div className="upload-overlay glass">
-          <Loader2 className="spinner" size={48} />
-          <p className="title-2">Uploading...</p>
+        <div className={styles.uploadOverlay}>
+          <div className={styles.uploadPanel}>
+            <Loader2 className={styles.spinner} size={42} />
+            <p className={styles.uploadTitle}>Uploading note</p>
+            <p className={styles.uploadCopy}>We’re starting the extraction flow now.</p>
+          </div>
         </div>
       )}
     </div>

@@ -28,3 +28,17 @@
 .button:active {
   transform: scale(0.97);
 }
+
+.label {
+  display: inline-block;
+}
+
+.compact {
+  width: 44px;
+  padding: 0;
+  justify-content: center;
+}
+
+.compact .label {
+  display: none;
+}

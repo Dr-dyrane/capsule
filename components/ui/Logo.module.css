@@ -1,0 +1,49 @@
+.container {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  transition: transform 300ms var(--ease-apple);
+}
+
+.withText {
+  gap: 12px;
+}
+
+.container:hover {
+  transform: scale(1.02) translateY(-1px);
+}
+
+.container:active {
+  transform: scale(0.98);
+}
+
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.text {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 20%; /* Visual approximation for the SVG mask if needed */
+  overflow: visible;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+[data-theme='light'] .svg {
+  filter: drop-shadow(0 4px 10px rgba(10, 132, 255, 0.2));
+}
+
+.svg path {
+  transition: fill 300ms var(--ease-apple);
+}

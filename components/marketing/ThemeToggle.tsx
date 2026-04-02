@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useSyncExternalStore } from 'react'
+import { Moon, SunMedium } from 'lucide-react'
+import clsx from 'clsx'
 
 import styles from './ThemeToggle.module.css'
 
@@ -55,7 +57,12 @@ function getServerSnapshot(): ThemeMode {
   return 'dark'
 }
 
-export default function ThemeToggle() {
+type ThemeToggleProps = {
+  compact?: boolean
+  className?: string
+}
+
+export default function ThemeToggle({ compact = false, className }: ThemeToggleProps) {
   const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   useEffect(() => {
@@ -73,6 +80,7 @@ export default function ThemeToggle() {
   }
 
   const nextLabel = theme === 'dark' ? 'Light' : 'Dark'
+  const Icon = theme === 'dark' ? SunMedium : Moon
 
   return (
     <button
@@ -80,9 +88,10 @@ export default function ThemeToggle() {
       onClick={toggleTheme}
       aria-label="Toggle appearance"
       title={`Switch to ${nextLabel.toLowerCase()} mode`}
-      className={styles.button}
+      className={clsx(styles.button, compact && styles.compact, className)}
     >
-      <span>{nextLabel}</span>
+      <Icon size={16} aria-hidden="true" />
+      <span className={styles.label}>{nextLabel}</span>
     </button>
   )
 }

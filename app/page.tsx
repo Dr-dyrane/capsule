@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import ShowcaseCarousel from '@/components/marketing/ShowcaseCarousel'
 import ThemeToggle from '@/components/marketing/ThemeToggle'
+import Logo from '@/components/ui/Logo'
 import styles from './MarketingPage.module.css'
 
 const showcaseCards = [
@@ -25,7 +26,7 @@ export default function MarketingPage() {
       <div className={styles.shell}>
         <nav aria-label="Primary" className={styles.nav}>
           <Link href="/" aria-label="Capsule home" className={styles.brand}>
-            Capsule
+            <Logo size={40} showText />
           </Link>
 
           <div className={styles.navActions}>

@@ -2,12 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
+import { Sparkles } from 'lucide-react'
 
 import { processNote } from '@/app/actions/process'
 import { getSignedCardUrls } from '@/app/actions/assets'
 import { generateSessionCards } from '@/app/actions/generate'
 import { createClient } from '@/lib/supabase/client'
 import type { CardRecord, PointRecord, SessionRecord, SessionStatus } from '@/lib/types'
+
+import styles from './ProcessingView.module.css'
 
 const EMPTY_POINTS: PointRecord[] = []
 const EMPTY_CARDS: CardRecord[] = []
@@ -77,7 +80,9 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` },
         (payload) => {
-          setCards((current) => current.map((card) => (card.id === payload.new.id ? (payload.new as CardRecord) : card)))
+          setCards((current) =>
+            current.map((card) => (card.id === payload.new.id ? (payload.new as CardRecord) : card)),
+          )
         },
       )
       .subscribe()
@@ -137,67 +142,103 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
   const completeCards = cards.filter((card) => card.status === 'complete')
   const totalPoints = points.length || session?.point_count || 0
   const progressWidth = totalPoints > 0 ? (completeCards.length / totalPoints) * 100 : 0
+  const title =
+    status === 'complete'
+      ? 'Card set ready'
+      : status === 'processing'
+        ? 'Extracting the note'
+        : status === 'error'
+          ? 'Something interrupted the flow'
+          : 'Generating the card set'
+  const copy =
+    status === 'complete'
+      ? 'Your points and cards are ready to review.'
+      : status === 'processing'
+        ? 'We are isolating the teachable points before image generation starts.'
+        : status === 'error'
+          ? 'Try uploading the page again or return to scan for a fresh pass.'
+          : 'Capsule is turning each extracted point into a quick-scan learning card.'
 
   return (
-    <div className="processing-view animate-fade-in">
-      <div className="status-header glass surface-1">
-        <div className="progress-info">
-          <p className="caption">{status.toUpperCase()}</p>
-          <h2 className="title-2">
-            {status === 'complete'
-              ? 'Cards Complete'
-              : `Generating ${completeCards.length} of ${totalPoints || '?'} cards`}
-          </h2>
-        </div>
-        <div className="progress-bar-container">
-          <div className="progress-bar accent" style={{ width: `${progressWidth}%` }} />
-        </div>
-      </div>
-
-      <div className="content-grid">
-        <section className="points-list">
-          <h3 className="subhead">Extracted Points</h3>
-          <div className="points-container no-scrollbar">
-            {points.map((point, index) => (
-              <div
-                key={point.id}
-                className="point-item animate-slide-up"
-                style={{ animationDelay: `${index * 80}ms` }}
-              >
-                <span className="point-bullet">•</span>
-                <p className="body">{point.text}</p>
+    <div className={styles.root}>
+      <section className={styles.statusPanel}>
+        <div className={styles.statusInner}>
+          <div className={styles.statusMeta}>
+            <div>
+              <div className={styles.statusEyebrow}>
+                <Sparkles size={14} aria-hidden="true" />
+                <span>{status.toUpperCase()}</span>
               </div>
-            ))}
-            {status === 'processing' && <div className="point-skeleton shimmer surface-1" />}
+              <h2 className={styles.statusTitle}>{title}</h2>
+            </div>
+
+            <div className={styles.count}>
+              {completeCards.length} / {totalPoints || '?'}
+            </div>
+          </div>
+
+          <p className={styles.statusCopy}>{copy}</p>
+          <div className={styles.progressRail}>
+            <div className={styles.progressFill} style={{ width: `${progressWidth}%` }} />
+          </div>
+        </div>
+      </section>
+
+      <div className={styles.content}>
+        <section className={styles.panel}>
+          <div className={styles.panelInner}>
+            <div className={styles.panelHeader}>
+              <h3 className={styles.panelTitle}>Extracted points</h3>
+              <div className={styles.count}>{points.length || 0}</div>
+            </div>
+
+            <div className={styles.pointList}>
+              {points.map((point) => (
+                <div key={point.id} className={styles.pointItem}>
+                  <span className={styles.pointBullet}>•</span>
+                  <p className={styles.pointText}>{point.text}</p>
+                </div>
+              ))}
+              {status === 'processing' && <div className={styles.pointSkeleton} />}
+            </div>
           </div>
         </section>
 
-        <section className="cards-grid-panel">
-          <h3 className="subhead">Generated Cards</h3>
-          <div className="grid-container">
-            {cards.map((card) => {
-              const signedUrl = cardUrls[card.image_url]
+        <section className={styles.panel}>
+          <div className={styles.panelInner}>
+            <div className={styles.panelHeader}>
+              <h3 className={styles.panelTitle}>Generated cards</h3>
+              <div className={styles.count}>{completeCards.length}</div>
+            </div>
 
-              return (
-                <div key={card.id} className="card-item surface-1 glass animate-fade-in">
-                  {card.status === 'complete' && signedUrl ? (
-                    <Image
-                      src={signedUrl}
-                      alt={card.title || 'Generated card'}
-                      fill
-                      unoptimized
-                      sizes="(max-width: 768px) 100vw, 33vw"
-                    />
-                  ) : (
-                    <div className="card-skeleton shimmer" />
-                  )}
-                  <div className="card-title-bar glass">{card.title}</div>
+            <div className={styles.cardGrid}>
+              {cards.map((card) => {
+                const signedUrl = cardUrls[card.image_url]
+
+                return (
+                  <div key={card.id} className={styles.cardItem}>
+                    {card.status === 'complete' && signedUrl ? (
+                      <Image
+                        src={signedUrl}
+                        alt={card.title || 'Generated card'}
+                        fill
+                        unoptimized
+                        sizes="(max-width: 768px) 100vw, 33vw"
+                        className={styles.cardImage}
+                      />
+                    ) : (
+                      <div className={styles.cardSkeleton} />
+                    )}
+                    <div className={styles.cardTitle}>{card.title || 'Generating card'}</div>
+                  </div>
+                )
+              })}
+              {status === 'generating' && cards.length < totalPoints && (
+                <div className={styles.cardItem}>
+                  <div className={styles.cardSkeleton} />
                 </div>
-              )
-            })}
-            {status === 'generating' && cards.length < totalPoints && (
-              <div className="card-item surface-1 glass shimmer" />
-            )}
+              )}
+            </div>
           </div>
         </section>
       </div>

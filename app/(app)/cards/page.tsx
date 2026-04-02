@@ -1,10 +1,18 @@
-import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+import { Images } from 'lucide-react'
+
 import CardThumbnail from '@/components/cards/CardThumbnail'
 import { createSignedObjectUrls } from '@/lib/storage/signed-urls'
+import { createClient } from '@/lib/supabase/server'
+
+import styles from '../AppScreen.module.css'
 
 export default async function CardsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) return null
 
   const { data: cards } = await supabase
@@ -19,20 +27,28 @@ export default async function CardsPage() {
   )
 
   return (
-    <div className="page-container animate-fade-in">
-      <header className="page-header">
-        <h1 className="title-large">Cards</h1>
-        <p className="subhead">Your collection of medical knowledge.</p>
+    <div className={styles.screen}>
+      <header className={styles.header}>
+        <div className={styles.eyebrow}>
+          <Images size={14} aria-hidden="true" />
+          <span>Cards</span>
+        </div>
+        <h1 className={styles.title}>Your generated card set.</h1>
+        <p className={styles.copy}>Every finished visual explanation lives here for fast review.</p>
       </header>
 
       {!cards || cards.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-icon">🗂️</div>
-          <p className="title-2">No cards yet</p>
-          <p className="subhead">Scan your first note to generate cards.</p>
+        <div className={styles.panel}>
+          <div className={`${styles.panelInner} ${styles.emptyState}`}>
+            <p className={styles.emptyTitle}>No cards yet</p>
+            <p className={styles.emptyCopy}>Scan your first note to start building the set.</p>
+            <Link href="/scan" className={styles.accentLink}>
+              Go to scan
+            </Link>
+          </div>
         </div>
       ) : (
-        <div className="cards-grid">
+        <div className={styles.list} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
           {cards.map((card) => (
             <CardThumbnail key={card.id} card={card} imageUrl={signedUrls[card.image_url]} />
           ))}

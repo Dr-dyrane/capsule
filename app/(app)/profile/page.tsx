@@ -1,49 +1,62 @@
-import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { User, LogOut, Settings, Shield } from 'lucide-react'
+import { LogOut, Settings2, ShieldCheck, User } from 'lucide-react'
+
+import { createClient } from '@/lib/supabase/server'
+
+import styles from '../AppScreen.module.css'
+import profileStyles from './ProfilePage.module.css'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   if (!user) return null
 
   async function signOut() {
     'use server'
-    const supabase = await createClient()
-    await supabase.auth.signOut()
+    const serverSupabase = await createClient()
+    await serverSupabase.auth.signOut()
     redirect('/login')
   }
 
   return (
-    <div className="page-container animate-fade-in">
-      <header className="page-header">
-        <h1 className="title-large">Profile</h1>
+    <div className={styles.screen}>
+      <header className={styles.header}>
+        <div className={styles.eyebrow}>
+          <User size={14} aria-hidden="true" />
+          <span>Profile</span>
+        </div>
+        <h1 className={styles.title}>Your Capsule account.</h1>
+        <p className={styles.copy}>Manage your workspace details and session access from one place.</p>
       </header>
 
-      <div className="profile-card surface-1 glass animate-slide-up">
-        <div className="profile-header">
-          <div className="avatar">
+      <div className={profileStyles.card}>
+        <div className={profileStyles.header}>
+          <div className={profileStyles.avatar}>
             <User size={32} />
           </div>
-          <div className="user-info">
-            <p className="title-2">{user.email?.split('@')[0]}</p>
-            <p className="caption">{user.email}</p>
+          <div className={profileStyles.userInfo}>
+            <p className={profileStyles.name}>{user.email?.split('@')[0]}</p>
+            <p className={profileStyles.email}>{user.email}</p>
           </div>
         </div>
 
-        <div className="profile-actions">
-          <button className="action-item">
-            <Settings size={20} />
-            <span className="body">Settings</span>
+        <div className={profileStyles.actions}>
+          <button className={profileStyles.actionItem}>
+            <Settings2 size={18} />
+            <span>Preferences</span>
           </button>
-          <button className="action-item">
-            <Shield size={20} />
-            <span className="body">Privacy</span>
-          </button>
+          <Link href="/" className={profileStyles.actionItem}>
+            <ShieldCheck size={18} />
+            <span>Back to site</span>
+          </Link>
           <form action={signOut}>
-            <button type="submit" className="action-item destructive">
+            <button type="submit" className={`${profileStyles.actionItem} ${profileStyles.destructive}`}>
               <LogOut size={20} />
-              <span className="body">Sign Out</span>
+              <span>Sign out</span>
             </button>
           </form>
         </div>

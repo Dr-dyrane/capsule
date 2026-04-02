@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server'
 
 import { createClient } from '@/lib/supabase/server'
 
-const AUTH_ERROR_MESSAGE = 'We could not complete that sign in link'
+const AUTH_ERROR_MESSAGE = 'Sign in did not finish.'
+const GOOGLE_AUTH_ERROR_MESSAGE = 'Google sign-in did not finish.'
 
 function buildAbsoluteRedirect(request: Request, next: string) {
   const { origin } = new URL(request.url)
@@ -21,7 +22,17 @@ function buildAbsoluteRedirect(request: Request, next: string) {
   return `${origin}${next}`
 }
 
-function buildLoginRedirect(request: Request, message: string, next: string) {
+function buildLoginRedirect({
+  request,
+  message,
+  next,
+  errorCode,
+}: {
+  request: Request
+  message: string
+  next: string
+  errorCode?: string
+}) {
   const url = new URL('/login', new URL(request.url).origin)
   url.searchParams.set('error', message)
 
@@ -29,7 +40,25 @@ function buildLoginRedirect(request: Request, message: string, next: string) {
     url.searchParams.set('next', next)
   }
 
+  if (errorCode) {
+    url.searchParams.set('error_code', errorCode)
+  }
+
   return url.toString()
+}
+
+function isOAuthExchangeFailure(message?: string | null) {
+  if (!message) {
+    return false
+  }
+
+  const normalized = message.toLowerCase()
+
+  return (
+    normalized.includes('unable to exchange external code') ||
+    (normalized.includes('exchange') && normalized.includes('oauth')) ||
+    (normalized.includes('exchange') && normalized.includes('code'))
+  )
 }
 
 export function sanitizeNextPath(candidate?: string | null) {
@@ -53,7 +82,17 @@ export async function handleAuthCallback(request: Request) {
   const authError = searchParams.get('error_description') ?? searchParams.get('error')
 
   if (authError) {
-    return NextResponse.redirect(buildLoginRedirect(request, authError, next))
+    const errorCode = isOAuthExchangeFailure(authError) ? 'oauth_exchange_failed' : 'auth_callback_failed'
+    const message = errorCode === 'oauth_exchange_failed' ? GOOGLE_AUTH_ERROR_MESSAGE : AUTH_ERROR_MESSAGE
+
+    return NextResponse.redirect(
+      buildLoginRedirect({
+        request,
+        message,
+        next,
+        errorCode,
+      }),
+    )
   }
 
   const supabase = await createClient()
@@ -64,6 +103,18 @@ export async function handleAuthCallback(request: Request) {
     if (!error) {
       return NextResponse.redirect(buildAbsoluteRedirect(request, next))
     }
+
+    const errorCode = isOAuthExchangeFailure(error.message) ? 'oauth_exchange_failed' : 'auth_callback_failed'
+    const message = errorCode === 'oauth_exchange_failed' ? GOOGLE_AUTH_ERROR_MESSAGE : AUTH_ERROR_MESSAGE
+
+    return NextResponse.redirect(
+      buildLoginRedirect({
+        request,
+        message,
+        next,
+        errorCode,
+      }),
+    )
   }
 
   if (tokenHash && type) {
@@ -77,5 +128,12 @@ export async function handleAuthCallback(request: Request) {
     }
   }
 
-  return NextResponse.redirect(buildLoginRedirect(request, AUTH_ERROR_MESSAGE, next))
+  return NextResponse.redirect(
+    buildLoginRedirect({
+      request,
+      message: AUTH_ERROR_MESSAGE,
+      next,
+      errorCode: 'auth_callback_failed',
+    }),
+  )
 }
