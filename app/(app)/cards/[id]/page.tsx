@@ -52,7 +52,7 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
         </div>
 
         <h1 className={shellStyles.title}>{card.title || 'Untitled card'}</h1>
-        <p className={shellStyles.copy}>One visual, one teaching point, no extra chrome.</p>
+        <p className={shellStyles.copy}>One card. One point.</p>
       </header>
 
       <div className={styles.layout}>
@@ -73,7 +73,7 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
               )}
             </div>
 
-            <p className={styles.caption}>Generated 16:9 quick-scan card.</p>
+            <p className={styles.caption}>Generated 16:9 card.</p>
           </div>
         </section>
 
@@ -92,9 +92,7 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
               <p className={styles.pointText}>{point?.text ?? 'Original point unavailable.'}</p>
             </div>
 
-            <div className={styles.note}>
-              Keep this card tight: scan the image first, then use the source point only if you need the deeper wording.
-            </div>
+            <div className={styles.note}>Scan the image first. Open the source point only if you need the wording.</div>
           </div>
         </section>
       </div>

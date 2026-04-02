@@ -81,7 +81,9 @@ export default async function LibraryPage() {
                     </div>
                     <div className={listStyles.info}>
                       <p className={listStyles.name}>Note session</p>
-                      <p className={listStyles.meta}>{session.card_count} cards · {session.status}</p>
+                      <p className={listStyles.meta}>
+                        {session.card_count} cards <span aria-hidden="true">&middot;</span> {session.status}
+                      </p>
                     </div>
                     <ChevronRight size={18} className={listStyles.chevron} />
                   </Link>

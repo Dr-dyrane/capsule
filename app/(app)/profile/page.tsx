@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { LogOut, Settings2, ShieldCheck, User } from 'lucide-react'
+import { LogOut, ShieldCheck, User } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 
@@ -29,8 +29,8 @@ export default async function ProfilePage() {
           <User size={14} aria-hidden="true" />
           <span>Profile</span>
         </div>
-        <h1 className={styles.title}>Your Capsule account.</h1>
-        <p className={styles.copy}>Manage your workspace details and session access from one place.</p>
+        <h1 className={styles.title}>Account.</h1>
+        <p className={styles.copy}>Email, home, sign out.</p>
       </header>
 
       <div className={profileStyles.card}>
@@ -45,13 +45,9 @@ export default async function ProfilePage() {
         </div>
 
         <div className={profileStyles.actions}>
-          <button className={profileStyles.actionItem}>
-            <Settings2 size={18} />
-            <span>Preferences</span>
-          </button>
           <Link href="/" className={profileStyles.actionItem}>
             <ShieldCheck size={18} />
-            <span>Back to site</span>
+            <span>Open site</span>
           </Link>
           <form action={signOut}>
             <button type="submit" className={`${profileStyles.actionItem} ${profileStyles.destructive}`}>

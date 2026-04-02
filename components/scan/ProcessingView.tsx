@@ -165,24 +165,35 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
   }, [cardUrls, cards])
 
   const completeCards = cards.filter((card) => card.status === 'complete')
+  const visibleCards = status === 'error' ? completeCards : cards
   const totalPoints = points.length || session?.point_count || 0
   const progressWidth = totalPoints > 0 ? (completeCards.length / totalPoints) * 100 : 0
+  const stageLabel =
+    status === 'complete'
+      ? 'Ready'
+      : status === 'processing'
+        ? 'Extracting'
+        : status === 'error'
+          ? 'Error'
+          : status === 'loading'
+            ? 'Loading'
+            : 'Generating'
   const title =
     status === 'complete'
-      ? 'Card set ready'
+      ? 'Cards ready.'
       : status === 'processing'
-        ? 'Extracting the note'
+        ? 'Finding the points.'
         : status === 'error'
-          ? 'Something interrupted the flow'
-          : 'Generating the card set'
+          ? 'This session stopped.'
+          : 'Building the cards.'
   const copy =
     status === 'complete'
-      ? 'Your points and cards are ready to review.'
+      ? 'Review them below.'
       : status === 'processing'
-        ? 'We are isolating the teachable points before image generation starts.'
+        ? 'Clean extraction comes first.'
         : status === 'error'
-          ? 'Try this session again.'
-          : 'Capsule is turning each extracted point into a quick-scan learning card.'
+          ? 'Retry this pass or scan again.'
+          : 'One point becomes one card.'
 
   function handleRetry() {
     startRetryTransition(() => {
@@ -218,7 +229,7 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
             <div>
               <div className={styles.statusEyebrow}>
                 <Sparkles size={14} aria-hidden="true" />
-                <span>{status.toUpperCase()}</span>
+                <span>{stageLabel}</span>
               </div>
               <h2 className={styles.statusTitle}>{title}</h2>
             </div>
@@ -246,57 +257,80 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
         <section className={styles.panel}>
           <div className={styles.panelInner}>
             <div className={styles.panelHeader}>
-              <h3 className={styles.panelTitle}>Extracted points</h3>
+              <h3 className={styles.panelTitle}>Points</h3>
               <div className={styles.count}>{points.length || 0}</div>
             </div>
 
-            <div className={styles.pointList}>
-              {points.map((point) => (
-                <div key={point.id} className={styles.pointItem}>
-                  <span className={styles.pointBullet}>•</span>
-                  <p className={styles.pointText}>{point.text}</p>
-                </div>
-              ))}
-              {status === 'processing' ? <div className={styles.pointSkeleton} /> : null}
-            </div>
+            {points.length > 0 ? (
+              <div className={styles.pointList}>
+                {points.map((point) => (
+                  <div key={point.id} className={styles.pointItem}>
+                    <span className={styles.pointMarker} aria-hidden="true" />
+                    <p className={styles.pointText}>{point.text}</p>
+                  </div>
+                ))}
+                {status === 'processing' ? <div className={styles.pointSkeleton} /> : null}
+              </div>
+            ) : (
+              <div className={styles.emptyPanel}>
+                <p className={styles.emptyPanelTitle}>No points yet</p>
+                <p className={styles.emptyPanelCopy}>
+                  {status === 'processing'
+                    ? 'The first extracted lines will appear here.'
+                    : 'Retry to pull the points again.'}
+                </p>
+              </div>
+            )}
           </div>
         </section>
 
         <section className={styles.panel}>
           <div className={styles.panelInner}>
             <div className={styles.panelHeader}>
-              <h3 className={styles.panelTitle}>Generated cards</h3>
+              <h3 className={styles.panelTitle}>Cards</h3>
               <div className={styles.count}>{completeCards.length}</div>
             </div>
 
-            <div className={styles.cardGrid}>
-              {cards.map((card) => {
-                const signedUrl = cardUrls[card.image_url]
+            {visibleCards.length > 0 || (status === 'generating' && totalPoints > 0) ? (
+              <div className={styles.cardGrid}>
+                {visibleCards.map((card) => {
+                  const signedUrl = cardUrls[card.image_url]
 
-                return (
-                  <div key={card.id} className={styles.cardItem}>
-                    {card.status === 'complete' && signedUrl ? (
-                      <Image
-                        src={signedUrl}
-                        alt={card.title || 'Generated card'}
-                        fill
-                        unoptimized
-                        sizes="(max-width: 768px) 100vw, 33vw"
-                        className={styles.cardImage}
-                      />
-                    ) : (
-                      <div className={styles.cardSkeleton} />
-                    )}
-                    <div className={styles.cardTitle}>{card.title || 'Generating card'}</div>
+                  return (
+                    <div key={card.id} className={styles.cardItem}>
+                      {card.status === 'complete' && signedUrl ? (
+                        <Image
+                          src={signedUrl}
+                          alt={card.title || 'Generated card'}
+                          fill
+                          unoptimized
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className={styles.cardImage}
+                        />
+                      ) : (
+                        <div className={styles.cardSkeleton} />
+                      )}
+                      <div className={styles.cardTitle}>{card.title || 'Building card'}</div>
+                    </div>
+                  )
+                })}
+                {status === 'generating' && cards.length < totalPoints ? (
+                  <div className={styles.cardItem}>
+                    <div className={styles.cardSkeleton} />
+                    <div className={styles.cardTitle}>Building card</div>
                   </div>
-                )
-              })}
-              {status === 'generating' && cards.length < totalPoints ? (
-                <div className={styles.cardItem}>
-                  <div className={styles.cardSkeleton} />
-                </div>
-              ) : null}
-            </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className={styles.emptyPanel}>
+                <p className={styles.emptyPanelTitle}>No cards yet</p>
+                <p className={styles.emptyPanelCopy}>
+                  {status === 'error'
+                    ? 'This pass stopped before the first card finished.'
+                    : 'Cards appear here as each point completes.'}
+                </p>
+              </div>
+            )}
           </div>
         </section>
       </div>
