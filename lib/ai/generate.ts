@@ -17,7 +17,7 @@ export async function generateCardImage(text: string, category: string): Promise
     response_format: "url",
   })
 
-  const imageUrl = response.data[0].url
+  const imageUrl = response?.data?.[0].url
   if (!imageUrl) throw new Error("Failed to generate card image")
 
   return imageUrl
