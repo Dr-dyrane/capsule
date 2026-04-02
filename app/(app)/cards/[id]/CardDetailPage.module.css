@@ -25,20 +25,27 @@
   gap: 32px;
 }
 
-.imagePanel,
+.imagePanel {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
 .infoPanel {
   display: grid;
   gap: 24px;
 }
 
+
 .imageWrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: auto; /* Remove 16/9 constraint */
+  min-height: 280px; /* Base height for immersion */
   overflow: hidden;
-  border-radius: 32px;
+  border-radius: 0; /* Flush for edge-to-edge mobile */
   background: rgba(255, 255, 255, 0.02);
-  box-shadow: var(--shadow-2xl);
+  box-shadow: none;
 }
 
 .image {
@@ -56,13 +63,24 @@
   text-align: center;
 }
 
-.caption {
-  padding: 0 8px;
-  color: var(--text-tertiary);
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+@media (min-width: 640px) {
+  .imagePanel {
+    padding: 8px;
+    gap: 24px;
+  }
+  
+  .imageWrap {
+    border-radius: 8px;
+    box-shadow: var(--shadow-2xl);
+  }
 }
+
+@media (min-width: 1024px) {
+  .imagePanel {
+    padding: 8px;
+  }
+}
+
 
 .metaRow {
   display: flex;

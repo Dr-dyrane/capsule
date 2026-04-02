@@ -8,6 +8,8 @@ import { createClient } from '@/lib/supabase/server'
 
 import shellStyles from '../../AppScreen.module.css'
 import styles from './CardDetailPage.module.css'
+import ImagePreview from '@/components/cards/ImagePreview'
+
 
 type CardDetailPageProps = {
   params: Promise<{ id: string }>
@@ -68,13 +70,9 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
           <div className={`${shellStyles.panelInner} ${styles.imagePanel}`}>
             <div className={styles.imageWrap}>
               {signedUrl ? (
-                <Image
+                <ImagePreview
                   src={signedUrl}
                   alt={card.title || 'Generated card'}
-                  fill
-                  unoptimized
-                  sizes="(max-width: 1023px) 100vw, 60vw"
-                  className={styles.image}
                 />
               ) : (
                 <div className={styles.placeholder}>
@@ -88,12 +86,9 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
                 </div>
               )}
             </div>
-
-            <p className={styles.caption}>
-              {card.status === 'complete' ? 'Generated 16:9 card.' : 'This card updates here as it moves through the queue.'}
-            </p>
           </div>
         </section>
+
 
         <section className={shellStyles.panel}>
           <div className={`${shellStyles.panelInner} ${styles.infoPanel}`}>
