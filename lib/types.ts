@@ -12,6 +12,7 @@ export interface SessionRecord {
   status: SessionStatus
   point_count: number | null
   card_count: number | null
+  session_context: string | null
   created_at?: string
   updated_at?: string
 }
@@ -33,7 +34,7 @@ export interface CardRecord {
   session_id: string
   image_url: string
   title: string | null
-  status: 'generating' | 'complete' | 'error'
+  status: 'queued' | 'generating' | 'complete' | 'error'
   card_order?: number | null
   created_at?: string
 }

@@ -19,7 +19,7 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
 
   const { data: card, error } = await supabase
     .from('cards')
-    .select('id, title, image_url, created_at, points(text, category)')
+    .select('id, title, image_url, created_at, status, points(text, category)')
     .eq('id', id)
     .single()
 
@@ -27,9 +27,17 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
     redirect('/cards')
   }
 
-  const signedUrl = await createSignedObjectUrlSafe('cards', card.image_url)
+  const signedUrl = card.status === 'complete' ? await createSignedObjectUrlSafe('cards', card.image_url) : null
   const point = Array.isArray(card.points) ? card.points[0] : card.points
   const category = point?.category ?? 'Learning card'
+  const statusLabel =
+    card.status === 'complete'
+      ? 'Ready'
+      : card.status === 'generating'
+        ? 'Generating'
+        : card.status === 'error'
+          ? 'Error'
+          : 'Queued'
   const createdAt = card.created_at
     ? new Date(card.created_at).toLocaleDateString(undefined, {
         month: 'long',
@@ -69,11 +77,21 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
                   className={styles.image}
                 />
               ) : (
-                <div className={styles.placeholder}>Preview unavailable</div>
+                <div className={styles.placeholder}>
+                  {card.status === 'generating'
+                    ? 'Image is generating.'
+                    : card.status === 'queued'
+                      ? 'This card is waiting its turn.'
+                      : card.status === 'error'
+                        ? 'This card stopped before it finished.'
+                        : 'Preview unavailable'}
+                </div>
               )}
             </div>
 
-            <p className={styles.caption}>Generated 16:9 card.</p>
+            <p className={styles.caption}>
+              {card.status === 'complete' ? 'Generated 16:9 card.' : 'This card updates here as it moves through the queue.'}
+            </p>
           </div>
         </section>
 
@@ -84,6 +102,7 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
                 <Sparkles size={14} aria-hidden="true" />
                 <span>{category}</span>
               </div>
+              <div className={styles.chip}>{statusLabel}</div>
               {createdAt ? <div className={styles.chip}>{createdAt}</div> : null}
             </div>
 
@@ -92,7 +111,11 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
               <p className={styles.pointText}>{point?.text ?? 'Original point unavailable.'}</p>
             </div>
 
-            <div className={styles.note}>Scan the image first. Open the source point only if you need the wording.</div>
+            <div className={styles.note}>
+              {card.status === 'complete'
+                ? 'Scan the image first. Open the source point only if you need the wording.'
+                : 'The source point is already ready. The image catches up here when generation finishes.'}
+            </div>
           </div>
         </section>
       </div>

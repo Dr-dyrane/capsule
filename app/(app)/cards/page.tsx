@@ -18,12 +18,11 @@ export default async function CardsPage() {
   const { data: cards } = await supabase
     .from('cards')
     .select('*')
-    .eq('status', 'complete')
     .order('created_at', { ascending: false })
 
   const signedUrls = await createSignedObjectUrlsSafe(
     'cards',
-    (cards ?? []).map((card) => card.image_url),
+    (cards ?? []).filter((card) => card.status === 'complete').map((card) => card.image_url),
   )
 
   return (
@@ -33,8 +32,8 @@ export default async function CardsPage() {
           <Images size={14} aria-hidden="true" />
           <span>Cards</span>
         </div>
-        <h1 className={styles.title}>Finished cards.</h1>
-        <p className={styles.copy}>Ready to review.</p>
+        <h1 className={styles.title}>All cards.</h1>
+        <p className={styles.copy}>Queued, building, ready.</p>
       </header>
 
       {!cards || cards.length === 0 ? (

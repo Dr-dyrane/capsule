@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { extractPointsFromImage } from '@/lib/ai/ocr'
 import { createSignedObjectUrl } from '@/lib/storage/signed-urls'
 
+function getCardTitle(text: string) {
+  const title = text.split(':')[0]?.trim()
+  return title || 'Learning card'
+}
+
 export async function processNote(sessionId: string) {
   const supabase = await createClient()
 
@@ -39,11 +44,30 @@ export async function processNote(sessionId: string) {
       card_count: p.card_count,
     }))
 
-    const { error: pointsError } = await supabase
+    const { data: insertedPoints, error: pointsError } = await supabase
       .from('points')
       .insert(pointsToInsert)
+      .select('id, text, sort_order')
 
     if (pointsError) throw pointsError
+
+    const queuedCards = (insertedPoints ?? []).map((point) => {
+      const cardId = crypto.randomUUID()
+
+      return {
+        id: cardId,
+        point_id: point.id,
+        session_id: sessionId,
+        image_url: `${session.user_id}/${sessionId}/${cardId}.png`,
+        title: getCardTitle(point.text),
+        status: 'queued',
+        card_order: point.sort_order ?? 0,
+      }
+    })
+
+    const { error: cardsError } = await supabase.from('cards').insert(queuedCards)
+
+    if (cardsError) throw cardsError
 
     // 5. Update Session
     await supabase
@@ -51,6 +75,7 @@ export async function processNote(sessionId: string) {
       .update({
         status: 'generating',
         point_count: points.length,
+        session_context: result.session_context,
       })
       .eq('id', sessionId)
 

@@ -14,6 +14,7 @@ export interface ExtractionPoint {
 
 export interface ExtractionResult {
   points: ExtractionPoint[]
+  session_context: string
 }
 
 type RawPoint = Record<string, unknown>
@@ -130,7 +131,13 @@ function normalizeExtractionResult(content: string): ExtractionResult {
     throw new Error('No teaching points were extracted from the page.')
   }
 
-  return { points }
+  const parsedRecord = typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : null
+  const session_context =
+    parsedRecord && typeof parsedRecord.session_context === 'string' && parsedRecord.session_context.trim()
+      ? parsedRecord.session_context
+      : 'Medical learning session'
+
+  return { points, session_context }
 }
 
 export async function extractPointsFromImage(imageUrl: string): Promise<ExtractionResult> {
@@ -142,9 +149,10 @@ export async function extractPointsFromImage(imageUrl: string): Promise<Extracti
         role: 'system',
         content: `You are Capsule AI, a medical education expert.
 Extract atomic teaching points from a single page of medical notes.
+Also provide a 2-3 sentence 'session_context' that summarizes the main theme of the entire note.
 Return JSON only.
 Use this exact shape:
-{"points":[{"text":"...","category":"...","concept":"Drug","card_count":1}]}
+{"session_context": "...", "points":[{"text":"...","category":"...","concept":"Drug","card_count":1}]}
 Allowed concept values: Drug, Disease, Mechanism, Regimen, Other.`,
       },
       {
