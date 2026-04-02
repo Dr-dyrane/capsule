@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronLeft, Share, MoreHorizontal } from 'lucide-react'
+import { createSignedObjectUrl } from '@/lib/storage/signed-urls'
 
 export default async function CardDetailPage({ params }: { params: { id: string } }) {
   const id = (await params).id
@@ -17,7 +19,7 @@ export default async function CardDetailPage({ params }: { params: { id: string 
     redirect('/cards')
   }
 
-  const publicUrl = supabase.storage.from('cards').getPublicUrl(card.image_url).data.publicUrl
+  const signedUrl = await createSignedObjectUrl('cards', card.image_url)
 
   return (
     <div className="detail-page animate-fade-in">
@@ -34,7 +36,7 @@ export default async function CardDetailPage({ params }: { params: { id: string 
       <div className="card-container">
         <div className="card-main surface-1 glass animate-slide-up">
           <div className="card-image-wrap">
-            <img src={publicUrl} alt={card.title} />
+            <Image src={signedUrl} alt={card.title} fill unoptimized sizes="100vw" />
           </div>
           <div className="card-content">
             <div className="card-meta">

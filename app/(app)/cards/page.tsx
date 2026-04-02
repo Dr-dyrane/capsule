@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import CardThumbnail from '@/components/cards/CardThumbnail'
+import { createSignedObjectUrls } from '@/lib/storage/signed-urls'
 
 export default async function CardsPage() {
   const supabase = await createClient()
@@ -11,6 +12,11 @@ export default async function CardsPage() {
     .select('*')
     .eq('status', 'complete')
     .order('created_at', { ascending: false })
+
+  const signedUrls = await createSignedObjectUrls(
+    'cards',
+    (cards ?? []).map((card) => card.image_url),
+  )
 
   return (
     <div className="page-container animate-fade-in">
@@ -28,7 +34,7 @@ export default async function CardsPage() {
       ) : (
         <div className="cards-grid">
           {cards.map((card) => (
-            <CardThumbnail key={card.id} card={card} />
+            <CardThumbnail key={card.id} card={card} imageUrl={signedUrls[card.image_url]} />
           ))}
         </div>
       )}

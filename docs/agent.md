@@ -115,6 +115,8 @@ Two or more coordinated images. Each teaches one layer. Sequence moves simple â†
 - Friendly, clear, not childish
 - Consistent dimensions across collection
 - Use anatomy and icons to reduce text burden
+- The product shell should showcase real generated cards, not placeholder gradients or fake demo tiles
+- Default presentation ratio is 16:9 unless the concept clearly benefits from another format
 
 ---
 
@@ -125,6 +127,8 @@ Two or more coordinated images. Each teaches one layer. Sequence moves simple â†
 - No repeated terms
 - No decorative text
 - Card works if viewer reads only title + 2-3 labels
+- On product surfaces, explanatory copy should be aggressively minimized
+- If the generated cards are present, let them carry the proof instead of adding extra descriptive text around them
 
 ---
 
@@ -145,3 +149,11 @@ Before generating each card:
 3. Is the mechanism accurate?
 4. Is text minimal enough?
 5. Will the learner understand it in one scan?
+
+## Product Shell Rules
+
+- The marketing page should demonstrate Capsule immediately, not explain it at length.
+- Avoid generic three-column SaaS feature blocks unless they directly extend the card experience.
+- Do not hide the cards below excessive hero copy or badge rows.
+- Wide 16:9 cards should not be forced into an overly narrow centered layout.
+- Include obvious polish controls such as theme toggles when the interface aspires to premium product quality.

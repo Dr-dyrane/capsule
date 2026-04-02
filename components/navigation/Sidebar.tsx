@@ -17,7 +17,6 @@ export default function Sidebar() {
   return (
     <aside className="sidebar glass surface-1">
       <div className="sidebar-header">
-        <div className="logo-icon">C</div>
         <span className="app-name title-2">Capsule</span>
       </div>
 

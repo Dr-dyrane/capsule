@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ChevronRight } from 'lucide-react'
+import type { SessionRecord } from '@/lib/types'
+import { createSignedObjectUrls } from '@/lib/storage/signed-urls'
 
 export default async function LibraryPage() {
   const supabase = await createClient()
@@ -12,11 +15,17 @@ export default async function LibraryPage() {
     .select('*')
     .order('created_at', { ascending: false })
 
-  const groups: Record<string, any[]> = {}
-  sessions?.forEach(session => {
+  const signedNoteUrls = await createSignedObjectUrls(
+    'notes',
+    (sessions ?? []).map((session) => session.source_url),
+  )
+
+  const groups: Record<string, SessionRecord[]> = {}
+  sessions?.forEach((session) => {
+    const typedSession = session as SessionRecord
     const date = new Date(session.created_at).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })
     if (!groups[date]) groups[date] = []
-    groups[date].push(session)
+    groups[date].push(typedSession)
   })
 
   return (
@@ -41,7 +50,13 @@ export default async function LibraryPage() {
                 {items.map((session) => (
                   <Link key={session.id} href={`/scan/${session.id}`} className="session-item surface-1 glass">
                     <div className="session-thumb">
-                      <img src={supabase.storage.from('notes').getPublicUrl(session.source_url).data.publicUrl} alt="Note" />
+                      <Image
+                        src={signedNoteUrls[session.source_url]}
+                        alt="Uploaded note"
+                        fill
+                        unoptimized
+                        sizes="50px"
+                      />
                     </div>
                     <div className="session-info">
                       <p className="body session-name">Note Session</p>

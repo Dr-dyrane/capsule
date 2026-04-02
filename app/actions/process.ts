@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { extractPointsFromImage } from '@/lib/ai/ocr'
+import { createSignedObjectUrl } from '@/lib/storage/signed-urls'
 
 export async function processNote(sessionId: string) {
   const supabase = await createClient()
@@ -16,14 +17,12 @@ export async function processNote(sessionId: string) {
 
   if (sessionError) throw sessionError
 
-  // 2. Get Public URL for OCR
-  const { data: { publicUrl } } = supabase.storage
-    .from('notes')
-    .getPublicUrl(session.source_url)
+  // 2. Create a short-lived signed URL for OCR instead of exposing the note publicly.
+  const signedUrl = await createSignedObjectUrl('notes', session.source_url, 60 * 10)
 
   // 3. Extract Points
   try {
-    const result = await extractPointsFromImage(publicUrl)
+    const result = await extractPointsFromImage(signedUrl)
 
     // 4. Save Points to DB
     const pointsToInsert = result.points.map((p, index) => ({

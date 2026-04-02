@@ -12,6 +12,15 @@
 | 4 | **No decoration** | Color = state. Shape = function. Nothing ornamental. |
 | 5 | **Content leads** | Cards, images, data are the interface. Chrome yields. |
 
+### Marketing Interpretation
+
+- The marketing page should behave like a product demonstration, not a copy-heavy SaaS landing page.
+- One headline and one short support line are usually enough.
+- Generated cards should appear high on the page and dominate the visual hierarchy.
+- Avoid long badge rows, explanatory feature copy, and generic centered marketing layouts.
+- Wide content should not be trapped inside an unnecessarily narrow max-width shell.
+- If the experience claims Apple-level polish, include small but meaningful controls such as a theme toggle in the footer or lower chrome.
+
 ---
 
 ## Surface System

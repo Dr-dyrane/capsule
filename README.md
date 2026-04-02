@@ -1,110 +1,78 @@
 # Capsule
 
-**Distill notes into visual knowledge.**
+Distill notes into visual knowledge.
 
-Capsule transforms handwritten and printed medical notes into illustrative learning cards. Scan a page, and Capsule extracts each teaching point, then generates a beautiful, scannable card for each concept — in the background, ready to read as they arrive.
+Capsule turns handwritten or printed medical notes into visual learning cards. Upload a page, extract teaching points with AI, then generate cards that arrive while processing continues.
 
----
+## Product Flow
 
-## How It Works
-
-```
-Scan  →  Extract  →  Generate  →  Read
+```text
+Scan -> Extract -> Generate -> Read
 ```
 
-1. **Scan** — Upload or photograph a page of notes
-2. **Extract** — AI reads the page and identifies atomic teaching points
-3. **Generate** — Each point becomes an illustrative learning card (generated in background)
-4. **Read** — Browse your cards immediately as they appear. Swipe. Study. Retain.
+1. Scan a note from camera or file upload.
+2. Extract atomic teaching points from the image.
+3. Generate visual cards for each point.
+4. Read completed cards while the rest continue in the background.
 
----
-
-## Design Philosophy
-
-Capsule is built on three principles:
-
-| Principle | Meaning |
-|---|---|
-| **Content is the interface** | Cards are the product. UI gets out of the way. |
-| **No waiting** | Cards stream in as they generate. Start reading immediately. |
-| **No friction** | No manual point curation. No configuration. Scan → cards. |
-
-### Visual Language
-
-- **Dark canvas** — `#000000` base, depth through translucent surfaces
-- **No borders** — Ever. Separation through layers, blur, and shadow only.
-- **No rings** — No outlines, no insets. Surfaces float.
-- **Apple HIG** — Element-for-element adherence. Tab bar, large titles, progressive disclosure, spatial transitions.
-
----
-
-## Tech Stack
+## Stack
 
 | Layer | Technology |
-|---|---|
-| Framework | Next.js 15 (App Router) |
-| Auth | Supabase Auth (email, `@supabase/ssr`) |
-| Database | Supabase PostgreSQL |
+| --- | --- |
+| Framework | Next.js 16 App Router |
+| UI | React 19, Tailwind 4 utilities, CSS tokens |
+| Auth | Supabase Auth with `@supabase/ssr` |
+| Database | Supabase Postgres |
 | Storage | Supabase Storage |
-| OCR | GPT-4o Vision |
-| Card Generation | AI image generation pipeline |
-| Styling | Vanilla CSS (custom properties) |
-| Animation | View Transitions API |
-| Deployment | Vercel |
-
----
+| AI extraction | OpenAI GPT-4o |
+| Image generation | OpenAI image generation |
 
 ## Project Structure
 
-```
-capsule/
-├── README.md                   ← You are here
-├── docs/                       ← All design & planning docs
-│   ├── ui-ux.md                   Design language & surfaces
-│   ├── tech-stack.md              Architecture & data model
-│   ├── implementation-plan.md     Build order & phases
-│   ├── ui-checklist.md            Component audit checklist
-│   ├── apple-hig-checklist.md     HIG compliance matrix
-│   ├── user-feedback.md           Feedback & loading system
-│   ├── loading-states.md          State design for every screen
-│   └── agent.md                   AI card generation rules
-├── app/                        ← Next.js App Router
-├── components/                 ← React components
-├── lib/                        ← Utilities, Supabase, AI
-├── styles/                     ← CSS tokens & globals
-└── public/                     ← Static assets
+```text
+app/           Routes, layouts, server actions
+components/    UI and feature components
+docs/          Product, UI, and AI guidance
+lib/           Supabase, AI, storage, shared helpers
+public/        Static assets and demo imagery
+supabase/      Config and SQL migrations
 ```
 
----
+## Key Routes
 
-## Documentation
+| Route | Purpose |
+| --- | --- |
+| `/` | Marketing landing page |
+| `/login` | Magic link auth |
+| `/scan` | Upload a note |
+| `/scan/[id]` | Live extraction and generation state |
+| `/cards` | Completed cards gallery |
+| `/cards/[id]` | Card detail view |
+| `/library` | Prior sessions |
+| `/profile` | Account actions |
 
-| Document | Purpose |
-|---|---|
-| [UI/UX Spec](docs/ui-ux.md) | Surfaces, typography, color, spacing, motion |
-| [Tech Stack](docs/tech-stack.md) | Architecture, data model, API design |
-| [Implementation Plan](docs/implementation-plan.md) | Build phases, file creation order |
-| [UI Checklist](docs/ui-checklist.md) | Per-component zero-border audit |
-| [Apple HIG Checklist](docs/apple-hig-checklist.md) | Element-by-element HIG compliance |
-| [User Feedback](docs/user-feedback.md) | Feedback system & micro-interactions |
-| [Loading States](docs/loading-states.md) | Every screen's loading/empty/error states |
-| [Agent](docs/agent.md) | AI card generation rules & heuristics |
+## Local Setup
 
----
-
-## Quick Start
+1. Install dependencies.
+2. Create `.env.local`.
+3. Add:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_APP_URL`
+   - `OPENAI_API_KEY`
+4. Run the dev server.
 
 ```bash
-cd capsule
 npm install
-cp .env.example .env.local   # Add Supabase + OpenAI keys
 npm run dev
 ```
 
-https://capsule.dyrane.tech/
+## Notes
 
----
+- The app uses `proxy.ts` for auth-aware request handling.
+- Supabase SQL setup lives in [supabase/migrations/20260402093000_initial_capsule_schema.sql](supabase/migrations/20260402093000_initial_capsule_schema.sql).
+- AI image guidance lives in [docs/agent.md](docs/agent.md).
 
 ## License
 
-Private — not for redistribution.
+Private. Not for redistribution.

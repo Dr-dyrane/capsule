@@ -1,55 +1,63 @@
 import Link from 'next/link'
 
+import ShowcaseCarousel from '@/components/marketing/ShowcaseCarousel'
+import ThemeToggle from '@/components/marketing/ThemeToggle'
+import styles from './MarketingPage.module.css'
+
+const showcaseCards = [
+  {
+    src: '/demo/multiple-myeloma-learning-card.png',
+    alt: 'Multiple myeloma learning card example',
+  },
+  {
+    src: '/demo/acute-myeloid-leukemia-learning-card.png',
+    alt: 'Acute myeloid leukemia learning card example',
+  },
+  {
+    src: '/demo/tumor-lysis-syndrome-learning-card-v4.png',
+    alt: 'Tumor lysis syndrome learning card example',
+  },
+]
+
 export default function MarketingPage() {
   return (
-    <main className="marketing-container animate-fade-in">
-      <nav className="marketing-nav glass">
-        <div className="logo title-2">Capsule</div>
-        <Link href="/login" className="login-link subhead">Login</Link>
-      </nav>
-
-      <section className="hero">
-        <div className="hero-content animate-slide-up">
-          <h1 className="title-large hero-title">Distill notes into visual knowledge.</h1>
-          <p className="subhead hero-subtitle">Transform your pharmacy notes into beautiful, illustrative learning cards in seconds.</p>
-          
-          <Link href="/login" className="cta-button accent">
-            Get Started
+    <main className={styles.page}>
+      <div className={styles.shell}>
+        <nav aria-label="Primary" className={styles.nav}>
+          <Link href="/" aria-label="Capsule home" className={styles.brand}>
+            Capsule
           </Link>
-        </div>
 
-        <div className="hero-visual animate-fade-in">
-          <div className="visual-card-shelf">
-            <div className="preview-card surface-1 glass">
-              <div className="card-mock-image" style={{ background: 'linear-gradient(135deg, #FF3B30 0%, #FF9500 100%)' }}></div>
-              <div className="card-mock-title">Pathophysiology</div>
-            </div>
-            <div className="preview-card surface-1 glass elevated">
-              <div className="card-mock-image" style={{ background: 'linear-gradient(135deg, #007AFF 0%, #34C759 100%)' }}></div>
-              <div className="card-mock-title">Mechanism of Action</div>
-            </div>
-            <div className="preview-card surface-1 glass">
-              <div className="card-mock-image" style={{ background: 'linear-gradient(135deg, #5856D6 0%, #AF52DE 100%)' }}></div>
-              <div className="card-mock-title">Dermatology</div>
-            </div>
+          <div className={styles.navActions}>
+            <Link href="#showcase" className={`${styles.quietNavLink} ${styles.examplesLink}`}>
+              Examples
+            </Link>
+            <Link href="/login" className={styles.navButton}>
+              Log in
+            </Link>
           </div>
-        </div>
-      </section>
+        </nav>
 
-      <section className="features">
-        <div className="feature-block surface-1 glass">
-          <div className="feature-icon">📸</div>
-          <p className="subhead">Scan Notes</p>
-        </div>
-        <div className="feature-block surface-1 glass">
-          <div className="feature-icon">🧠</div>
-          <p className="subhead">AI Points</p>
-        </div>
-        <div className="feature-block surface-1 glass">
-          <div className="feature-icon">🗂️</div>
-          <p className="subhead">Smart Library</p>
-        </div>
-      </section>
+        <section aria-labelledby="marketing-title" className={styles.stage}>
+          <div className={styles.hero}>
+            <h1 id="marketing-title" className={styles.title}>
+              Scan notes into cards.
+            </h1>
+
+            <Link href="/login" className={styles.primaryButton}>
+              Get Started
+            </Link>
+          </div>
+
+          <div id="showcase" className={styles.showcase}>
+            <ShowcaseCarousel cards={showcaseCards} />
+          </div>
+        </section>
+
+        <footer aria-label="Appearance" className={styles.footer}>
+          <ThemeToggle />
+        </footer>
+      </div>
     </main>
   )
 }

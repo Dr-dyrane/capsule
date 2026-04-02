@@ -1,0 +1,30 @@
+.button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple);
+}
+
+.button:hover,
+.button:focus-visible {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.button:active {
+  transform: scale(0.97);
+}
