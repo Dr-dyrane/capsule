@@ -1,0 +1,60 @@
+:root {
+  /* System Base */
+  --canvas: #000000;
+  
+  /* Text Layers */
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(235, 235, 245, 0.6);
+  --text-tertiary: rgba(235, 235, 245, 0.3);
+  
+  /* Surfaces (Liquid Glass) */
+  --surface-1: rgba(28, 28, 30, 0.5);
+  --surface-2: rgba(44, 44, 46, 0.6);
+  --surface-3: rgba(58, 58, 60, 0.7);
+  
+  /* Accents */
+  --accent: #0A84FF;
+  --accent-hover: #007AFF;
+  --destructive: #FF453A;
+  
+  /* Spacing */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  
+  /* Motion & Glass */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-apple: cubic-bezier(0.3, 0, 0.1, 1);
+  --duration-micro: 150ms;
+  --duration-standard: 300ms;
+  --duration-dramatic: 600ms;
+  --glass: blur(20px);
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.6);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.8);
+  --shadow-xl: 0 12px 48px rgba(0,0,0,0.9);
+}
+
+/* Theme Awareness Support */
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Even in light mode, user requested 'darkmode first', but we define these so its not broken */
+    /* For now, Capsule keeps its dark brand identity even in light mode per SPEC */
+  }
+}

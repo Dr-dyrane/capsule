@@ -27,57 +27,6 @@ export default function TabBar() {
           </Link>
         )
       })}
-
-      <style jsx>{`
-        .tab-bar {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          display: flex;
-          justify-content: space-around;
-          padding: 8px 0 calc(8px + var(--safe-area-inset-bottom, 0px));
-          z-index: 1000;
-        }
-        
-        .tab-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 4px;
-          color: var(--text-tertiary);
-          transition: color var(--duration-micro) var(--ease-standard),
-                      transform var(--duration-micro) var(--ease-apple);
-          min-width: 64px;
-        }
-        
-        .tab-item.active {
-          color: var(--accent);
-        }
-        
-        .tab-item:active {
-          transform: scale(0.92);
-        }
-        
-        .tab-label {
-          font-size: 10px;
-          font-weight: 500;
-          opacity: 0;
-          transform: translateY(2px);
-          transition: all var(--duration-micro) var(--ease-standard);
-        }
-        
-        .tab-item.active .tab-label {
-          opacity: 1;
-          transform: translateY(0);
-        }
-
-        @media (min-width: 768px) {
-          .tab-bar {
-            display: none;
-          }
-        }
-      `}</style>
     </nav>
   )
 }

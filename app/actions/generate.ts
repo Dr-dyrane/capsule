@@ -1,3 +1,5 @@
+'use server'
+
 import { createClient } from '@/lib/supabase/server'
 import { generateCardImage } from '@/lib/ai/generate'
 
@@ -43,7 +45,7 @@ export async function generateCard(pointId: string) {
         point_id: pointId,
         session_id: sessionId,
         image_url: filePath,
-        title: point.text.split(':')[0], // Simple title extraction
+        title: point.text.split(':')[0],
         status: 'complete'
       })
       .select()
@@ -54,7 +56,6 @@ export async function generateCard(pointId: string) {
     return card
   } catch (error) {
     console.error(error)
-    // Create error record if needed or handle via status
     throw error
   }
 }

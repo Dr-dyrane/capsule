@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { uploadNote } from '@/app/actions/upload'
-import { Button } from '@/components/ui/Button'
 import { Camera, Upload, Loader2 } from 'lucide-react'
 
 export default function ScanPage() {
@@ -78,90 +77,6 @@ export default function ScanPage() {
           <p className="title-2">Uploading...</p>
         </div>
       )}
-
-      <style jsx>{`
-        .page-container {
-          max-width: 800px;
-          margin: 0 auto;
-        }
-        
-        .page-header {
-          margin-bottom: var(--space-48);
-        }
-        
-        .upload-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: var(--space-24);
-        }
-        
-        .upload-card {
-          aspect-ratio: 1/1;
-          border-radius: var(--radius-lg);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          cursor: pointer;
-          transition: transform var(--duration-micro) var(--ease-apple),
-                      background-color var(--duration-micro) var(--ease-standard);
-          position: relative;
-        }
-        
-        .upload-card:hover {
-          background-color: var(--surface-2);
-        }
-        
-        .upload-card:active {
-          transform: scale(0.97);
-        }
-        
-        .hidden-input {
-          display: none;
-        }
-        
-        .icon-circle {
-          width: 80px;
-          height: 80px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto var(--space-16);
-        }
-        
-        .icon-circle.accent {
-          background-color: var(--accent);
-          color: white;
-        }
-        
-        .upload-overlay {
-          position: fixed;
-          inset: 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: var(--space-20);
-          z-index: 2000;
-          background: rgba(0,0,0,0.8);
-        }
-        
-        .spinner {
-          animation: spin 1s linear infinite;
-          color: var(--accent);
-        }
-        
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 500px) {
-          .upload-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </div>
   )
 }

@@ -43,7 +43,7 @@ export default async function LoginPage() {
             required
             className="auth-input surface-2"
           />
-          <button type="submit" className="auth-button accent">
+          <button type="submit" className="auth-button">
             Continue
           </button>
         </form>
@@ -52,64 +52,6 @@ export default async function LoginPage() {
           <p className="caption">By continuing, you agree to our terms.</p>
         </div>
       </div>
-
-      <style jsx>{`
-        .auth-container {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          background-color: var(--canvas);
-          padding: var(--space-24);
-        }
-        .auth-card {
-          width: 100%;
-          max-width: 400px;
-          padding: var(--space-40);
-          border-radius: var(--radius-xl);
-          text-align: center;
-          box-shadow: var(--shadow-xl);
-        }
-        .auth-card h1 {
-          margin-bottom: var(--space-8);
-        }
-        .auth-card p {
-          margin-bottom: var(--space-32);
-        }
-        .auth-form {
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-16);
-        }
-        .auth-input {
-          padding: var(--space-16);
-          border-radius: var(--radius-md);
-          font-size: 17px;
-          transition: background-color var(--duration-micro) var(--ease-standard);
-        }
-        .auth-input:focus {
-          background-color: var(--surface-3);
-        }
-        .auth-button {
-          padding: var(--space-16);
-          border-radius: var(--radius-md);
-          font-size: 17px;
-          font-weight: 600;
-          background-color: var(--accent);
-          color: white;
-          transition: background-color var(--duration-micro) var(--ease-standard),
-                      transform var(--duration-micro) var(--ease-apple);
-        }
-        .auth-button:hover {
-          background-color: var(--accent-hover);
-        }
-        .auth-button:active {
-          transform: scale(0.98);
-        }
-        .auth-footer {
-          margin-top: var(--space-32);
-        }
-      `}</style>
     </main>
   )
 }

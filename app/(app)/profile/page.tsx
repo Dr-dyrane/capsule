@@ -22,7 +22,7 @@ export default async function ProfilePage() {
 
       <div className="profile-card surface-1 glass animate-slide-up">
         <div className="profile-header">
-          <div className="avatar accent">
+          <div className="avatar">
             <User size={32} />
           </div>
           <div className="user-info">
@@ -40,7 +40,7 @@ export default async function ProfilePage() {
             <Shield size={20} />
             <span className="body">Privacy</span>
           </button>
-          <form action={signOut} className="w-full">
+          <form action={signOut}>
             <button type="submit" className="action-item destructive">
               <LogOut size={20} />
               <span className="body">Sign Out</span>
@@ -48,61 +48,6 @@ export default async function ProfilePage() {
           </form>
         </div>
       </div>
-
-      <style jsx>{`
-        .page-container {
-          max-width: 600px;
-          margin: 0 auto;
-        }
-        .page-header { margin-bottom: var(--space-32); }
-        .profile-card {
-          padding: var(--space-32);
-          border-radius: var(--radius-xl);
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-40);
-        }
-        .profile-header {
-          display: flex;
-          align-items: center;
-          gap: var(--space-20);
-        }
-        .avatar {
-          width: 64px;
-          height: 64px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background-color: var(--accent);
-          color: white;
-        }
-        .profile-actions {
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-8);
-        }
-        .action-item {
-          display: flex;
-          align-items: center;
-          gap: var(--space-16);
-          padding: var(--space-16);
-          width: 100%;
-          border-radius: var(--radius-md);
-          color: var(--text-secondary);
-          transition: all var(--duration-micro) var(--ease-standard);
-        }
-        .action-item:hover {
-          background-color: var(--surface-2);
-          color: var(--text-primary);
-        }
-        .action-item.destructive {
-          color: var(--destructive);
-        }
-        .action-item.destructive:hover {
-          background-color: rgba(255, 69, 58, 0.1);
-        }
-      `}</style>
     </div>
   )
 }

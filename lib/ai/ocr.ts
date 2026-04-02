@@ -1,3 +1,4 @@
+import 'server-only'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({
@@ -23,24 +24,13 @@ export async function extractPointsFromImage(imageUrl: string): Promise<Extracti
         role: "system",
         content: `You are Capsule AI, a medical education expert. 
         Your goal is to extract atomic teaching points from handwritten or printed medical notes.
-        
-        RULES:
-        1. Break down notes into single, focused concepts (one drug, one mechanism, one disease pathophysiology).
-        2. Assign a category (e.g., Cardiology, Dermatology, Oncology).
-        3. Identify the concept type.
-        4. Suggest a 'card_count' (usually 1, but 2-3 for complex processes like pathophysiology).
-        5. Return ONLY a JSON object matching the ExtractionResult interface.`
+        Return ONLY a JSON object matching the ExtractionResult interface.`
       },
       {
         role: "user",
         content: [
-          { type: "text", text: "Extract teaching points from this medical note into structured JSON." },
-          {
-            type: "image_url",
-            image_url: {
-              url: imageUrl,
-            },
-          },
+          { type: "text", text: "Extract teaching points from structured JSON." },
+          { type: "image_url", image_url: { url: imageUrl } },
         ],
       },
     ],

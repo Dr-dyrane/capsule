@@ -1,0 +1,19 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="114" fill="black"/>
+  <defs>
+    <linearGradient id="liquid" x1="256" y1="216" x2="256" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A84FF"/>
+      <stop offset="1" stop-color="#0040FF" stop-opacity="0.8"/>
+    </linearGradient>
+    <filter id="blur" x="180" y="100" width="152" height="180" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <!-- Capsule Top (Frosted Glass) -->
+  <path d="M256 112C214.026 112 180 146.026 180 188V256H332V188C332 146.026 297.974 112 256 112Z" fill="white" fill-opacity="0.2"/>
+  <path d="M256 112C214.026 112 180 146.026 180 188V256H332V188C332 146.026 297.974 112 256 112Z" fill="url(#glass-gradient)" fill-opacity="0.1"/>
+  <!-- Capsule Bottom (Liquid) -->
+  <path d="M180 256V324C180 365.974 214.026 400 256 400C297.974 400 332 365.974 332 324V256H180Z" fill="url(#liquid)"/>
+  <rect x="180" y="254" width="152" height="4" fill="white" fill-opacity="0.1"/>
+</svg>

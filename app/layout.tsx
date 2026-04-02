@@ -15,10 +15,15 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'Capsule — Distill notes into visual knowledge',
   description: 'Capsule transforms medical notes into illustrative learning cards.',
+  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Capsule',
+  },
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/apple-icon.png',
   },
 };
 
@@ -37,6 +42,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+      </head>
       <body>
         {children}
       </body>

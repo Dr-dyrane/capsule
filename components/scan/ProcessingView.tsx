@@ -14,7 +14,6 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     async function start() {
-      // 1. Initial Load
       const { data: initialSession } = await supabase
         .from('sessions')
         .select('*')
@@ -24,7 +23,6 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
       setSession(initialSession)
       setStatus(initialSession?.status || 'loading')
 
-      // 2. Start Processing if needed
       if (initialSession?.status === 'processing') {
         try {
           await processNote(sessionId)
@@ -36,7 +34,6 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
 
     start()
 
-    // 3. Real-time Subscriptions
     const pointsSub = supabase
       .channel('points')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'points', filter: `session_id=eq.${sessionId}` }, 
@@ -50,7 +47,7 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
       .channel('cards')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` },
         (payload) => {
-          setCards(current => [...current, payload.new].sort((a,b) => a.created_at.localeCompare(b.created_at)))
+          setCards(current => [...current, payload.new].sort((a,b) => (a.created_at || '').localeCompare(b.created_at || '')))
         }
       )
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` },
@@ -75,23 +72,19 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
       supabase.removeChannel(cardsSub)
       supabase.removeChannel(sessionSub)
     }
-  }, [sessionId])
+  }, [sessionId, supabase])
 
-  // 4. Sequential Generation Trigger
   useEffect(() => {
     if (status === 'generating' && points.length > 0) {
-      // Find points without cards
       const pointsWithoutCards = points.filter(p => !cards.find(c => c.point_id === p.id))
       if (pointsWithoutCards.length > 0) {
-        // Start generating for the next one sequentially
         const nextPoint = pointsWithoutCards[0]
         generateCard(nextPoint.id).catch(console.error)
       } else if (cards.length === points.length && points.length > 0) {
-        // All done
         supabase.from('sessions').update({ status: 'complete' }).eq('id', sessionId).then(() => setStatus('complete'))
       }
     }
-  }, [status, points, cards, sessionId])
+  }, [status, points, cards, sessionId, supabase])
 
   return (
     <div className="processing-view animate-fade-in">
@@ -143,112 +136,6 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
           </div>
         </section>
       </div>
-
-      <style jsx>{`
-        .processing-view {
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-40);
-          max-width: 1000px;
-          margin: 0 auto;
-        }
-        
-        .status-header {
-          padding: var(--space-24);
-          border-radius: var(--radius-lg);
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-16);
-        }
-        
-        .progress-bar-container {
-          height: 4px;
-          background-color: var(--surface-2);
-          border-radius: var(--radius-full);
-          overflow: hidden;
-        }
-        
-        .progress-bar {
-          height: 100%;
-          border-radius: var(--radius-full);
-          transition: width 0.5s var(--ease-apple);
-        }
-        
-        .content-grid {
-          display: grid;
-          grid-template-columns: 320px 1fr;
-          gap: var(--space-40);
-        }
-        
-        .points-container {
-          display: flex;
-          flex-direction: column;
-          gap: var(--space-16);
-          margin-top: var(--space-16);
-        }
-        
-        .point-item {
-          display: flex;
-          gap: var(--space-12);
-        }
-        
-        .point-bullet {
-          color: var(--accent);
-        }
-        
-        .grid-container {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-          gap: var(--space-20);
-          margin-top: var(--space-16);
-        }
-        
-        .card-item {
-          aspect-ratio: 4/5;
-          border-radius: var(--radius-md);
-          overflow: hidden;
-          position: relative;
-        }
-        
-        .card-item img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        
-        .card-skeleton {
-          width: 100%;
-          height: 100%;
-          background-color: var(--surface-1);
-        }
-        
-        .shimmer {
-          background: linear-gradient(90deg, var(--surface-1) 25%, var(--surface-2) 50%, var(--surface-1) 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite linear;
-        }
-        
-        @keyframes shimmer {
-          from { background-position: 200% 0; }
-          to { background-position: -200% 0; }
-        }
-        
-        .card-title-bar {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          padding: var(--space-12);
-          font-size: 13px;
-          font-weight: 600;
-        }
-
-        @media (max-width: 767px) {
-          .content-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
     </div>
   )
 }

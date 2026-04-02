@@ -1,3 +1,4 @@
+import 'server-only'
 import OpenAI from 'openai'
 
 const openai = new OpenAI({
@@ -5,13 +6,7 @@ const openai = new OpenAI({
 })
 
 export async function generateCardImage(text: string, category: string): Promise<string> {
-  const prompt = `A professional, premium, illustrative medical learning card about: ${text}. 
-  Category: ${category}.
-  STYLE: Apple HIG inspired, clean, minimal clutter, editorial educational tone.
-  Visual story type: Illustrative mechanism or anatomy. 
-  NO TEXT except for a few micro-labels if necessary. 
-  High contrast, dark mode compatible, vibrant but professional colors. 
-  Cinematic lighting, high resolution.`
+  const prompt = `A professional medical learning card about: ${text}. Category: ${category}. Apple HIG inspired, clean, minimal clutter, editorial tone. NO TEXT. High contrast, dark mode compatible, vibrant colors.`
 
   const response = await openai.images.generate({
     model: "dall-e-3",
