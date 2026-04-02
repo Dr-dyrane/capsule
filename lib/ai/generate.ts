@@ -16,27 +16,53 @@ async function loadAgentGuidance() {
   }
 }
 
+function summarizeAgentGuidance(guidance: string) {
+  const bulletLines = guidance
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.slice(2).trim())
+    .filter(Boolean)
+
+  const condensed = bulletLines.slice(0, 10).join('; ')
+
+  if (condensed) {
+    return condensed
+  }
+
+  return [
+    'one clear teaching story',
+    'minimal text',
+    'low clutter',
+    'medically accurate visuals',
+    'fast scan comprehension',
+  ].join('; ')
+}
+
 export async function generateCardImage(text: string, category: string): Promise<string> {
-  const agentGuidance = await loadAgentGuidance()
-  const prompt = [
+  const agentGuidance = summarizeAgentGuidance(await loadAgentGuidance())
+  const promptSections = [
     'Create a polished 16:9 landscape medical learning card.',
     'This is for Capsule, a quick-scan educational product that turns notes into visual understanding.',
     `Topic: ${text}`,
     `Category: ${category || 'General medicine'}`,
-    'Follow these image requirements:',
-    '- illustrative first, not text-heavy',
-    '- quick scan comprehension within a few seconds',
-    '- use concise labels only when they improve understanding',
-    '- premium editorial medical infographic style',
-    '- clear hierarchy, low clutter, strong spacing',
-    '- use the best explanatory structure for the concept rather than forcing a template',
-    '- preserve medical accuracy',
-    '- 16:9 landscape composition',
-    '- no prompt artifact text, no provenance text, no unrelated diseases or mechanisms',
-    '',
-    'Capsule guidance:',
-    agentGuidance,
-  ].join('\n')
+    'Requirements: illustrative first, minimal text, quick scan, premium editorial medical infographic, clear hierarchy, low clutter, preserve medical accuracy, 16:9 landscape, no unrelated mechanisms or prompt artifact text.',
+    `Capsule guidance: ${agentGuidance}`,
+  ]
+
+  let prompt = promptSections.join('\n')
+
+  if (prompt.length > 3900) {
+    const overflow = prompt.length - 3900
+    const shortenedText = text.slice(0, Math.max(80, text.length - overflow - 24)).trim()
+    prompt = [
+      'Create a polished 16:9 landscape medical learning card.',
+      `Topic: ${shortenedText}`,
+      `Category: ${category || 'General medicine'}`,
+      'Requirements: illustrative first, minimal text, quick scan, premium editorial medical infographic, low clutter, preserve medical accuracy, 16:9 landscape.',
+      `Capsule guidance: ${agentGuidance}`,
+    ].join('\n')
+  }
 
   const response = await openai.images.generate({
     model: 'dall-e-3',

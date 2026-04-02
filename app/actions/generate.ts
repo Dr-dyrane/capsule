@@ -91,31 +91,45 @@ export async function generateSessionCards(sessionId: string) {
 
   const typedPoints = (points ?? []) as PointRecord[]
 
-  for (const point of typedPoints) {
-    const { data: existingCard } = await supabase
+  try {
+    for (const point of typedPoints) {
+      const { data: existingCard } = await supabase
+        .from('cards')
+        .select('id')
+        .eq('point_id', point.id)
+        .maybeSingle()
+
+      if (existingCard) continue
+
+      await generateCard(point.id)
+    }
+
+    const { count } = await supabase
       .from('cards')
-      .select('id')
-      .eq('point_id', point.id)
-      .maybeSingle()
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+      .eq('status', 'complete')
 
-    if (existingCard) continue
+    await supabase
+      .from('sessions')
+      .update({
+        status: 'complete',
+        card_count: count ?? 0,
+      })
+      .eq('id', sessionId)
 
-    await generateCard(point.id)
+    return { success: true, count: count ?? 0 }
+  } catch (error) {
+    console.error(error)
+    await supabase
+      .from('sessions')
+      .update({ status: 'error' })
+      .eq('id', sessionId)
+
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : 'Generation failed',
+    }
   }
-
-  const { count } = await supabase
-    .from('cards')
-    .select('*', { count: 'exact', head: true })
-    .eq('session_id', sessionId)
-    .eq('status', 'complete')
-
-  await supabase
-    .from('sessions')
-    .update({
-      status: 'complete',
-      card_count: count ?? 0,
-    })
-    .eq('id', sessionId)
-
-  return { success: true, count: count ?? 0 }
 }

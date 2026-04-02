@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { uploadNote } from '@/app/actions/upload'
 import { Camera, CircleAlert, Loader2, ScanLine, Upload } from 'lucide-react'
+
+import { uploadNote } from '@/app/actions/upload'
 
 import shellStyles from '../AppScreen.module.css'
 import styles from './ScanPage.module.css'
@@ -13,8 +14,8 @@ export default function ScanPage() {
   const [uploadError, setUploadError] = useState<string | null>(null)
   const router = useRouter()
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
+  async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
     if (!file) return
 
     setIsUploading(true)
@@ -39,10 +40,8 @@ export default function ScanPage() {
           <ScanLine size={14} aria-hidden="true" />
           <span>Capture</span>
         </div>
-        <h1 className={shellStyles.title}>Scan a page into a clean card flow.</h1>
-        <p className={shellStyles.copy}>
-          One note in. Structured points and quick-scan cards out.
-        </p>
+        <h1 className={shellStyles.title}>Scan one page into cards.</h1>
+        <p className={shellStyles.copy}>One note in. Clean points out.</p>
       </header>
 
       {uploadError ? (
@@ -70,10 +69,10 @@ export default function ScanPage() {
           </div>
           <div className={styles.body}>
             <p className={styles.title}>Take photo</p>
-            <p className={styles.copy}>Use your camera for a fast one-page capture.</p>
+            <p className={styles.copy}>Fastest way to start.</p>
             <div className={styles.meta}>
-              <span className={styles.metaChip}>One sheet at a time</span>
-              <span className={styles.metaChip}>Best on good light</span>
+              <span className={styles.metaChip}>One page</span>
+              <span className={styles.metaChip}>Good light</span>
             </div>
           </div>
         </label>
@@ -94,28 +93,26 @@ export default function ScanPage() {
           </div>
           <div className={styles.body}>
             <p className={styles.title}>Upload file</p>
-            <p className={styles.copy}>Choose an image you already captured and keep moving.</p>
+            <p className={styles.copy}>Use a photo you already have.</p>
             <div className={styles.meta}>
-              <span className={styles.metaChip}>Photos or screenshots</span>
-              <span className={styles.metaChip}>Works with notes pages</span>
+              <span className={styles.metaChip}>Photos</span>
+              <span className={styles.metaChip}>Screenshots</span>
             </div>
           </div>
         </label>
       </div>
 
-      <div className={styles.supportPanel}>
-        Clean single-page photos work best. Keep the page flat, bright, and easy to crop at a glance.
-      </div>
+      <div className={styles.supportPanel}>Flat page. Good light. Tight crop.</div>
 
-      {isUploading && (
+      {isUploading ? (
         <div className={styles.uploadOverlay}>
           <div className={styles.uploadPanel}>
             <Loader2 className={styles.spinner} size={42} />
             <p className={styles.uploadTitle}>Uploading note</p>
-            <p className={styles.uploadCopy}>We’re starting the extraction flow now.</p>
+            <p className={styles.uploadCopy}>Starting extraction.</p>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

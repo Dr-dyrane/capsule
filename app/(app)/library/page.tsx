@@ -44,17 +44,17 @@ export default async function LibraryPage() {
           <Archive size={14} aria-hidden="true" />
           <span>Library</span>
         </div>
-        <h1 className={styles.title}>Sessions, captured in order.</h1>
-        <p className={styles.copy}>Return to any note session and pick the flow back up instantly.</p>
+        <h1 className={styles.title}>Past sessions.</h1>
+        <p className={styles.copy}>Open any capture.</p>
       </header>
 
       {Object.keys(groups).length === 0 ? (
         <div className={styles.panel}>
           <div className={`${styles.panelInner} ${styles.emptyState}`}>
             <p className={styles.emptyTitle}>Your library is empty</p>
-            <p className={styles.emptyCopy}>Your scanned sessions will collect here as soon as you start.</p>
+            <p className={styles.emptyCopy}>Sessions will appear here.</p>
             <Link href="/scan" className={styles.accentLink}>
-              Scan your first note
+              Scan note
             </Link>
           </div>
         </div>

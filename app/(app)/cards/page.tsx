@@ -33,17 +33,17 @@ export default async function CardsPage() {
           <Images size={14} aria-hidden="true" />
           <span>Cards</span>
         </div>
-        <h1 className={styles.title}>Your generated card set.</h1>
-        <p className={styles.copy}>Every finished visual explanation lives here for fast review.</p>
+        <h1 className={styles.title}>Finished cards.</h1>
+        <p className={styles.copy}>Ready to review.</p>
       </header>
 
       {!cards || cards.length === 0 ? (
         <div className={styles.panel}>
           <div className={`${styles.panelInner} ${styles.emptyState}`}>
             <p className={styles.emptyTitle}>No cards yet</p>
-            <p className={styles.emptyCopy}>Scan your first note to start building the set.</p>
+            <p className={styles.emptyCopy}>Scan a note to start.</p>
             <Link href="/scan" className={styles.accentLink}>
-              Go to scan
+              Scan note
             </Link>
           </div>
         </div>

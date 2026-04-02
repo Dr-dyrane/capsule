@@ -1,0 +1,134 @@
+.backLink {
+  width: fit-content;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple);
+}
+
+.backLink:hover,
+.backLink:focus-visible {
+  color: var(--text-primary);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-md);
+}
+
+.backLink:active {
+  transform: scale(0.98);
+}
+
+.layout {
+  display: grid;
+  gap: 20px;
+}
+
+.imagePanel,
+.infoPanel {
+  display: grid;
+  gap: 18px;
+}
+
+.imageWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-lg);
+}
+
+.image {
+  object-fit: cover;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  text-align: center;
+}
+
+.caption {
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+}
+
+.label {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pointText {
+  color: var(--text-primary);
+  font-size: 17px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.note {
+  padding: 16px 18px;
+  border-radius: 20px;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+    align-items: start;
+  }
+
+  .imagePanel,
+  .infoPanel {
+    gap: 20px;
+  }
+}

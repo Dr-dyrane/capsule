@@ -1,17 +1,25 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import Image from 'next/image'
-import { ChevronLeft, Share, MoreHorizontal } from 'lucide-react'
-import { createSignedObjectUrlSafe } from '@/lib/storage/signed-urls'
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { ChevronLeft, Images, Sparkles } from 'lucide-react'
 
-export default async function CardDetailPage({ params }: { params: { id: string } }) {
-  const id = (await params).id
+import { createSignedObjectUrlSafe } from '@/lib/storage/signed-urls'
+import { createClient } from '@/lib/supabase/server'
+
+import shellStyles from '../../AppScreen.module.css'
+import styles from './CardDetailPage.module.css'
+
+type CardDetailPageProps = {
+  params: Promise<{ id: string }>
+}
+
+export default async function CardDetailPage({ params }: CardDetailPageProps) {
+  const { id } = await params
   const supabase = await createClient()
 
   const { data: card, error } = await supabase
     .from('cards')
-    .select('*, points(text, category)')
+    .select('id, title, image_url, created_at, points(text, category)')
     .eq('id', id)
     .single()
 
@@ -20,48 +28,75 @@ export default async function CardDetailPage({ params }: { params: { id: string 
   }
 
   const signedUrl = await createSignedObjectUrlSafe('cards', card.image_url)
+  const point = Array.isArray(card.points) ? card.points[0] : card.points
+  const category = point?.category ?? 'Learning card'
+  const createdAt = card.created_at
+    ? new Date(card.created_at).toLocaleDateString(undefined, {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : null
 
   return (
-    <div className="detail-page animate-fade-in">
-      <nav className="detail-nav glass">
-        <Link href="/cards" className="nav-btn">
-          <ChevronLeft size={24} />
+    <div className={shellStyles.screen}>
+      <header className={shellStyles.header}>
+        <Link href="/cards" className={styles.backLink}>
+          <ChevronLeft size={16} aria-hidden="true" />
+          <span>Back to cards</span>
         </Link>
-        <div className="nav-actions">
-          <button className="nav-btn"><Share size={20} /></button>
-          <button className="nav-btn"><MoreHorizontal size={20} /></button>
-        </div>
-      </nav>
 
-      <div className="card-container">
-        <div className="card-main surface-1 glass animate-slide-up">
-          <div className="card-image-wrap">
-            {signedUrl ? (
-              <Image src={signedUrl} alt={card.title} fill unoptimized sizes="100vw" />
-            ) : (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'grid',
-                  placeItems: 'center',
-                  color: 'var(--text-secondary)',
-                  background: 'var(--surface-2)',
-                }}
-              >
-                Preview unavailable
-              </div>
-            )}
-          </div>
-          <div className="card-content">
-            <div className="card-meta">
-              <span className="category-chip">{card.points.category}</span>
-              <span className="date-hint">{new Date(card.created_at).toLocaleDateString()}</span>
-            </div>
-            <h1 className="title-1">{card.title}</h1>
-            <p className="body point-text">{card.points.text}</p>
-          </div>
+        <div className={shellStyles.eyebrow}>
+          <Images size={14} aria-hidden="true" />
+          <span>Card detail</span>
         </div>
+
+        <h1 className={shellStyles.title}>{card.title || 'Untitled card'}</h1>
+        <p className={shellStyles.copy}>One visual, one teaching point, no extra chrome.</p>
+      </header>
+
+      <div className={styles.layout}>
+        <section className={shellStyles.panel}>
+          <div className={`${shellStyles.panelInner} ${styles.imagePanel}`}>
+            <div className={styles.imageWrap}>
+              {signedUrl ? (
+                <Image
+                  src={signedUrl}
+                  alt={card.title || 'Generated card'}
+                  fill
+                  unoptimized
+                  sizes="(max-width: 1023px) 100vw, 60vw"
+                  className={styles.image}
+                />
+              ) : (
+                <div className={styles.placeholder}>Preview unavailable</div>
+              )}
+            </div>
+
+            <p className={styles.caption}>Generated 16:9 quick-scan card.</p>
+          </div>
+        </section>
+
+        <section className={shellStyles.panel}>
+          <div className={`${shellStyles.panelInner} ${styles.infoPanel}`}>
+            <div className={styles.metaRow}>
+              <div className={styles.chip}>
+                <Sparkles size={14} aria-hidden="true" />
+                <span>{category}</span>
+              </div>
+              {createdAt ? <div className={styles.chip}>{createdAt}</div> : null}
+            </div>
+
+            <div className={styles.section}>
+              <p className={styles.label}>Source point</p>
+              <p className={styles.pointText}>{point?.text ?? 'Original point unavailable.'}</p>
+            </div>
+
+            <div className={styles.note}>
+              Keep this card tight: scan the image first, then use the source point only if you need the deeper wording.
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   )

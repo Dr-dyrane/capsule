@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Image from 'next/image'
 import { Sparkles } from 'lucide-react'
 
-import { processNote } from '@/app/actions/process'
 import { getSignedCardUrls } from '@/app/actions/assets'
 import { generateSessionCards } from '@/app/actions/generate'
+import { processNote, restartSession } from '@/app/actions/process'
 import { createClient } from '@/lib/supabase/client'
 import type { CardRecord, PointRecord, SessionRecord, SessionStatus } from '@/lib/types'
 
@@ -21,6 +21,7 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
   const [cards, setCards] = useState<CardRecord[]>(EMPTY_CARDS)
   const [cardUrls, setCardUrls] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<SessionStatus | 'loading'>('loading')
+  const [isRetrying, startRetryTransition] = useTransition()
   const supabase = useMemo(() => createClient(), [])
   const processingStartedRef = useRef(false)
   const generationStartedRef = useRef(false)
@@ -107,16 +108,40 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
   }, [sessionId, supabase])
 
   useEffect(() => {
+    if (status !== 'processing') {
+      processingStartedRef.current = false
+    }
+  }, [status])
+
+  useEffect(() => {
     if (status === 'processing' && !processingStartedRef.current) {
       processingStartedRef.current = true
-      void processNote(sessionId).catch(() => setStatus('error'))
+      void processNote(sessionId)
+        .then((result) => {
+          if (!result.success) {
+            setStatus('error')
+          }
+        })
+        .catch(() => setStatus('error'))
     }
   }, [sessionId, status])
 
   useEffect(() => {
+    if (status !== 'generating') {
+      generationStartedRef.current = false
+    }
+  }, [status])
+
+  useEffect(() => {
     if (status === 'generating' && !generationStartedRef.current) {
       generationStartedRef.current = true
-      void generateSessionCards(sessionId).catch(() => setStatus('error'))
+      void generateSessionCards(sessionId)
+        .then((result) => {
+          if (!result.success) {
+            setStatus('error')
+          }
+        })
+        .catch(() => setStatus('error'))
     }
   }, [sessionId, status])
 
@@ -156,8 +181,34 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
       : status === 'processing'
         ? 'We are isolating the teachable points before image generation starts.'
         : status === 'error'
-          ? 'Try uploading the page again or return to scan for a fresh pass.'
+          ? 'Try this session again.'
           : 'Capsule is turning each extracted point into a quick-scan learning card.'
+
+  function handleRetry() {
+    startRetryTransition(() => {
+      void restartSession(sessionId)
+        .then(() => {
+          setPoints(EMPTY_POINTS)
+          setCards(EMPTY_CARDS)
+          setCardUrls({})
+          setSession((current) =>
+            current
+              ? {
+                  ...current,
+                  status: 'processing',
+                  point_count: 0,
+                  card_count: 0,
+                }
+              : current,
+          )
+          setStatus('processing')
+        })
+        .catch((error) => {
+          console.error(error)
+          setStatus('error')
+        })
+    })
+  }
 
   return (
     <div className={styles.root}>
@@ -178,6 +229,13 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
           </div>
 
           <p className={styles.statusCopy}>{copy}</p>
+          {status === 'error' ? (
+            <div className={styles.statusActions}>
+              <button type="button" className={styles.retryButton} onClick={handleRetry} disabled={isRetrying}>
+                {isRetrying ? 'Retrying...' : 'Try again'}
+              </button>
+            </div>
+          ) : null}
           <div className={styles.progressRail}>
             <div className={styles.progressFill} style={{ width: `${progressWidth}%` }} />
           </div>
@@ -199,7 +257,7 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
                   <p className={styles.pointText}>{point.text}</p>
                 </div>
               ))}
-              {status === 'processing' && <div className={styles.pointSkeleton} />}
+              {status === 'processing' ? <div className={styles.pointSkeleton} /> : null}
             </div>
           </div>
         </section>
@@ -233,11 +291,11 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
                   </div>
                 )
               })}
-              {status === 'generating' && cards.length < totalPoints && (
+              {status === 'generating' && cards.length < totalPoints ? (
                 <div className={styles.cardItem}>
                   <div className={styles.cardSkeleton} />
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </section>
