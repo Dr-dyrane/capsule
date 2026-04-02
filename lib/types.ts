@@ -37,4 +37,5 @@ export interface CardRecord {
   status: 'queued' | 'generating' | 'complete' | 'error'
   card_order?: number | null
   created_at?: string
+  points?: PointRecord | PointRecord[]
 }

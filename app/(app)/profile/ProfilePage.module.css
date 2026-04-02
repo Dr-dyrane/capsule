@@ -1,85 +1,186 @@
 .card {
   display: grid;
-  gap: 24px;
-  padding: 24px;
-  border-radius: 28px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 92%, transparent), var(--surface-1));
-  box-shadow: var(--shadow-xl);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
+  gap: 32px;
+  padding: 32px;
+  border-radius: 32px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+  box-shadow: var(--shadow-2xl);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
 }
 
 .header {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
 }
 
 .avatar {
-  width: 72px;
-  height: 72px;
+  width: 88px;
+  height: 88px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 22px;
-  color: var(--text-on-accent);
-  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
-  box-shadow: var(--shadow-md);
+  border-radius: 28px;
+  color: white;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  box-shadow: 0 8px 32px rgba(var(--accent-rgb), 0.25);
+  font-size: 32px;
+  font-weight: 700;
 }
 
 .userInfo {
   min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .name {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--text-primary);
 }
 
 .email {
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.section {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  padding-left: 4px;
+}
+
+.settingGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.settingItem {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 200ms var(--ease-apple);
+}
+
+.settingItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.settingLabel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   font-size: 15px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.settingLabel svg {
+  color: var(--text-tertiary);
+}
+
+.toggleGroup {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.toggleBtn {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  transition: all 180ms var(--ease-apple);
+}
+
+.activeToggle {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.countText {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.select {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .actions {
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .actionItem {
   width: 100%;
-  min-height: 52px;
+  min-height: 56px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 18px;
+  gap: 14px;
+  padding: 0 20px;
+  border-radius: 20px;
   color: var(--text-primary);
-  background: var(--surface-2);
-  box-shadow: var(--shadow-sm);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 15px;
   font-weight: 600;
-  transition:
-    transform 150ms var(--ease-apple),
-    background-color 150ms var(--ease-apple),
-    box-shadow 150ms var(--ease-apple);
+  transition: all 200ms var(--ease-apple);
 }
 
-.actionItem:hover,
-.actionItem:focus-visible {
+.actionItem:hover {
+  background: rgba(255, 255, 255, 0.08);
   transform: translateY(-1px);
-  background: var(--surface-3);
-  box-shadow: var(--shadow-md);
-}
-
-.actionItem:active {
-  transform: scale(0.98);
 }
 
 .destructive {
   color: var(--destructive);
-  background: var(--destructive-surface);
+  background: rgba(var(--destructive-rgb), 0.08);
+}
+
+.destructive:hover {
+  background: rgba(var(--destructive-rgb), 0.12);
 }

@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Sparkles, ArrowUp, RefreshCcw, CheckCircle2 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowUp, CheckCircle2, Sparkles } from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
 
 import { getSignedCardUrls } from '@/app/actions/assets'
-import { generateCard } from '@/app/actions/generate'
+import { ensureCardPlaceholders, generateCard } from '@/app/actions/generate'
 import { processNote, restartSession } from '@/app/actions/process'
 import { createClient } from '@/lib/supabase/client'
 import type { CardRecord, PointRecord, SessionRecord, SessionStatus } from '@/lib/types'
@@ -17,6 +17,27 @@ import styles from './ProcessingView.module.css'
 const EMPTY_POINTS: PointRecord[] = []
 const EMPTY_CARDS: CardRecord[] = []
 
+function getCardStatusLabel(cardStatus: CardRecord['status']) {
+  if (cardStatus === 'complete') return 'Ready'
+  if (cardStatus === 'generating') return 'Generating'
+  if (cardStatus === 'error') return 'Error'
+  return 'Queued'
+}
+
+function getFallbackCardTitle(text: string) {
+  const title = text.split(':')[0]?.trim()
+  return title || 'Learning card'
+}
+
+function getPointPreview(text: string) {
+  const compact = text.replace(/\s+/g, ' ').trim()
+  if (compact.length <= 120) {
+    return compact
+  }
+
+  return `${compact.slice(0, 117).trimEnd()}...`
+}
+
 export default function ProcessingView({ sessionId }: { sessionId: string }) {
   const [session, setSession] = useState<SessionRecord | null>(null)
   const [points, setPoints] = useState<PointRecord[]>(EMPTY_POINTS)
@@ -24,63 +45,87 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
   const [cardUrls, setCardUrls] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<SessionStatus | 'loading'>('loading')
   const [isRetrying, startRetryTransition] = useTransition()
-  
-  // Queue Management
   const [queuedPointIds, setQueuedPointIds] = useState<string[]>([])
   const [activePointId, setActivePointId] = useState<string | null>(null)
+
   const activePointIdRef = useRef<string | null>(null)
+  const placeholderSyncRef = useRef(false)
+  const processingStartedRef = useRef(false)
 
   const supabase = useMemo(() => createClient(), [])
-  const processingStartedRef = useRef(false)
   const router = useRouter()
 
-  // 1. Bootstrap & Subscriptions
   useEffect(() => {
     async function bootstrap() {
-      const [{ data: initialSession }, { data: initialPoints }, { data: initialCards }] =
-        await Promise.all([
-          supabase.from('sessions').select('*').eq('id', sessionId).single(),
-          supabase.from('points').select('*').eq('session_id', sessionId).order('sort_order', { ascending: true }),
-          supabase.from('cards').select('*').eq('session_id', sessionId).order('card_order', { ascending: true }),
-        ])
+      const [{ data: initialSession }, { data: initialPoints }, { data: initialCards }] = await Promise.all([
+        supabase.from('sessions').select('*').eq('id', sessionId).single(),
+        supabase.from('points').select('*').eq('session_id', sessionId).order('sort_order', { ascending: true }),
+        supabase.from('cards').select('*').eq('session_id', sessionId).order('card_order', { ascending: true }),
+      ])
 
       if (initialSession) {
         setSession(initialSession as SessionRecord)
         setStatus((initialSession.status as SessionStatus) || 'loading')
       }
-      if (initialPoints) setPoints(initialPoints as PointRecord[])
-      if (initialCards) setCards(initialCards as CardRecord[])
+
+      if (initialPoints) {
+        setPoints(initialPoints as PointRecord[])
+      }
+
+      if (initialCards) {
+        setCards(initialCards as CardRecord[])
+      }
     }
 
     void bootstrap()
 
     const pointsSub = supabase
       .channel(`points:${sessionId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'points', filter: `session_id=eq.${sessionId}` }, (p) => {
-        setPoints((curr) => [...curr, p.new as PointRecord].sort((a, b) => a.sort_order - b.sort_order))
-      })
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'points', filter: `session_id=eq.${sessionId}` },
+        (payload) => {
+          setPoints((current) =>
+            [...current, payload.new as PointRecord].sort((a, b) => a.sort_order - b.sort_order),
+          )
+        },
+      )
       .subscribe()
 
     const cardsSub = supabase
       .channel(`cards:${sessionId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` }, (p) => {
-        setCards((curr) => [...curr, p.new as CardRecord].sort((a, b) => (a.card_order ?? 0) - (b.card_order ?? 0)))
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` }, (p) => {
-        setCards((curr) =>
-          curr
-            .map((c) => (c.id === p.new.id ? (p.new as CardRecord) : c))
-            .sort((a, b) => (a.card_order ?? 0) - (b.card_order ?? 0)),
-        )
-      })
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` },
+        (payload) => {
+          setCards((current) =>
+            [...current, payload.new as CardRecord].sort((a, b) => (a.card_order ?? 0) - (b.card_order ?? 0)),
+          )
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` },
+        (payload) => {
+          setCards((current) =>
+            current
+              .map((card) => (card.id === payload.new.id ? (payload.new as CardRecord) : card))
+              .sort((a, b) => (a.card_order ?? 0) - (b.card_order ?? 0)),
+          )
+        },
+      )
       .subscribe()
 
     const sessionSub = supabase
       .channel(`session:${sessionId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` }, (p) => {
-        setStatus(p.new.status as SessionStatus)
-        setSession(p.new as SessionRecord)
-      })
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` },
+        (payload) => {
+          setStatus(payload.new.status as SessionStatus)
+          setSession(payload.new as SessionRecord)
+        },
+      )
       .subscribe()
 
     return () => {
@@ -90,74 +135,112 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
     }
   }, [sessionId, supabase])
 
-  // 2. OCR Processing (Phased Logic)
   useEffect(() => {
     if (status === 'processing' && !processingStartedRef.current) {
       processingStartedRef.current = true
-      void processNote(sessionId).then((r) => { if (!r.success) setStatus('error') }).catch(() => setStatus('error'))
+      void processNote(sessionId)
+        .then((result) => {
+          if (!result.success) {
+            setStatus('error')
+          }
+        })
+        .catch(() => setStatus('error'))
     }
   }, [sessionId, status])
 
-  // 3. Queue Orchestrator (Phase 3 Core)
   useEffect(() => {
-    if (status !== 'generating') return
+    if (status === 'loading' || status === 'processing' || points.length === 0) {
+      return
+    }
 
-    setQueuedPointIds((prev) => {
+    const hasMissingCards = points.some((point) => !cards.some((card) => card.point_id === point.id))
+    if (!hasMissingCards || placeholderSyncRef.current) {
+      return
+    }
+
+    placeholderSyncRef.current = true
+    void ensureCardPlaceholders(sessionId)
+      .catch((error) => {
+        console.error('Placeholder sync failed:', error)
+      })
+      .finally(() => {
+        placeholderSyncRef.current = false
+      })
+  }, [cards, points, sessionId, status])
+
+  useEffect(() => {
+    if (status !== 'generating') {
+      return
+    }
+
+    setQueuedPointIds((current) => {
       const missingPointIds = points
         .filter((point) => {
           const card = cards.find((candidate) => candidate.point_id === point.id)
           return !card || card.status === 'queued'
         })
-        .map(p => p.id)
-      
-      const toAdd = missingPointIds.filter(id => !prev.includes(id) && activePointIdRef.current !== id)
-      if (toAdd.length > 0) return [...prev, ...toAdd]
-      return prev
+        .map((point) => point.id)
+
+      const next = missingPointIds.filter((id) => !current.includes(id) && activePointIdRef.current !== id)
+      return next.length > 0 ? [...current, ...next] : current
     })
-  }, [points, cards, status])
+  }, [cards, points, status])
 
   useEffect(() => {
-    if (status !== 'generating' || activePointId || queuedPointIds.length === 0) return
+    if (status !== 'generating' || activePointId || queuedPointIds.length === 0) {
+      return
+    }
 
     const [nextId, ...rest] = queuedPointIds
+
     queueMicrotask(() => {
       setActivePointId(nextId)
       activePointIdRef.current = nextId
       setQueuedPointIds(rest)
 
       void generateCard(nextId)
-        .catch(err => console.error('Generation failure:', err))
+        .catch((error) => {
+          console.error('Generation failure:', error)
+        })
         .finally(() => {
           setActivePointId(null)
           activePointIdRef.current = null
         })
     })
-  }, [status, activePointId, queuedPointIds])
+  }, [activePointId, queuedPointIds, status])
 
-  // 4. Asset URL Handling
   useEffect(() => {
     const freshPaths = cards
-      .filter((c) => c.status === 'complete' && !cardUrls[c.image_url])
-      .map((c) => c.image_url)
+      .filter((card) => card.status === 'complete' && !cardUrls[card.image_url])
+      .map((card) => card.image_url)
 
-    if (freshPaths.length > 0) {
-      void getSignedCardUrls(freshPaths).then((urls) => {
-        setCardUrls((curr) => ({ ...curr, ...urls }))
-      }).catch(console.error)
+    if (freshPaths.length === 0) {
+      return
     }
-  }, [cards, cardUrls])
 
-  // 5. Actions
-  const handlePromote = useCallback((id: string) => {
-    if (activePointId === id) return
-    setQueuedPointIds(prev => [id, ...prev.filter(x => x !== id)])
-  }, [activePointId])
+    void getSignedCardUrls(freshPaths)
+      .then((urls) => {
+        setCardUrls((current) => ({ ...current, ...urls }))
+      })
+      .catch(console.error)
+  }, [cardUrls, cards])
+
+  const handlePromote = useCallback(
+    (id: string) => {
+      if (activePointId === id) {
+        return
+      }
+
+      setQueuedPointIds((current) => [id, ...current.filter((entry) => entry !== id)])
+    },
+    [activePointId],
+  )
 
   const handleRefine = useCallback(async (pointId: string, cardId: string) => {
     try {
       await generateCard(pointId, cardId)
-    } catch (err) {
-      console.error('Refinement failed:', err)
+    } catch (error) {
+      console.error('Refinement failed:', error)
     }
   }, [])
 
@@ -167,177 +250,265 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
         setPoints(EMPTY_POINTS)
         setCards(EMPTY_CARDS)
         setCardUrls({})
+        setQueuedPointIds([])
+        setActivePointId(null)
+        activePointIdRef.current = null
         setStatus('processing')
         processingStartedRef.current = false
       })
     })
   }
 
-  // Visual Helpers
-  const completeCards = cards.filter((c) => c.status === 'complete')
+  const completeCards = cards.filter((card) => card.status === 'complete')
+  const generatingCards = cards.filter((card) => card.status === 'generating')
+  const queuedCards = cards.filter((card) => card.status === 'queued')
+  const erroredCards = cards.filter((card) => card.status === 'error')
   const totalPoints = points.length || session?.point_count || 0
   const progressWidth = totalPoints > 0 ? (completeCards.length / totalPoints) * 100 : 0
 
-  function getCardStatusLabel(cardStatus: CardRecord['status']) {
-    if (cardStatus === 'complete') return 'Ready'
-    if (cardStatus === 'generating') return 'Generating'
-    if (cardStatus === 'error') return 'Error'
-    return 'Queued'
-  }
+  const statusTitle =
+    status === 'complete'
+      ? 'Cards ready.'
+      : status === 'processing'
+        ? 'Extracting points.'
+        : status === 'error'
+          ? 'Generation paused.'
+          : status === 'loading'
+            ? 'Loading session.'
+            : 'Building cards.'
+
+  const statusCopy =
+    status === 'complete'
+      ? 'Open any card below.'
+      : status === 'processing'
+        ? 'The point list comes first, then the card queue fills in.'
+        : status === 'error'
+          ? 'Some cards can still be reviewed. Retry the session or restart individual cards below.'
+          : 'Cards appear as soon as they enter the queue. You do not need to wait for the whole batch.'
+
+  const displayCards =
+    cards.length > 0
+      ? cards
+      : points.map((point, index) => ({
+          id: `shadow-${point.id}`,
+          point_id: point.id,
+          session_id: sessionId,
+          image_url: '',
+          title: getFallbackCardTitle(point.text),
+          status: 'queued' as const,
+          card_order: index,
+        }))
 
   return (
     <div className={styles.root}>
-      {/* Absolute Status Bar (Rule 6: Calm Feedback) */}
       <section className={styles.statusPanel}>
         <div className={styles.statusInner}>
           <div className={styles.statusMeta}>
-            <div>
+            <div className={styles.statusCopyBlock}>
               <div className={styles.statusEyebrow}>
-                <Sparkles size={14} />
-                <span>{status.toUpperCase()}</span>
+                <Sparkles size={14} aria-hidden="true" />
+                <span>{status === 'loading' ? 'Loading' : status}</span>
               </div>
-              <h2 className={styles.statusTitle}>
-                {status === 'complete' ? 'Collection ready.' : status === 'error' ? 'Session stalled.' : 'Building your visual archive.'}
-              </h2>
+              <h2 className={styles.statusTitle}>{statusTitle}</h2>
+              <p className={styles.statusCopy}>{statusCopy}</p>
             </div>
-            <div className={styles.countText}>{completeCards.length} / {totalPoints || '?'}</div>
+
+            <div className={styles.statusCount}>{completeCards.length} / {totalPoints || '?'}</div>
           </div>
+
+          <div className={styles.statusLedger}>
+            <div className={styles.statusChip}>Ready {completeCards.length}</div>
+            <div className={styles.statusChip}>Generating {generatingCards.length}</div>
+            <div className={styles.statusChip}>Queued {queuedCards.length}</div>
+            {erroredCards.length > 0 ? <div className={styles.statusChip}>Errors {erroredCards.length}</div> : null}
+          </div>
+
+          {status === 'error' ? (
+            <div className={styles.statusActions}>
+              <button type="button" className={styles.primaryAction} onClick={handleRetry} disabled={isRetrying}>
+                {isRetrying ? 'Restarting...' : 'Restart session'}
+              </button>
+            </div>
+          ) : null}
+
           <div className={styles.progressRail}>
-            <motion.div 
-              className={styles.progressFill} 
+            <motion.div
+              className={styles.progressFill}
               initial={{ width: 0 }}
               animate={{ width: `${progressWidth}%` }}
-              transition={{ type: 'spring', damping: 20, stiffness: 60 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 90 }}
             />
           </div>
         </div>
       </section>
 
       <div className={styles.content}>
-        {/* Points Sidebar (Rule 16: Reveal on Intent) */}
-        <section className={styles.panel}>
+        <section className={`${styles.panel} ${styles.cardsPanel}`}>
           <div className={styles.panelInner}>
-            <h3 className={styles.panelTitle}>Points Matrix</h3>
-            <div className={styles.pointList}>
-              <AnimatePresence mode="popLayout">
-                {points.map((point) => {
-                  const isActive = activePointId === point.id
-                  const isDone = cards.some(c => c.point_id === point.id && c.status === 'complete')
-
-                  return (
-                    <motion.div 
-                      key={point.id} 
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`${styles.pointItem} ${isActive ? styles.activePoint : ''} ${isDone ? styles.donePoint : ''}`}
-                    >
-                      <div className={styles.pointMain}>
-                        <CheckCircle2 size={12} className={styles.doneIcon} />
-                        <p className={styles.pointText}>{point.text}</p>
-                      </div>
-                      {!isDone && !isActive && (
-                        <button 
-                          className={styles.promoteBtn} 
-                          onClick={() => handlePromote(point.id)}
-                          title="Promote to front"
-                        >
-                          <ArrowUp size={14} />
-                        </button>
-                      )}
-                    </motion.div>
-                  )
-                })}
-              </AnimatePresence>
-              {status === 'processing' && <div className={styles.pointSkeleton} />}
+            <div className={styles.panelHeader}>
+              <div>
+                <h3 className={styles.panelTitle}>Cards</h3>
+                <p className={styles.panelCopy}>Each card advances on its own. Open it the moment it appears.</p>
+              </div>
+              <div className={styles.panelCount}>{displayCards.length}</div>
             </div>
+
+            {displayCards.length === 0 ? (
+              <div className={styles.cardsEmpty}>
+                <p className={styles.cardsEmptyTitle}>No cards yet</p>
+                <p className={styles.cardsEmptyCopy}>As soon as the queue starts, each card appears here on its own.</p>
+              </div>
+            ) : (
+              <div className={styles.cardGrid}>
+                <AnimatePresence mode="popLayout">
+                  {displayCards.map((card) => {
+                    const signedUrl = card.image_url ? cardUrls[card.image_url] : undefined
+                    const statusLabel = getCardStatusLabel(card.status)
+                    const isPersisted = !card.id.startsWith('shadow-')
+                    const showRetry = card.status === 'error' && isPersisted
+
+                    return (
+                      <motion.article
+                        key={card.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.97 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={styles.cardItem}
+                        role={isPersisted ? 'button' : undefined}
+                        tabIndex={isPersisted ? 0 : -1}
+                        onClick={isPersisted ? () => router.push(`/cards/${card.id}`) : undefined}
+                        onKeyDown={
+                          isPersisted
+                            ? (event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                  event.preventDefault()
+                                  router.push(`/cards/${card.id}`)
+                                }
+                              }
+                            : undefined
+                        }
+                      >
+                        <div className={styles.cardVisual}>
+                          <div className={styles.cardStatus}>{statusLabel}</div>
+
+                          {card.status === 'complete' && signedUrl ? (
+                            <Image
+                              src={signedUrl}
+                              alt={card.title || 'Generated card'}
+                              fill
+                              unoptimized
+                              sizes="(max-width: 767px) 100vw, (max-width: 1439px) 50vw, 33vw"
+                              className={styles.cardImage}
+                            />
+                          ) : (
+                            <div className={`${styles.cardPlaceholder} ${card.status === 'generating' ? styles.shimmering : ''}`}>
+                              <span className={styles.cardPlaceholderText}>
+                                {card.status === 'queued'
+                                  ? 'Waiting in queue'
+                                  : card.status === 'generating'
+                                    ? 'Rendering image'
+                                    : card.status === 'error'
+                                      ? 'Stopped before finish'
+                                      : 'Preparing card'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className={styles.cardMeta}>
+                          <div className={styles.cardTextBlock}>
+                            <p className={styles.cardTitle}>{card.title || 'Learning card'}</p>
+                            <p className={styles.cardHint}>
+                              {card.status === 'complete'
+                                ? 'Open card'
+                                : card.status === 'error'
+                                  ? 'Retry or open detail'
+                                  : 'Live batch state'}
+                            </p>
+                          </div>
+
+                          {showRetry ? (
+                            <button
+                              type="button"
+                              className={styles.inlineRetry}
+                              onClick={(event) => {
+                                event.preventDefault()
+                                event.stopPropagation()
+                                void handleRefine(card.point_id, card.id)
+                              }}
+                            >
+                              Retry
+                            </button>
+                          ) : null}
+                        </div>
+                      </motion.article>
+                    )
+                  })}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Cards Gallery (Phase 3 Core: The Bloom) */}
-        <section className={styles.panel}>
+        <section className={`${styles.panel} ${styles.queuePanel}`}>
           <div className={styles.panelInner}>
-            <h3 className={styles.panelTitle}>Visual Cards</h3>
-            <div className={styles.cardGrid}>
+            <div className={styles.panelHeader}>
+              <div>
+                <h3 className={styles.panelTitle}>Queue</h3>
+                <p className={styles.panelCopy}>Compact point summaries with live status.</p>
+              </div>
+              <div className={styles.panelCount}>{points.length}</div>
+            </div>
+
+            <div className={styles.pointScroll}>
               <AnimatePresence mode="popLayout">
-                {cards.map((card) => {
-                  const signedUrl = cardUrls[card.image_url]
-                  const isGenerating = card.status === 'generating'
+                {points.map((point, index) => {
+                  const card = cards.find((candidate) => candidate.point_id === point.id)
+                  const pointState = activePointId === point.id ? 'Generating' : getCardStatusLabel(card?.status ?? 'queued')
+                  const isDone = pointState === 'Ready'
+                  const canPromote = pointState === 'Queued' && status === 'generating'
 
                   return (
-                    <motion.div 
-                      key={card.id}
+                    <motion.div
+                      key={point.id}
                       layout
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className={styles.cardItem}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => router.push(`/cards/${card.id}`)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          router.push(`/cards/${card.id}`)
-                        }
-                      }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={styles.pointItem}
                     >
-                      <div className={styles.cardStatus}>{getCardStatusLabel(card.status)}</div>
-                      <div className={styles.cardVisual}>
-                        {card.status === 'complete' && signedUrl ? (
-                          <div className={styles.revealWrapper}>
-                            <Image src={signedUrl} alt={card.title || ''} fill className={styles.cardImage} unoptimized />
-                            <div className={styles.cardOverlay}>
-                              <button 
-                                className={styles.refineBtn}
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  handleRefine(card.point_id, card.id)
-                                }}
-                              >
-                                <RefreshCcw size={14} /> <span>Refine Visual</span>
-                              </button>
-                            </div>
+                      <div className={styles.pointMain}>
+                        <div className={styles.pointIndex}>{index + 1}</div>
+                        <div className={styles.pointBody}>
+                          <div className={styles.pointTopRow}>
+                            <span className={styles.pointState}>{pointState}</span>
+                            {isDone ? <CheckCircle2 size={14} className={styles.doneIcon} /> : null}
                           </div>
-                        ) : (
-                          <div className={`${styles.cardSkeleton} ${isGenerating ? styles.shimmering : ''}`}>
-                            {isGenerating && <div className={styles.glowPulse} />}
-                          </div>
-                        )}
+                          <p className={styles.pointText}>{getPointPreview(point.text)}</p>
+                        </div>
                       </div>
-                      <div className={styles.cardMeta}>
-                        <span className={styles.cardTitle}>{card.title}</span>
-                        {card.status === 'error' ? (
+
+                      {canPromote ? (
+                        <div className={styles.pointFooter}>
                           <button
                             type="button"
-                            className={styles.inlineRetry}
-                            onClick={(event) => {
-                              event.preventDefault()
-                              event.stopPropagation()
-                              void handleRefine(card.point_id, card.id)
-                            }}
+                            className={styles.promoteButton}
+                            onClick={() => handlePromote(point.id)}
                           >
-                            Retry card
+                            <ArrowUp size={14} aria-hidden="true" />
+                            <span>Move next</span>
                           </button>
-                        ) : null}
-                      </div>
+                        </div>
+                      ) : null}
                     </motion.div>
                   )
                 })}
               </AnimatePresence>
+
+              {status === 'processing' ? <div className={styles.pointSkeleton} /> : null}
             </div>
           </div>
         </section>
       </div>
-
-      {status === 'error' && (
-        <div className={styles.errorBanner}>
-          <p>Generation encountered a limitation.</p>
-          <button onClick={handleRetry} className={styles.retryBtn} disabled={isRetrying}>
-            {isRetrying ? 'Restarting...' : 'Restart Session'}
-          </button>
-        </div>
-      )}
     </div>
   )
 }

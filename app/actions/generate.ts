@@ -23,6 +23,37 @@ function buildPlaceholderCard(point: PointRecord, sessionId: string, userId: str
   }
 }
 
+export async function ensureCardPlaceholders(sessionId: string) {
+  const supabase = await createClient()
+
+  const [{ data: session, error: sessionError }, { data: points, error: pointsError }, { data: existingCards }] =
+    await Promise.all([
+      supabase.from('sessions').select('id, user_id').eq('id', sessionId).single(),
+      supabase.from('points').select('*').eq('session_id', sessionId).order('sort_order', { ascending: true }),
+      supabase.from('cards').select('id, point_id').eq('session_id', sessionId),
+    ])
+
+  if (sessionError) throw sessionError
+  if (pointsError) throw pointsError
+
+  const typedPoints = (points ?? []) as PointRecord[]
+  const existingPointIds = new Set((existingCards ?? []).map((card) => card.point_id))
+  const missingPoints = typedPoints.filter((point) => !existingPointIds.has(point.id))
+
+  if (missingPoints.length === 0) {
+    return { success: true, created: 0 }
+  }
+
+  const placeholderCards = missingPoints.map((point) => buildPlaceholderCard(point, sessionId, session.user_id))
+  const { error: insertError } = await supabase.from('cards').insert(placeholderCards)
+
+  if (insertError) throw insertError
+
+  await syncSessionState(supabase, sessionId)
+
+  return { success: true, created: placeholderCards.length }
+}
+
 async function finalizeSessionProgress(supabase: Awaited<ReturnType<typeof createClient>>, sessionId: string) {
   const { count } = await supabase
     .from('cards')
@@ -129,20 +160,20 @@ export async function generateCard(pointId: string, existingCardId?: string) {
   }
 
   try {
-    const imageUrl = await generateCardImage(
+    // Fetch User Preferences (Rule 35: Anticipate)
+    const { data: { user } } = await supabase.auth.getUser()
+    const preferences = user?.user_metadata?.preferences || {}
+
+    const { imageBase64 } = await generateCardImage(
       point.text,
       point.category,
-      point.sessions.session_context || ''
+      point.sessions.session_context || '',
+      preferences
     )
 
-    const imageRes = await fetch(imageUrl)
-    if (!imageRes.ok) {
-      throw new Error(`Failed to fetch generated image: ${imageRes.status}`)
-    }
+    const imageBuffer = Buffer.from(imageBase64, 'base64')
 
-    const imageBlob = await imageRes.blob()
-
-    const { error: uploadError } = await supabase.storage.from('cards').upload(filePath, imageBlob, {
+    const { error: uploadError } = await supabase.storage.from('cards').upload(filePath, imageBuffer, {
       contentType: 'image/png',
       upsert: true,
     })

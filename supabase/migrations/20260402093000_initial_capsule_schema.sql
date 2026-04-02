@@ -39,7 +39,7 @@ create table if not exists public.cards (
   image_url text not null,
   title text,
   card_order integer not null default 1,
-  status text not null default 'generating' check (status in ('generating', 'complete', 'error')),
+  status text not null default 'queued' check (status in ('queued', 'generating', 'complete', 'error')),
   created_at timestamptz not null default timezone('utc', now())
 );
 

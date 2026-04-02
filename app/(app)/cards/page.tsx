@@ -1,10 +1,7 @@
-import Link from 'next/link'
 import { Images } from 'lucide-react'
-
-import CardThumbnail from '@/components/cards/CardThumbnail'
-import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
-
+import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
+import CardLibrary from '@/components/cards/CardLibrary'
 import styles from '../AppScreen.module.css'
 
 export default async function CardsPage() {
@@ -15,14 +12,26 @@ export default async function CardsPage() {
 
   if (!user) return null
 
+  // 1. Fetch Cards
   const { data: cards } = await supabase
     .from('cards')
-    .select('*')
+    .select('*, points(category)')
     .order('created_at', { ascending: false })
 
+  // 2. Generate Signed URLs for the initial set
+  const completedCards = (cards ?? []).filter(c => c.status === 'complete')
   const signedUrls = await createSignedObjectUrlsSafe(
     'cards',
-    (cards ?? []).filter((card) => card.status === 'complete').map((card) => card.image_url),
+    completedCards.map((card) => card.image_url),
+  )
+
+  // 3. Extract unique categories for filtering
+  const categories = Array.from(
+    new Set(
+      (cards ?? [])
+        .map((c) => (Array.isArray(c.points) ? c.points[0]?.category : c.points?.category))
+        .filter(Boolean)
+    )
   )
 
   return (
@@ -30,29 +39,17 @@ export default async function CardsPage() {
       <header className={styles.header}>
         <div className={styles.eyebrow}>
           <Images size={14} aria-hidden="true" />
-          <span>Cards</span>
+          <span>Library</span>
         </div>
-        <h1 className={styles.title}>All cards.</h1>
-        <p className={styles.copy}>Queued, building, ready.</p>
+        <h1 className={styles.title}>Visual archive.</h1>
+        <p className={styles.copy}>Search, filter, and manage your clinical visual points.</p>
       </header>
 
-      {!cards || cards.length === 0 ? (
-        <div className={styles.panel}>
-          <div className={`${styles.panelInner} ${styles.emptyState}`}>
-            <p className={styles.emptyTitle}>No cards yet</p>
-            <p className={styles.emptyCopy}>Scan a note to start.</p>
-            <Link href="/scan" className={styles.accentLink}>
-              Scan note
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <div className={styles.list} style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-          {cards.map((card) => (
-            <CardThumbnail key={card.id} card={card} imageUrl={signedUrls[card.image_url]} />
-          ))}
-        </div>
-      )}
+      <CardLibrary 
+        initialCards={cards ?? []} 
+        initialSignedUrls={signedUrls}
+        categories={categories as string[]} 
+      />
     </div>
   )
 }

@@ -6,7 +6,6 @@
 }
 
 .header {
-  max-width: 44rem;
   display: grid;
   gap: 12px;
 }
@@ -36,7 +35,6 @@
 }
 
 .copy {
-  max-width: 36rem;
   color: var(--text-secondary);
   font-size: 17px;
   line-height: 1.5;
