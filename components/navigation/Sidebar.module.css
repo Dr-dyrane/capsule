@@ -45,6 +45,16 @@
     color: var(--accent-hover);
   }
 
+  .brandFull,
+  .brandCompact {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .brandCompact {
+    display: none;
+  }
+
   .nav {
     display: grid;
     align-content: start;
@@ -153,6 +163,14 @@
     justify-content: center;
     padding-inline: 0;
     font-size: 20px;
+  }
+
+  .brandFull {
+    display: none;
+  }
+
+  .brandCompact {
+    display: inline-flex;
   }
 
   .item {

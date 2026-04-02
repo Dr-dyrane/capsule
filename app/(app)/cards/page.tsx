@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Images } from 'lucide-react'
 
 import CardThumbnail from '@/components/cards/CardThumbnail'
-import { createSignedObjectUrls } from '@/lib/storage/signed-urls'
+import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
 
 import styles from '../AppScreen.module.css'
@@ -21,7 +21,7 @@ export default async function CardsPage() {
     .eq('status', 'complete')
     .order('created_at', { ascending: false })
 
-  const signedUrls = await createSignedObjectUrls(
+  const signedUrls = await createSignedObjectUrlsSafe(
     'cards',
     (cards ?? []).map((card) => card.image_url),
   )

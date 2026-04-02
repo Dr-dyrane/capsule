@@ -25,6 +25,17 @@
   object-fit: cover;
 }
 
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: center;
+}
+
 .meta {
   display: grid;
   gap: 4px;

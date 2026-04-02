@@ -2,6 +2,16 @@ import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
 
+function isMissingStorageError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+
+  const message = 'message' in error && typeof error.message === 'string' ? error.message.toLowerCase() : ''
+
+  return message.includes('bucket not found') || message.includes('object not found')
+}
+
 export async function createSignedObjectUrl(
   bucket: 'notes' | 'cards',
   path: string,
@@ -15,6 +25,22 @@ export async function createSignedObjectUrl(
   }
 
   return data.signedUrl
+}
+
+export async function createSignedObjectUrlSafe(
+  bucket: 'notes' | 'cards',
+  path: string,
+  expiresIn = 60 * 60,
+) {
+  try {
+    return await createSignedObjectUrl(bucket, path, expiresIn)
+  } catch (error) {
+    if (isMissingStorageError(error)) {
+      return null
+    }
+
+    throw error
+  }
 }
 
 export async function createSignedObjectUrls(
@@ -42,4 +68,20 @@ export async function createSignedObjectUrls(
     }
     return acc
   }, {})
+}
+
+export async function createSignedObjectUrlsSafe(
+  bucket: 'notes' | 'cards',
+  paths: string[],
+  expiresIn = 60 * 60,
+) {
+  try {
+    return await createSignedObjectUrls(bucket, paths, expiresIn)
+  } catch (error) {
+    if (isMissingStorageError(error)) {
+      return {}
+    }
+
+    throw error
+  }
 }

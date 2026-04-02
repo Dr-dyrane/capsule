@@ -2,7 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Archive, ChevronRight } from 'lucide-react'
 
-import { createSignedObjectUrls } from '@/lib/storage/signed-urls'
+import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
 import type { SessionRecord } from '@/lib/types'
 
@@ -19,7 +19,7 @@ export default async function LibraryPage() {
 
   const { data: sessions } = await supabase.from('sessions').select('*').order('created_at', { ascending: false })
 
-  const signedNoteUrls = await createSignedObjectUrls(
+  const signedNoteUrls = await createSignedObjectUrlsSafe(
     'notes',
     (sessions ?? []).map((session) => session.source_url),
   )
@@ -67,19 +67,21 @@ export default async function LibraryPage() {
                 {items.map((session) => (
                   <Link key={session.id} href={`/scan/${session.id}`} className={listStyles.item}>
                     <div className={listStyles.thumb}>
-                      <Image
-                        src={signedNoteUrls[session.source_url]}
-                        alt="Uploaded note"
-                        fill
-                        unoptimized
-                        sizes="56px"
-                      />
+                      {signedNoteUrls[session.source_url] ? (
+                        <Image
+                          src={signedNoteUrls[session.source_url]}
+                          alt="Uploaded note"
+                          fill
+                          unoptimized
+                          sizes="56px"
+                        />
+                      ) : (
+                        <div className={listStyles.thumbFallback}>Note</div>
+                      )}
                     </div>
                     <div className={listStyles.info}>
                       <p className={listStyles.name}>Note session</p>
-                      <p className={listStyles.meta}>
-                        {session.card_count} cards · {session.status}
-                      </p>
+                      <p className={listStyles.meta}>{session.card_count} cards · {session.status}</p>
                     </div>
                     <ChevronRight size={18} className={listStyles.chevron} />
                   </Link>

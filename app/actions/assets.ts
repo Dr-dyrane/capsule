@@ -1,7 +1,7 @@
 'use server'
 
-import { createSignedObjectUrls } from '@/lib/storage/signed-urls'
+import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 
 export async function getSignedCardUrls(paths: string[]) {
-  return await createSignedObjectUrls('cards', paths, 60 * 60)
+  return await createSignedObjectUrlsSafe('cards', paths, 60 * 60)
 }

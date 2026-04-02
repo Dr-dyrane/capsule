@@ -17,25 +17,30 @@ export default function Sidebar() {
     <aside className={styles.sidebar}>
       <div className={styles.surface}>
         <Link href="/scan" aria-label="Capsule workspace" className={styles.brand}>
-          <Logo size={40} showText />
+          <span className={styles.brandFull}>
+            <Logo size={40} showText />
+          </span>
+          <span className={styles.brandCompact}>
+            <Logo size={40} />
+          </span>
         </Link>
 
         <nav className={styles.nav} aria-label="Primary">
           {navigationItems.map((item) => {
-          const isActive = pathname.startsWith(item.href)
-          const Icon = item.icon
+            const isActive = pathname.startsWith(item.href)
+            const Icon = item.icon
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`${styles.item} ${isActive ? styles.itemActive : ''}`}
-              aria-current={isActive ? 'page' : undefined}
-            >
-              <Icon size={20} />
-              <span className={styles.label}>{item.name}</span>
-            </Link>
-          )
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`${styles.item} ${isActive ? styles.itemActive : ''}`}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Icon size={20} />
+                <span className={styles.label}>{item.name}</span>
+              </Link>
+            )
           })}
         </nav>
 

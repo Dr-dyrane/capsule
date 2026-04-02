@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronLeft, Share, MoreHorizontal } from 'lucide-react'
-import { createSignedObjectUrl } from '@/lib/storage/signed-urls'
+import { createSignedObjectUrlSafe } from '@/lib/storage/signed-urls'
 
 export default async function CardDetailPage({ params }: { params: { id: string } }) {
   const id = (await params).id
@@ -19,7 +19,7 @@ export default async function CardDetailPage({ params }: { params: { id: string 
     redirect('/cards')
   }
 
-  const signedUrl = await createSignedObjectUrl('cards', card.image_url)
+  const signedUrl = await createSignedObjectUrlSafe('cards', card.image_url)
 
   return (
     <div className="detail-page animate-fade-in">
@@ -36,7 +36,22 @@ export default async function CardDetailPage({ params }: { params: { id: string 
       <div className="card-container">
         <div className="card-main surface-1 glass animate-slide-up">
           <div className="card-image-wrap">
-            <Image src={signedUrl} alt={card.title} fill unoptimized sizes="100vw" />
+            {signedUrl ? (
+              <Image src={signedUrl} alt={card.title} fill unoptimized sizes="100vw" />
+            ) : (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: 'var(--text-secondary)',
+                  background: 'var(--surface-2)',
+                }}
+              >
+                Preview unavailable
+              </div>
+            )}
           </div>
           <div className="card-content">
             <div className="card-meta">

@@ -52,6 +52,18 @@
   background: var(--surface-2);
 }
 
+.thumbFallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .info {
   min-width: 0;
   flex: 1;
