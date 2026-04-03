@@ -282,15 +282,17 @@ export default function CommunityFeed({
     return (
       <div className={styles.feed}>
         <div className={styles.toolbar}>
-          <div className={styles.searchBar}>
-            <Search size={18} className={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder={lockedAuthor ? `Search ${lockedAuthor.name}'s cards...` : 'Search community cards...'}
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              className={styles.searchInput}
-            />
+          <div className={styles.searchRow}>
+            <div className={styles.searchBar}>
+              <Search size={18} className={styles.searchIcon} />
+              <input
+                type="text"
+                placeholder={lockedAuthor ? `Search ${lockedAuthor.name}'s cards...` : 'Search community cards...'}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className={styles.searchInput}
+              />
+            </div>
           </div>
         </div>
 
@@ -339,32 +341,39 @@ export default function CommunityFeed({
   return (
     <div className={styles.feed}>
       <div className={styles.toolbar}>
-        <div className={styles.searchBar}>
-          <Search size={18} className={styles.searchIcon} />
-          <input
-            type="text"
-            placeholder={
-              lockedAuthor ? `Search ${lockedAuthor.name}'s cards...` : 'Search by title, author, topic, or category...'
-            }
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            className={styles.searchInput}
-          />
-          {searchQuery ? (
-            <button type="button" onClick={() => setSearchQuery('')} className={styles.clearSearch}>
-              <X size={14} />
-            </button>
-          ) : null}
-        </div>
+        <div className={styles.searchRow}>
+          <div className={styles.searchBar}>
+            <Search size={18} className={styles.searchIcon} />
+            <input
+              type="text"
+              placeholder={
+                lockedAuthor ? `Search ${lockedAuthor.name}'s cards...` : 'Search by title, author, topic, or category...'
+              }
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className={styles.searchInput}
+            />
+            {searchQuery ? (
+              <button type="button" onClick={() => setSearchQuery('')} className={styles.clearSearch}>
+                <X size={14} />
+              </button>
+            ) : null}
+          </div>
 
-        <div className={styles.mobileActions}>
-          <button type="button" className={styles.mobileSheetTrigger} onClick={() => setIsMobileSheetOpen(true)}>
-            <span className={styles.mobileSheetTriggerCopy}>
-              <SlidersHorizontal size={16} />
-              <span>Filters</span>
-            </span>
-            {mobileFilterCount > 0 ? <span className={styles.mobileCount}>{mobileFilterCount}</span> : null}
-          </button>
+          <div className={styles.mobileActions}>
+            <button
+              type="button"
+              className={styles.mobileSheetTrigger}
+              onClick={() => setIsMobileSheetOpen(true)}
+              aria-label="Open filters"
+            >
+              <span className={styles.mobileSheetTriggerCopy}>
+                <SlidersHorizontal size={16} />
+                <span>Filters</span>
+              </span>
+              {mobileFilterCount > 0 ? <span className={styles.mobileCount}>{mobileFilterCount}</span> : null}
+            </button>
+          </div>
         </div>
 
         <div className={styles.controls}>

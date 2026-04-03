@@ -71,6 +71,12 @@
   gap: 20px;
 }
 
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .mobileActions {
   display: none;
 }
@@ -78,6 +84,7 @@
 .searchBar {
   position: relative;
   width: 100%;
+  flex: 1;
   max-width: 600px;
   min-height: 52px;
   display: flex;
@@ -367,11 +374,62 @@
 }
 
 @media (max-width: 767px) {
+  .libraryHeader {
+    gap: 16px;
+  }
+
+  .searchRow {
+    align-items: stretch;
+  }
+
   .toolbar {
     display: none;
   }
 
   .mobileActions {
     display: flex;
+  }
+
+  .mobileSheetTrigger {
+    position: relative;
+    width: 52px;
+    min-width: 52px;
+    min-height: 52px;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    border-radius: 18px;
+  }
+
+  .mobileSheetTriggerCopy {
+    gap: 0;
+  }
+
+  .mobileSheetTriggerCopy span {
+    display: none;
+  }
+
+  .mobileCount {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 20px;
+    height: 20px;
+    font-size: 11px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .searchBar {
+    max-width: none;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .mobileActions {
+    display: flex;
+    flex-shrink: 0;
   }
 }

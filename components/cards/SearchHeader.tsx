@@ -29,20 +29,37 @@ export default function SearchHeader({
 
   return (
     <header className={styles.libraryHeader}>
-      <div className={styles.searchBar}>
-        <Search size={18} className={styles.searchIcon} />
-        <input
-          type="text"
-          placeholder="Search by title or concept..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className={styles.searchInput}
-        />
-        {searchQuery && (
-          <button onClick={() => setSearchQuery('')} className={styles.clearSearch}>
-            <X size={14} />
+      <div className={styles.searchRow}>
+        <div className={styles.searchBar}>
+          <Search size={18} className={styles.searchIcon} />
+          <input
+            type="text"
+            placeholder="Search by title or concept..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={styles.searchInput}
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery('')} className={styles.clearSearch}>
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className={styles.mobileActions}>
+          <button
+            type="button"
+            className={styles.mobileSheetTrigger}
+            onClick={() => setIsMobileSheetOpen(true)}
+            aria-label="Open filters"
+          >
+            <span className={styles.mobileSheetTriggerCopy}>
+              <SlidersHorizontal size={16} />
+              <span>Filters</span>
+            </span>
+            {mobileFilterCount > 0 ? <span className={styles.mobileCount}>{mobileFilterCount}</span> : null}
           </button>
-        )}
+        </div>
       </div>
 
       <div className={styles.toolbar}>
@@ -85,16 +102,6 @@ export default function SearchHeader({
             <List size={16} />
           </button>
         </div>
-      </div>
-
-      <div className={styles.mobileActions}>
-        <button type="button" className={styles.mobileSheetTrigger} onClick={() => setIsMobileSheetOpen(true)}>
-          <span className={styles.mobileSheetTriggerCopy}>
-            <SlidersHorizontal size={16} />
-            <span>Filters</span>
-          </span>
-          {mobileFilterCount > 0 ? <span className={styles.mobileCount}>{mobileFilterCount}</span> : null}
-        </button>
       </div>
 
       <MobileBottomSheet open={isMobileSheetOpen} onClose={() => setIsMobileSheetOpen(false)} title="Browse cards">

@@ -153,7 +153,17 @@
 
 @media (max-width: 767px) {
   .stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .statCard {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .statValue {
+    font-size: 20px;
   }
 }
 

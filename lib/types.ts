@@ -116,6 +116,23 @@ export interface CommunityIndexRecord {
   trend_score: number
 }
 
+export interface CommunityLibraryIndexRecord {
+  session_id: string
+  cover_image_url: string
+  title: string | null
+  published_at: string | null
+  published_by: string | null
+  author_name: string | null
+  author_avatar_url: string | null
+  card_count: number
+  like_count: number
+  save_count: number
+  report_count: number
+  trend_score: number
+  category: string | null
+  concept: string | null
+}
+
 export interface CommunityViewerState {
   liked: boolean
   saved: boolean

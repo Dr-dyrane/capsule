@@ -9,6 +9,7 @@ export default function CommunityCard({
   card,
   imageUrl,
   layout = 'grid',
+  showImageMeta = true,
   liked = false,
   saved = false,
   reported = false,
@@ -19,6 +20,7 @@ export default function CommunityCard({
   card: CommunityCardRecord
   imageUrl?: string
   layout?: 'grid' | 'list'
+  showImageMeta?: boolean
   liked?: boolean
   saved?: boolean
   reported?: boolean
@@ -38,28 +40,32 @@ export default function CommunityCard({
       <Link href={cardHref} className={styles.cardLink}>
         <div className={styles.imageWrap}>
           <div className={styles.imageFrame}>
-            <div className={styles.authorBadge}>
-              {card.author_avatar_url ? (
-                <Image
-                  src={card.author_avatar_url}
-                  alt={authorName}
-                  width={18}
-                  height={18}
-                  unoptimized
-                  className={styles.avatar}
-                />
-              ) : (
-                <div className={styles.avatarFallback}>
-                  <User size={12} />
+            {showImageMeta ? (
+              <>
+                <div className={styles.authorBadge}>
+                  {card.author_avatar_url ? (
+                    <Image
+                      src={card.author_avatar_url}
+                      alt={authorName}
+                      width={18}
+                      height={18}
+                      unoptimized
+                      className={styles.avatar}
+                    />
+                  ) : (
+                    <div className={styles.avatarFallback}>
+                      <User size={12} />
+                    </div>
+                  )}
+                  <span className={styles.authorName}>{authorName}</span>
                 </div>
-              )}
-              <span className={styles.authorName}>{authorName}</span>
-            </div>
 
-            <div className={styles.status}>
-              <Globe size={12} className={styles.globe} />
-              <span>Published</span>
-            </div>
+                <div className={styles.status}>
+                  <Globe size={12} className={styles.globe} />
+                  <span>Published</span>
+                </div>
+              </>
+            ) : null}
 
             {imageUrl ? (
               <Image

@@ -18,8 +18,12 @@
   gap: 16px;
   padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0px));
   border-radius: 28px 28px 0 0;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 92%, transparent), var(--surface-1));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-3) 98%, var(--surface-1) 2%),
+    color-mix(in srgb, var(--surface-2) 94%, var(--surface-1) 6%)
+  );
+  backdrop-filter: 32px;
   box-shadow: var(--shadow-xl);
 }
 
@@ -67,7 +71,7 @@
   padding-bottom: 8px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .overlay {
     display: none;
   }

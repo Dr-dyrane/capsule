@@ -1,11 +1,14 @@
 import { Globe } from 'lucide-react'
 import {
   fetchCommunityCardsWithUrls,
+  getCommunityCardCount,
+  getCommunityLibraryCount,
+  getCommunityLibrariesWithUrls,
   getCommunityFilters,
   getViewerCommunityReactions,
   getViewerCommunityReports,
 } from '@/app/actions/community'
-import CommunityFeed from '@/components/community/CommunityFeed'
+import CommunityBrowser from '@/components/community/CommunityBrowser'
 import styles from '../AppScreen.module.css'
 
 export default async function CommunityPage({
@@ -18,6 +21,7 @@ export default async function CommunityPage({
     topic?: string
     sort?: string
     saved?: string
+    view?: string
   }>
 }) {
   const params = searchParams ? await searchParams : {}
@@ -28,9 +32,15 @@ export default async function CommunityPage({
     topic: params?.topic ?? null,
     sort: params?.sort === 'trending' ? 'trending' : 'recent',
     savedOnly: params?.saved === '1',
+    view: params?.view === 'libraries' ? 'libraries' : 'cards',
   } as const
 
-  const { cards, signedUrls } = await fetchCommunityCardsWithUrls(0, 20, initialFilters)
+  const [{ cards, signedUrls }, { libraries, signedUrls: libraryUrls }, totalCardCount, totalLibraryCount] = await Promise.all([
+    fetchCommunityCardsWithUrls(0, 20, initialFilters),
+    getCommunityLibrariesWithUrls(24),
+    getCommunityCardCount(),
+    getCommunityLibraryCount(),
+  ])
   const filterMeta = await getCommunityFilters()
   const cardIds = cards.map((card) => card.card_id)
   const [viewerReactions, viewerReports] = await Promise.all([
@@ -60,12 +70,16 @@ export default async function CommunityPage({
         <p className={styles.copy}>Discover visual clinical concepts published by the community.</p>
       </header>
 
-      <CommunityFeed 
-        initialCards={cards} 
+      <CommunityBrowser
+        initialCards={cards}
         initialSignedUrls={signedUrls}
         initialViewerReactions={initialViewerState}
+        totalCardCount={totalCardCount}
+        totalLibraryCount={totalLibraryCount}
         filterMeta={filterMeta}
         initialFilters={initialFilters}
+        libraries={libraries}
+        libraryUrls={libraryUrls}
       />
     </div>
   )

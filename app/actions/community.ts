@@ -10,6 +10,7 @@ import type {
   CardRecord,
   CommunityFilterMeta,
   CommunityIndexRecord,
+  CommunityLibraryIndexRecord,
   CommunityReactionKind,
   CommunitySort,
   CommunityViewerState,
@@ -18,6 +19,7 @@ import type {
 } from '@/lib/types'
 
 export type CommunityCardRecord = CommunityIndexRecord
+export type CommunityLibraryRecord = CommunityLibraryIndexRecord
 
 export type CommunityQueryOptions = {
   search?: string
@@ -27,6 +29,7 @@ export type CommunityQueryOptions = {
   sort?: CommunitySort
   savedOnly?: boolean
   authorId?: string | null
+  sessionId?: string | null
 }
 
 function toCommunityUnsupportedError() {
@@ -70,6 +73,10 @@ function revalidateCommunityPaths(sessionId?: string | null, cardId?: string | n
   if (cardId) {
     revalidatePath(`/cards/${cardId}`)
     revalidatePath(`/community/${cardId}`)
+  }
+
+  if (sessionId) {
+    revalidatePath(`/community/library/${sessionId}`)
   }
 }
 
@@ -380,6 +387,7 @@ export async function getCommunityCards(
   const sort = normalizeSort(options.sort)
   const savedOnly = Boolean(options.savedOnly)
   const authorId = normalizeValue(options.authorId)
+  const sessionId = normalizeValue(options.sessionId)
 
   let savedCardIds: string[] | null = null
 
@@ -437,6 +445,10 @@ export async function getCommunityCards(
     query = query.eq('published_by', authorId)
   }
 
+  if (sessionId) {
+    query = query.eq('session_id', sessionId)
+  }
+
   if (savedCardIds) {
     query = query.in('card_id', savedCardIds)
   }
@@ -469,6 +481,99 @@ export async function getCommunityCards(
   }
 
   return (data ?? []) as CommunityCardRecord[]
+}
+
+export async function getCommunityCardCount(options: Omit<CommunityQueryOptions, 'sort'> = {}) {
+  const supabase = createPublicClient()
+  const search = normalizeSearch(options.search)
+  const template = normalizeTemplate(options.template)
+  const category = normalizeValue(options.category)
+  const topic = normalizeValue(options.topic)
+  const savedOnly = Boolean(options.savedOnly)
+  const authorId = normalizeValue(options.authorId)
+  const sessionId = normalizeValue(options.sessionId)
+
+  let savedCardIds: string[] | null = null
+
+  if (savedOnly) {
+    const serverClient = await createClient()
+    const {
+      data: { user },
+    } = await serverClient.auth.getUser()
+
+    if (!user) {
+      return 0
+    }
+
+    const { data: savedRows, error: savedError } = await serverClient
+      .from('community_reactions')
+      .select('card_id')
+      .eq('user_id', user.id)
+      .eq('kind', 'save')
+
+    if (savedError) {
+      if (isCommunitySchemaError(savedError)) {
+        return 0
+      }
+
+      throw savedError
+    }
+
+    savedCardIds = (savedRows ?? []).map((row) => row.card_id)
+
+    if (savedCardIds.length === 0) {
+      return 0
+    }
+  }
+
+  let query = supabase
+    .from('community_index')
+    .select('card_id', { count: 'exact', head: true })
+
+  if (template) {
+    query = query.eq('community_template', template)
+  }
+
+  if (category) {
+    query = query.eq('category', category)
+  }
+
+  if (topic) {
+    query = query.eq('concept', topic)
+  }
+
+  if (authorId) {
+    query = query.eq('published_by', authorId)
+  }
+
+  if (sessionId) {
+    query = query.eq('session_id', sessionId)
+  }
+
+  if (savedCardIds) {
+    query = query.in('card_id', savedCardIds)
+  }
+
+  if (search) {
+    const escaped = search.replace(/[%_,]/g, '').trim()
+    if (escaped) {
+      query = query.or(
+        `title.ilike.%${escaped}%,author_name.ilike.%${escaped}%,category.ilike.%${escaped}%,concept.ilike.%${escaped}%`,
+      )
+    }
+  }
+
+  const { count, error } = await query
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      return 0
+    }
+
+    throw error
+  }
+
+  return count ?? 0
 }
 
 export async function getCommunityFilters(): Promise<CommunityFilterMeta> {
@@ -744,6 +849,134 @@ export async function getCommunityCardByIdWithUrl(cardId: string) {
   return {
     ...card,
     signedUrl: signed?.signedUrl ?? null,
+  }
+}
+
+export async function getCommunityLibraries(limit: number = 6, authorId?: string | null) {
+  const supabase = createPublicClient()
+  let query = supabase
+    .from('community_library_index')
+    .select(
+      'session_id, cover_image_url, title, published_at, published_by, author_name, author_avatar_url, card_count, like_count, save_count, report_count, trend_score, category, concept',
+    )
+    .order('published_at', { ascending: false })
+    .limit(limit)
+
+  const normalizedAuthorId = normalizeValue(authorId)
+
+  if (normalizedAuthorId) {
+    query = query.eq('published_by', normalizedAuthorId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      return [] as CommunityLibraryRecord[]
+    }
+
+    throw error
+  }
+
+  return (data ?? []) as CommunityLibraryRecord[]
+}
+
+export async function getCommunityLibraryCount(authorId?: string | null) {
+  const supabase = createPublicClient()
+  let query = supabase
+    .from('community_library_index')
+    .select('session_id', { count: 'exact', head: true })
+
+  const normalizedAuthorId = normalizeValue(authorId)
+
+  if (normalizedAuthorId) {
+    query = query.eq('published_by', normalizedAuthorId)
+  }
+
+  const { count, error } = await query
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      return 0
+    }
+
+    throw error
+  }
+
+  return count ?? 0
+}
+
+export async function getCommunityLibrariesWithUrls(limit: number = 6, authorId?: string | null) {
+  const libraries = await getCommunityLibraries(limit, authorId)
+  const uniquePaths = [...new Set(libraries.map((library) => library.cover_image_url).filter(Boolean))]
+  let signedUrls: Record<string, string> = createDirectAssetUrlMap(uniquePaths)
+  const storagePaths = uniquePaths.filter((path) => !isDirectAssetUrl(path))
+
+  if (storagePaths.length > 0) {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase.storage.from('cards').createSignedUrls(storagePaths, 60 * 60)
+
+    if (error) {
+      if (!isCommunitySchemaError(error)) {
+        throw error
+      }
+    } else {
+      signedUrls = {
+        ...signedUrls,
+        ...Object.fromEntries(
+          (data ?? [])
+            .filter((row) => typeof row.path === 'string')
+            .map((row) => {
+              const path = row.path as string
+              return [
+                path,
+                row.signedUrl ?? signedUrls[path] ?? '',
+              ]
+            }),
+        ),
+      }
+    }
+  }
+
+  return {
+    libraries,
+    signedUrls,
+  }
+}
+
+export async function getCommunityLibraryById(sessionId: string) {
+  const publicClient = createPublicClient()
+  const { data: library, error } = await publicClient
+    .from('community_library_index')
+    .select(
+      'session_id, cover_image_url, title, published_at, published_by, author_name, author_avatar_url, card_count, like_count, save_count, report_count, trend_score, category, concept',
+    )
+    .eq('session_id', sessionId)
+    .maybeSingle()
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      return null
+    }
+
+    throw error
+  }
+
+  if (!library) {
+    return null
+  }
+
+  const typedLibrary = library as CommunityLibraryRecord
+  const { cards, signedUrls } = await fetchCommunityCardsWithUrls(
+    0,
+    Math.max(typedLibrary.card_count || 1, 1),
+    { sessionId },
+  )
+
+  return {
+    library: typedLibrary,
+    cards,
+    signedUrls,
   }
 }
 

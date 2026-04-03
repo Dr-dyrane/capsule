@@ -5,10 +5,12 @@ import {
   fetchCommunityCardsWithUrls,
   getCommunityAuthorSummary,
   getCommunityFilters,
+  getCommunityLibraryCount,
+  getCommunityLibrariesWithUrls,
   getViewerCommunityReactions,
   getViewerCommunityReports,
 } from '@/app/actions/community'
-import CommunityFeed from '@/components/community/CommunityFeed'
+import CommunityBrowser from '@/components/community/CommunityBrowser'
 import styles from '../../../AppScreen.module.css'
 
 export default async function CommunityAuthorPage({
@@ -23,10 +25,14 @@ export default async function CommunityAuthorPage({
     notFound()
   }
 
-  const { cards, signedUrls } = await fetchCommunityCardsWithUrls(0, 20, {
-    authorId: id,
-    sort: 'recent',
-  })
+  const [{ cards, signedUrls }, { libraries, signedUrls: libraryUrls }, totalLibraryCount] = await Promise.all([
+    fetchCommunityCardsWithUrls(0, 20, {
+      authorId: id,
+      sort: 'recent',
+    }),
+    getCommunityLibrariesWithUrls(24, id),
+    getCommunityLibraryCount(id),
+  ])
   const filterMeta = await getCommunityFilters()
   const cardIds = cards.map((card) => card.card_id)
   const [viewerReactions, viewerReports] = await Promise.all([
@@ -59,12 +65,16 @@ export default async function CommunityAuthorPage({
         </p>
       </header>
 
-      <CommunityFeed
+      <CommunityBrowser
         initialCards={cards}
         initialSignedUrls={signedUrls}
         initialViewerReactions={initialViewerState}
+        totalCardCount={author.cardCount}
+        totalLibraryCount={totalLibraryCount}
         filterMeta={filterMeta}
-        initialFilters={{ sort: 'recent' }}
+        initialFilters={{ sort: 'recent', view: 'cards' }}
+        libraries={libraries}
+        libraryUrls={libraryUrls}
         lockedAuthor={{ id, name: author.username }}
       />
     </div>

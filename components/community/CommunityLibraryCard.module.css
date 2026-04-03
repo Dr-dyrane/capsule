@@ -1,0 +1,117 @@
+.card {
+  display: grid;
+  gap: 14px;
+  text-decoration: none;
+}
+
+.cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--image-stage-bg);
+  box-shadow: var(--image-stage-shadow);
+  transition:
+    transform 180ms var(--ease-apple),
+    box-shadow 180ms var(--ease-apple);
+}
+
+.card:hover .cover,
+.card:focus-visible .cover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+}
+
+.coverFrame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--image-stage-surface);
+}
+
+.image {
+  object-fit: cover;
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-tertiary);
+  font-size: 14px;
+}
+
+.collectionBadge,
+.countBadge {
+  position: absolute;
+  z-index: 1;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  color: var(--image-overlay-text);
+  background: var(--image-overlay);
+  box-shadow: var(--shadow-sm);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.collectionBadge {
+  top: 12px;
+  left: 12px;
+}
+
+.countBadge {
+  right: 12px;
+  bottom: 12px;
+}
+
+.meta {
+  display: grid;
+  gap: 6px;
+  padding: 0 4px;
+}
+
+.title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hint {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.author {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dot {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.trailing {
+  display: none;
+}
