@@ -303,7 +303,7 @@
   display: grid;
   gap: 8px;
   padding: 12px;
-  border-radius: inherit;
+  border-radius: 24px;
   background: var(--surface-2);
   box-shadow: var(--shadow-sm);
 }
