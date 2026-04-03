@@ -4,10 +4,14 @@
   aspect-ratio: 16 / 9; /* Default, but will be overridden for immersive full-height if needed */
   overflow: hidden;
   cursor: pointer;
-    border-radius: 28px;
+  border-radius: 28px;
   background: var(--image-stage-bg);
-    box-shadow: var(--image-stage-shadow);
+  box-shadow: var(--image-stage-shadow);
   transition: transform 200ms var(--ease-apple);
+}
+
+.documentContainer {
+  aspect-ratio: 4 / 3;
 }
 
 .container:active {
@@ -24,6 +28,10 @@
 
 .image {
   object-fit: cover;
+}
+
+.documentImage {
+  object-fit: contain;
 }
 
 .overlay {
@@ -70,10 +78,19 @@
   overflow: hidden;
   border-radius: 28px;
   background: var(--image-stage-bg);
-    box-shadow: var(--image-stage-shadow);
+  box-shadow: var(--image-stage-shadow);
 }
 
 .fullscreenImage {
+  object-fit: contain;
+}
+
+.documentFullscreenImageWrap {
+  width: min(88vw, 1080px);
+  aspect-ratio: 4 / 5;
+}
+
+.documentFullscreenImage {
   object-fit: contain;
 }
 
@@ -116,6 +133,11 @@
     width: min(94vw, 720px);
     max-height: min(74vh, 520px);
     border-radius: 24px;
+  }
+
+  .documentFullscreenImageWrap {
+    width: min(92vw, 520px);
+    aspect-ratio: 4 / 5;
   }
 
   .closeButton {

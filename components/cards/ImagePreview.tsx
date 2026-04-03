@@ -9,10 +9,12 @@ import styles from './ImagePreview.module.css'
 interface ImagePreviewProps {
   src: string
   alt: string
+  variant?: 'card' | 'document'
 }
 
-export default function ImagePreview({ src, alt }: ImagePreviewProps) {
+export default function ImagePreview({ src, alt, variant = 'card' }: ImagePreviewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const isDocument = variant === 'document'
 
   // Prevent scrolling when full screen is open
   useEffect(() => {
@@ -28,8 +30,8 @@ export default function ImagePreview({ src, alt }: ImagePreviewProps) {
 
   return (
     <>
-      <div 
-        className={styles.container} 
+      <div
+        className={`${styles.container} ${isDocument ? styles.documentContainer : ''}`}
         onClick={() => setIsFullscreen(true)}
         role="button"
         tabIndex={0}
@@ -43,7 +45,7 @@ export default function ImagePreview({ src, alt }: ImagePreviewProps) {
             fill
             unoptimized
             sizes="(max-width: 1023px) 100vw, 60vw"
-            className={styles.image}
+            className={`${styles.image} ${isDocument ? styles.documentImage : ''}`}
           />
         </div>
         <div className={styles.overlay}>
@@ -68,16 +70,16 @@ export default function ImagePreview({ src, alt }: ImagePreviewProps) {
               className={styles.fullscreenContent}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className={styles.fullscreenImageWrap}>
+              <div className={`${styles.fullscreenImageWrap} ${isDocument ? styles.documentFullscreenImageWrap : ''}`}>
                 <Image
                   src={src}
                   alt={alt}
                   fill
                   unoptimized
-                  className={styles.fullscreenImage}
+                  className={`${styles.fullscreenImage} ${isDocument ? styles.documentFullscreenImage : ''}`}
                 />
               </div>
-              
+
               <button 
                 className={styles.closeButton}
                 onClick={() => setIsFullscreen(false)}

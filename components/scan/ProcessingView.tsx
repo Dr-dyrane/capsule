@@ -218,6 +218,8 @@ export default function ProcessingView({
   const totalPoints = points.length || session?.point_count || 0
   const progressWidth = totalPoints > 0 ? (completeCards.length / totalPoints) * 100 : 0
   const pointsById = useMemo(() => new Map(points.map((point) => [point.id, point])), [points])
+  const supportCount = Number(Boolean(sourceImageUrl)) + Number(Boolean(remixSource))
+  const isSettledView = status === 'complete' && generatingCards.length === 0 && queuedCards.length === 0
 
   const statusTitle =
     status === 'complete'
@@ -232,7 +234,7 @@ export default function ProcessingView({
 
   const statusCopy =
     status === 'complete'
-      ? 'Open any card.'
+      ? 'Open any card or review the source note.'
       : status === 'processing'
         ? 'Extracting points first.'
         : status === 'error'
@@ -301,18 +303,20 @@ export default function ProcessingView({
             <div className={styles.statusCount}>{completeCards.length} / {totalPoints || '?'}</div>
           </div>
 
-          <div className={styles.statusLedger}>
-            <div className={styles.statusChip}>Ready {completeCards.length}</div>
-            <div className={styles.statusChip}>Generating {generatingCards.length}</div>
-            <div className={styles.statusChip}>Queued {queuedCards.length}</div>
-            {erroredCards.length > 0 ? <div className={styles.statusChip}>Errors {erroredCards.length}</div> : null}
-          </div>
+          <div className={styles.statusFooter}>
+            <div className={styles.statusLedger}>
+              <div className={styles.statusChip}>Ready {completeCards.length}</div>
+              <div className={styles.statusChip}>Generating {generatingCards.length}</div>
+              <div className={styles.statusChip}>Queued {queuedCards.length}</div>
+              {erroredCards.length > 0 ? <div className={styles.statusChip}>Errors {erroredCards.length}</div> : null}
+            </div>
 
-          {status === 'error' ? (
             <div className={styles.statusActions}>
-              <button type="button" className={styles.primaryAction} onClick={handleRetry} disabled={isRetrying}>
-                {isRetrying ? 'Restarting...' : 'Restart session'}
-              </button>
+              {status === 'error' ? (
+                <button type="button" className={styles.primaryAction} onClick={handleRetry} disabled={isRetrying}>
+                  {isRetrying ? 'Restarting...' : 'Restart session'}
+                </button>
+              ) : null}
               <button
                 type="button"
                 className={styles.secondaryAction}
@@ -334,30 +338,7 @@ export default function ProcessingView({
                 )}
               </button>
             </div>
-          ) : (
-            <div className={styles.statusActions}>
-              <button
-                type="button"
-                className={styles.secondaryAction}
-                onClick={() => setPublishPrompt(isSessionPublished ? 'unpublish' : 'publish')}
-                disabled={isPublishing}
-              >
-                {isPublishing ? (
-                  'Saving...'
-                ) : isSessionPublished ? (
-                  <>
-                    <Lock size={14} aria-hidden="true" />
-                    <span>Unpublish all</span>
-                  </>
-                ) : (
-                  <>
-                    <Globe size={14} aria-hidden="true" />
-                    <span>Publish all</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+          </div>
 
           <div className={styles.progressRail}>
             <motion.div
@@ -371,9 +352,11 @@ export default function ProcessingView({
       </section>
 
       {sourceImageUrl || remixSource ? (
-        <section className={styles.supportGrid}>
+        <section className={`${styles.supportGrid} ${supportCount === 1 ? styles.supportGridSingle : ''}`}>
           {sourceImageUrl ? (
-            <section className={`${styles.panel} ${styles.sourcePanel}`}>
+            <section
+              className={`${styles.panel} ${styles.sourcePanel} ${supportCount === 1 ? styles.sourcePanelSingle : ''}`}
+            >
               <div className={`${styles.panelInner} ${styles.sourceInner}`}>
                 <div className={styles.sourceCopy}>
                   <div className={styles.panelEyebrow}>
@@ -388,7 +371,7 @@ export default function ProcessingView({
                 </div>
 
                 <div className={styles.sourcePreview}>
-                  <ImagePreview src={sourceImageUrl} alt="Original note scan" />
+                  <ImagePreview src={sourceImageUrl} alt="Original note scan" variant="document" />
                 </div>
               </div>
             </section>
@@ -427,13 +410,13 @@ export default function ProcessingView({
         </section>
       ) : null}
 
-      <div className={styles.content}>
+      <div className={`${styles.content} ${isSettledView ? styles.contentComplete : ''}`}>
         <section className={`${styles.panel} ${styles.cardsPanel}`}>
           <div className={styles.panelInner}>
             <div className={styles.panelHeader}>
               <div>
                 <h3 className={styles.panelTitle}>Cards</h3>
-                <p className={styles.panelCopy}>Live build state.</p>
+                <p className={styles.panelCopy}>{isSettledView ? 'Open any card.' : 'Live build state.'}</p>
               </div>
               <div className={styles.panelCount}>{displayCards.length}</div>
             </div>
@@ -544,17 +527,17 @@ export default function ProcessingView({
           </div>
         </section>
 
-        <section className={`${styles.panel} ${styles.queuePanel}`}>
+        <section className={`${styles.panel} ${styles.queuePanel} ${isSettledView ? styles.queuePanelSettled : ''}`}>
           <div className={styles.panelInner}>
             <div className={styles.panelHeader}>
               <div>
                 <h3 className={styles.panelTitle}>Queue</h3>
-                <p className={styles.panelCopy}>Point order.</p>
+                <p className={styles.panelCopy}>{isSettledView ? 'Source points.' : 'Point order.'}</p>
               </div>
               <div className={styles.panelCount}>{points.length}</div>
             </div>
 
-            <div className={styles.pointScroll}>
+            <div className={`${styles.pointScroll} ${isSettledView ? styles.pointScrollSettled : ''}`}>
               <AnimatePresence mode="popLayout">
                 {points.map((point, index) => {
                   const card = cards.find((candidate) => candidate.point_id === point.id)
