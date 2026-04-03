@@ -37,6 +37,11 @@ const IMAGE_FLAT_PRICING: Record<string, Record<string, Record<'low' | 'medium' 
     '1024x1536': { low: 0.013, medium: 0.05, high: 0.2 },
     '1024x1024': { low: 0.01, medium: 0.04, high: 0.17 },
   },
+  'gpt-image-1-mini': {
+    '1536x1024': { low: 0.01, medium: 0.015, high: 0.052 },
+    '1024x1536': { low: 0.01, medium: 0.015, high: 0.052 },
+    '1024x1024': { low: 0.008, medium: 0.012, high: 0.045 },
+  },
   'gpt-image-1.5': {
     '1536x1024': { low: 0.013, medium: 0.05, high: 0.2 },
     '1024x1536': { low: 0.013, medium: 0.05, high: 0.2 },

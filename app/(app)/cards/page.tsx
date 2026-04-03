@@ -17,6 +17,7 @@ export default async function CardsPage() {
   const { data: cards } = await supabase
     .from('cards')
     .select('*, points(category)')
+    .eq('status', 'complete')
     .order('created_at', { ascending: false })
 
   // 2. Generate Signed URLs for the initial set

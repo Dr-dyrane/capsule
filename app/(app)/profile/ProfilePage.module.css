@@ -165,6 +165,62 @@
   cursor: pointer;
 }
 
+.input,
+.textarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border-radius: 18px;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.formGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.inlineGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.primaryAction {
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 20px;
+  border-radius: 20px;
+  color: var(--text-on-accent);
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: var(--shadow-md);
+  font-size: 15px;
+  font-weight: 700;
+  transition: all 180ms var(--ease-apple);
+}
+
+.primaryAction:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.helperText {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .actions {
   display: grid;
   gap: 12px;
@@ -198,4 +254,10 @@
 
 .destructive:hover {
   background: rgba(var(--destructive-rgb), 0.12);
+}
+
+@media (min-width: 768px) {
+  .inlineGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

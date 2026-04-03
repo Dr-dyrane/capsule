@@ -39,7 +39,9 @@
 .panelEyebrow,
 .statusChip,
 .pointState,
+.pointRole,
 .cardStatus,
+.cardRole,
 .panelCount,
 .promoteButton,
 .inlineRetry {
@@ -65,6 +67,12 @@
 
 .panelEyebrow {
   width: fit-content;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.pointRole,
+.cardRole {
   color: var(--text-secondary);
   text-transform: uppercase;
 }
@@ -353,6 +361,12 @@
   gap: 10px;
 }
 
+.pointBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .doneIcon {
   color: var(--success);
   flex: none;
@@ -366,6 +380,120 @@
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.pointHint {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.matchCard {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+  border-radius: 22px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+}
+
+.matchFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--image-stage-bg);
+}
+
+.matchImage {
+  object-fit: cover;
+}
+
+.matchFallback {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.matchMeta {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+}
+
+.matchTitle {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.matchCopy {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+}
+
+.pointActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pointAction,
+.pointActionPrimary {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    opacity 150ms var(--ease-apple);
+}
+
+.pointActionPrimary {
+  color: var(--text-on-accent);
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: var(--shadow-sm);
+}
+
+.pointAction {
+  color: var(--text-primary);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-sm);
+}
+
+.pointAction:hover,
+.pointActionPrimary:hover,
+.pointAction:focus-visible,
+.pointActionPrimary:focus-visible {
+  transform: translateY(-1px);
+}
+
+.pointInlineStatus {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
 .pointFooter {
@@ -425,6 +553,16 @@
   line-height: 1.5;
 }
 
+.pointEmpty {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 18px;
+  border-radius: 24px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
 .cardGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -441,11 +579,15 @@
   transition:
     transform 180ms var(--ease-apple),
     box-shadow 180ms var(--ease-apple);
+  cursor: default;
+}
+
+.cardItemInteractive {
   cursor: pointer;
 }
 
-.cardItem:hover,
-.cardItem:focus-visible {
+.cardItemInteractive:hover,
+.cardItemInteractive:focus-visible {
   transform: translateY(-2px);
   box-shadow: var(--shadow-xl);
 }
@@ -474,6 +616,14 @@
   background: var(--image-overlay);
 }
 
+.cardRole {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+  background: color-mix(in srgb, var(--surface-2) 92%, transparent);
+}
+
 .cardImage {
   object-fit: cover;
 }
@@ -498,6 +648,11 @@
   display: grid;
   align-content: space-between;
   gap: 16px;
+}
+
+.cardPlaceholderCopy {
+  display: grid;
+  gap: 10px;
 }
 
 .cardPlaceholderText {

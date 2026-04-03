@@ -5,9 +5,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { buildRenderCacheKey, buildPromptHash } from '@/lib/ai/cache-keys'
 import { recordGenerationCosts } from '@/lib/ai/cost-ledger'
 import { estimateImageCostUsd, estimatePlannerCostUsd, serializeImageUsage, serializePlannerUsage } from '@/lib/ai/costs'
-import { generateCardImage, resolveGenerationStrategy } from '@/lib/ai/generate'
+import { generateCardImage } from '@/lib/ai/generate'
 import { upsertRenderCache, findRenderCache } from '@/lib/ai/render-cache'
-import type { CardJobRecord, GenerationRunStatus } from '@/lib/types'
+import { resolveGenerationStrategy } from '@/lib/ai/strategy'
+import { getCurrentUserEntitlement, refundGenerationCredit } from '@/lib/billing/entitlements'
+import { chooseRenderProfile } from '@/lib/generation/render-policy'
+import type { CardJobRecord, GenerationRunStatus, RenderCreditKind } from '@/lib/types'
 
 type ProcessCardJobOptions = {
   skipClaim?: boolean
@@ -27,8 +30,19 @@ function getErrorMessage(error: unknown) {
   return 'Generation failed'
 }
 
+async function refundReservedCreditIfNeeded(
+  supabase: SupabaseClient,
+  job: Pick<CardJobRecord, 'entitlement_kind' | 'entitlement_units'>,
+) {
+  if (!job.entitlement_kind || !job.entitlement_units || job.entitlement_units < 1) {
+    return
+  }
+
+  await refundGenerationCredit(supabase, job.entitlement_kind as RenderCreditKind, job.entitlement_units)
+}
+
 export async function syncGenerationRunState(supabase: SupabaseClient, sessionId: string) {
-  const [{ data: jobs, error: jobsError }, { data: runningCard }] = await Promise.all([
+  const [{ data: jobs, error: jobsError }, { data: runningCard }, { count: completeCardCount, error: cardsError }] = await Promise.all([
     supabase
       .from('card_jobs')
       .select('status, card_id')
@@ -40,9 +54,15 @@ export async function syncGenerationRunState(supabase: SupabaseClient, sessionId
       .eq('status', 'running')
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('cards')
+      .select('id', { count: 'exact', head: true })
+      .eq('session_id', sessionId)
+      .eq('status', 'complete'),
   ])
 
   if (jobsError) throw jobsError
+  if (cardsError) throw cardsError
 
   const jobList = (jobs ?? []) as Array<Pick<CardJobRecord, 'status' | 'card_id'>>
   const totalCards = jobList.length
@@ -87,7 +107,7 @@ export async function syncGenerationRunState(supabase: SupabaseClient, sessionId
       .from('sessions')
       .update({
         status: sessionStatus,
-        card_count: completedCards,
+        card_count: completeCardCount ?? 0,
       })
       .eq('id', sessionId),
   ])
@@ -128,21 +148,21 @@ export async function processCardJob(
 
   const typedJob = job as CardJobRecord
 
-  const [{ data: point, error: pointError }, { data: session, error: sessionError }, { error: cardError }] =
+  const [{ data: point, error: pointError }, { data: session, error: sessionError }, { data: card, error: cardError }] =
     await Promise.all([
       supabase
         .from('points')
-        .select('id, text, category, concept, sort_order')
+        .select('id, text, category, concept, sort_order, note_role')
         .eq('id', typedJob.point_id)
         .single(),
       supabase
         .from('sessions')
-        .select('id, user_id, session_context')
+        .select('id, user_id, session_context, visibility')
         .eq('id', typedJob.session_id)
         .single(),
       supabase
         .from('cards')
-        .select('id')
+        .select('id, generation_gate, community_match_card_id, community_match_score, status')
         .eq('id', typedJob.card_id)
         .single(),
     ])
@@ -152,21 +172,61 @@ export async function processCardJob(
   if (cardError) throw cardError
 
   const strategy = resolveGenerationStrategy(point.text, point.category, point.concept)
+  const entitlement = await getCurrentUserEntitlement(supabase)
+  const renderProfile = chooseRenderProfile({
+    noteRole: point.note_role ?? 'support',
+    generationGate: card.generation_gate ?? 'manual',
+    strategy,
+    sessionVisibility: session.visibility ?? null,
+    forcePremium: card.generation_gate === 'premium',
+    allowHighQuality: entitlement.can_high_quality,
+  })
 
   const { data: authData } = await supabase.auth.getUser()
   const preferences = authData.user?.user_metadata?.preferences || {}
+
+  let referenceContext = ''
+
+  if (typedJob.reference_card_id) {
+    const { data: referenceCard } = await supabase
+      .from('community_index')
+      .select('title, community_template, category, concept, author_name')
+      .eq('card_id', typedJob.reference_card_id)
+      .maybeSingle()
+
+    if (referenceCard) {
+      const referenceSummary = [
+        referenceCard.title ? `title=${referenceCard.title}` : null,
+        referenceCard.community_template ? `template=${referenceCard.community_template}` : null,
+        referenceCard.category ? `category=${referenceCard.category}` : null,
+        referenceCard.concept ? `concept=${referenceCard.concept}` : null,
+        referenceCard.author_name ? `author=${referenceCard.author_name}` : null,
+      ]
+        .filter(Boolean)
+        .join('; ')
+
+      if (referenceSummary) {
+        referenceContext = `\nReference card for remix: ${referenceSummary}`
+      }
+    }
+  }
+
+  const effectiveSessionContext = `${session.session_context ?? ''}${referenceContext}`.trim()
 
   const cacheKey = buildRenderCacheKey({
     pointText: point.text,
     category: point.category,
     concept: point.concept,
-    sessionContext: session.session_context,
+    sessionContext: effectiveSessionContext,
     plannerMode: strategy.plannerMode,
     profileId: strategy.profileId,
     toonTemplateId: strategy.templateId,
     routeLevel: strategy.routeLevel,
     density: preferences.density,
     specialty: preferences.specialty,
+    model: renderProfile.imageModel,
+    quality: renderProfile.imageQuality,
+    size: renderProfile.imageSize,
   })
 
   const claimUpdate = skipClaim
@@ -211,12 +271,16 @@ export async function processCardJob(
     const cached = await findRenderCache(supabase, session.user_id, cacheKey)
 
     if (cached) {
+      await refundReservedCreditIfNeeded(supabase, typedJob)
+
       const { error: cardCompleteError } = await supabase
         .from('cards')
-        .update({
+      .update({
           image_url: cached.image_url,
           title: getCardTitle(point.text),
           status: 'complete',
+          render_model: cached.model,
+          render_quality: renderProfile.imageQuality,
           community_template: strategy.templateId,
           community_hash: cacheKey,
         })
@@ -231,6 +295,7 @@ export async function processCardJob(
           prompt_hash: cached.prompt_hash,
           model: cached.model,
           prompt_version: cached.prompt_version,
+          entitlement_units: 0,
           finished_at: new Date().toISOString(),
           last_error: null,
         })
@@ -279,9 +344,15 @@ export async function processCardJob(
     } = await generateCardImage(
       point.text,
       point.concept || point.category || 'Learning card',
-      session.session_context || '',
+      effectiveSessionContext,
       preferences,
-      { strategy },
+      {
+        strategy,
+        imageModel: renderProfile.imageModel,
+        plannerModel: renderProfile.plannerModel,
+        quality: renderProfile.imageQuality,
+        size: renderProfile.imageSize,
+      },
     )
 
     const promptHash = buildPromptHash(prompt)
@@ -314,6 +385,8 @@ export async function processCardJob(
           image_url: cacheImagePath,
           title: getCardTitle(point.text),
           status: 'complete',
+          render_model: model,
+          render_quality: quality,
           community_template: templateId,
           community_hash: cacheKey,
         })
@@ -391,6 +464,8 @@ export async function processCardJob(
   } catch (error) {
     const message = getErrorMessage(error)
 
+    await refundReservedCreditIfNeeded(supabase, typedJob)
+
     await Promise.all([
       supabase
         .from('cards')
@@ -400,6 +475,7 @@ export async function processCardJob(
         .from('card_jobs')
         .update({
           status: 'error',
+          entitlement_units: 0,
           last_error: message,
           finished_at: new Date().toISOString(),
         })

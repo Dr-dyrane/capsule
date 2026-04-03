@@ -5,6 +5,12 @@ export type SessionStatus =
   | 'complete'
   | 'error'
 
+export type NoteRole = 'hero' | 'support' | 'overflow'
+export type GenerationGate = 'automatic' | 'community-first' | 'manual' | 'reused' | 'premium'
+export type EntitlementPlan = 'student_free' | 'sponsored' | 'premium_manual' | 'admin'
+export type FundingSource = 'student_free' | 'manual' | 'sponsor' | 'donor' | 'school' | 'admin'
+export type RenderCreditKind = 'support' | 'premium'
+
 export type CommunityVisibility = 'private' | 'published'
 export type CommunityReactionKind = 'like' | 'save'
 export type CommunitySort = 'recent' | 'trending'
@@ -35,6 +41,7 @@ export interface PointRecord {
   text: string
   category: string | null
   concept: string | null
+  note_role?: NoteRole
   sort_order: number
   card_count: number | null
   created_at?: string
@@ -48,6 +55,12 @@ export interface CardRecord {
   title: string | null
   status: 'queued' | 'generating' | 'complete' | 'error'
   card_order?: number | null
+  generation_gate?: GenerationGate
+  render_model?: string | null
+  render_quality?: string | null
+  reused_from_card_id?: string | null
+  community_match_card_id?: string | null
+  community_match_score?: number | null
   visibility?: CommunityVisibility
   published_at?: string | null
   published_by?: string | null
@@ -55,6 +68,26 @@ export interface CardRecord {
   community_hash?: string | null
   created_at?: string
   points?: PointRecord | PointRecord[]
+}
+
+export interface CommunityMatchRecord {
+  card_id: string
+  title: string | null
+  image_url: string
+  author_name: string | null
+  community_template: string | null
+  category: string | null
+  concept: string | null
+  score: number
+}
+
+export interface SessionRecommendationRecord {
+  point_id: string
+  role: NoteRole
+  gate: GenerationGate
+  match: (CommunityMatchRecord & {
+    signed_url: string | null
+  }) | null
 }
 
 export interface ProfileRecord {
@@ -115,6 +148,9 @@ export interface CardJobRecord {
   session_id: string
   card_id: string
   point_id: string
+  reference_card_id?: string | null
+  entitlement_kind?: RenderCreditKind | null
+  entitlement_units?: number
   user_id: string
   status: CardJobStatus
   planner_mode: PlannerMode
@@ -172,4 +208,42 @@ export interface GenerationCostRecord {
   output_image_tokens: number | null
   metadata: Record<string, unknown> | null
   created_at?: string
+}
+
+export interface UserEntitlementRecord {
+  user_id: string
+  plan: EntitlementPlan
+  funding_source: FundingSource
+  hero_auto_per_note: number
+  support_renders_remaining: number
+  premium_renders_remaining: number
+  community_reuse_unlimited: boolean
+  can_publish: boolean
+  can_high_quality: boolean
+  expires_at?: string | null
+  notes?: string | null
+  updated_at?: string
+}
+
+export interface EntitlementGrantRecord {
+  id: string
+  user_id: string
+  granted_by: string
+  grant_type: string
+  support_renders: number
+  premium_renders: number
+  plan?: EntitlementPlan | null
+  funding_source?: FundingSource | null
+  reason?: string | null
+  source_reference?: string | null
+  expires_at?: string | null
+  created_at?: string
+}
+
+export interface UserDirectoryRecord {
+  user_id: string
+  email: string
+  display_name?: string | null
+  avatar_url?: string | null
+  updated_at?: string
 }

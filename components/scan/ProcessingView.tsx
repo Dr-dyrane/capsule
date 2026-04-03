@@ -1,44 +1,75 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, Globe, Lock, Repeat2, ScanText, Sparkles, X } from 'lucide-react'
+import {
+  ArrowRight,
+  CheckCircle2,
+  Globe,
+  Lock,
+  RefreshCcw,
+  Repeat2,
+  ScanText,
+  Sparkles,
+  Wand2,
+  X,
+} from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { getSignedCardUrls } from '@/app/actions/assets'
 import { publishSession, unpublishSession } from '@/app/actions/community'
-import { ensureCardPlaceholders, generateCard } from '@/app/actions/generate'
+import {
+  ensureCardPlaceholders,
+  generateCard,
+  getSessionRecommendations,
+  useCommunityMatch as applyCommunityMatch,
+} from '@/app/actions/generate'
 import { processNote, restartSession } from '@/app/actions/process'
 import ImagePreview from '@/components/cards/ImagePreview'
 import { createClient } from '@/lib/supabase/client'
-import type { CardRecord, PointRecord, SessionRecord, SessionStatus } from '@/lib/types'
+import type { CardRecord, NoteRole, PointRecord, SessionRecommendationRecord, SessionRecord, SessionStatus } from '@/lib/types'
 
 import styles from './ProcessingView.module.css'
 
 const EMPTY_POINTS: PointRecord[] = []
 const EMPTY_CARDS: CardRecord[] = []
 
-function getCardStatusLabel(cardStatus: CardRecord['status']) {
-  if (cardStatus === 'complete') return 'Ready'
-  if (cardStatus === 'generating') return 'Generating'
-  if (cardStatus === 'error') return 'Error'
-  return 'Queued'
-}
-
-function getFallbackCardTitle(text: string) {
-  const title = text.split(':')[0]?.trim()
-  return title || 'Learning card'
-}
-
 function getPointPreview(text: string) {
   const compact = text.replace(/\s+/g, ' ').trim()
-  if (compact.length <= 120) {
-    return compact
-  }
+  return compact.length <= 120 ? compact : `${compact.slice(0, 117).trimEnd()}...`
+}
 
-  return `${compact.slice(0, 117).trimEnd()}...`
+function getRolePriority(role?: NoteRole) {
+  if (role === 'hero') return 0
+  if (role === 'support') return 1
+  return 2
+}
+
+function getRoleLabel(role?: NoteRole) {
+  if (role === 'hero') return 'Hero'
+  if (role === 'support') return 'Support'
+  return 'Later'
+}
+
+function getCardStatusLabel(card?: CardRecord, role?: NoteRole, recommendation?: SessionRecommendationRecord | null) {
+  if (!card) return role === 'hero' ? 'Queued' : 'Draft'
+  if (card.status === 'complete') return card.generation_gate === 'reused' ? 'Reused' : 'Ready'
+  if (card.status === 'generating') return 'Generating'
+  if (card.status === 'error') return 'Error'
+  if (role === 'hero' || card.generation_gate === 'automatic' || card.generation_gate === 'premium') return 'Queued'
+  if (recommendation?.match && card.generation_gate === 'community-first') return 'Community match'
+  return role === 'overflow' ? 'Generate later' : 'On demand'
+}
+
+function getCardHint(card: CardRecord, role?: NoteRole) {
+  if (card.status === 'complete') return card.generation_gate === 'reused' ? 'Used from community' : 'Open card'
+  if (card.status === 'generating') return 'Rendering now'
+  if (card.status === 'error') return 'Retry render'
+  if (role === 'hero') return 'First card in line'
+  if (card.generation_gate === 'community-first') return 'Reuse before rerender'
+  return role === 'overflow' ? 'Generate when needed' : 'Generate next'
 }
 
 export default function ProcessingView({
@@ -59,14 +90,16 @@ export default function ProcessingView({
   const [points, setPoints] = useState<PointRecord[]>(EMPTY_POINTS)
   const [cards, setCards] = useState<CardRecord[]>(EMPTY_CARDS)
   const [cardUrls, setCardUrls] = useState<Record<string, string>>({})
+  const [recommendations, setRecommendations] = useState<Record<string, SessionRecommendationRecord>>({})
   const [status, setStatus] = useState<SessionStatus | 'loading'>('loading')
+  const [cardActionTarget, setCardActionTarget] = useState<string | null>(null)
   const [isRetrying, startRetryTransition] = useTransition()
   const [isPublishing, startPublishTransition] = useTransition()
+  const [isCardActionPending, startCardActionTransition] = useTransition()
   const [publishPrompt, setPublishPrompt] = useState<'publish' | 'unpublish' | null>(null)
 
   const placeholderSyncRef = useRef(false)
   const processingStartedRef = useRef(false)
-
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
 
@@ -82,65 +115,40 @@ export default function ProcessingView({
         setSession(initialSession as SessionRecord)
         setStatus((initialSession.status as SessionStatus) || 'loading')
       }
-
-      if (initialPoints) {
-        setPoints(initialPoints as PointRecord[])
-      }
-
-      if (initialCards) {
-        setCards(initialCards as CardRecord[])
-      }
+      if (initialPoints) setPoints(initialPoints as PointRecord[])
+      if (initialCards) setCards(initialCards as CardRecord[])
     }
 
     void bootstrap()
 
     const pointsSub = supabase
       .channel(`points:${sessionId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'points', filter: `session_id=eq.${sessionId}` },
-        (payload) => {
-          setPoints((current) =>
-            [...current, payload.new as PointRecord].sort((a, b) => a.sort_order - b.sort_order),
-          )
-        },
-      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'points', filter: `session_id=eq.${sessionId}` }, (payload) => {
+        setPoints((current) => [...current, payload.new as PointRecord].sort((a, b) => a.sort_order - b.sort_order))
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'points', filter: `session_id=eq.${sessionId}` }, (payload) => {
+        setPoints((current) => current.map((point) => (point.id === payload.new.id ? (payload.new as PointRecord) : point)).sort((a, b) => a.sort_order - b.sort_order))
+      })
       .subscribe()
 
     const cardsSub = supabase
       .channel(`cards:${sessionId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` },
-        (payload) => {
-          setCards((current) =>
-            [...current, payload.new as CardRecord].sort((a, b) => (a.card_order ?? 0) - (b.card_order ?? 0)),
-          )
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` },
-        (payload) => {
-          setCards((current) =>
-            current
-              .map((card) => (card.id === payload.new.id ? (payload.new as CardRecord) : card))
-              .sort((a, b) => (a.card_order ?? 0) - (b.card_order ?? 0)),
-          )
-        },
-      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` }, (payload) => {
+        setCards((current) => [...current, payload.new as CardRecord].sort((a, b) => (a.card_order ?? 0) - (b.card_order ?? 0)))
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'cards', filter: `session_id=eq.${sessionId}` }, (payload) => {
+        setCards((current) =>
+          current.map((card) => (card.id === payload.new.id ? (payload.new as CardRecord) : card)).sort((a, b) => (a.card_order ?? 0) - (b.card_order ?? 0)),
+        )
+      })
       .subscribe()
 
     const sessionSub = supabase
       .channel(`session:${sessionId}`)
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` },
-        (payload) => {
-          setStatus(payload.new.status as SessionStatus)
-          setSession(payload.new as SessionRecord)
-        },
-      )
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `id=eq.${sessionId}` }, (payload) => {
+        setStatus(payload.new.status as SessionStatus)
+        setSession(payload.new as SessionRecord)
+      })
       .subscribe()
 
     return () => {
@@ -155,55 +163,64 @@ export default function ProcessingView({
       processingStartedRef.current = true
       void processNote(sessionId)
         .then((result) => {
-          if (!result.success) {
-            setStatus('error')
-          }
+          if (!result.success) setStatus('error')
         })
         .catch(() => setStatus('error'))
     }
   }, [sessionId, status])
 
   useEffect(() => {
-    if (status === 'loading' || status === 'processing' || points.length === 0) {
-      return
-    }
-
+    if (status === 'loading' || status === 'processing' || points.length === 0) return
     const hasMissingCards = points.some((point) => !cards.some((card) => card.point_id === point.id))
-    if (!hasMissingCards || placeholderSyncRef.current) {
-      return
-    }
+    if (!hasMissingCards || placeholderSyncRef.current) return
 
     placeholderSyncRef.current = true
     void ensureCardPlaceholders(sessionId)
-      .catch((error) => {
-        console.error('Placeholder sync failed:', error)
-      })
+      .catch((error) => console.error('Placeholder sync failed:', error))
       .finally(() => {
         placeholderSyncRef.current = false
       })
   }, [cards, points, sessionId, status])
 
-  useEffect(() => {
-    const freshPaths = cards
-      .filter((card) => card.status === 'complete' && !cardUrls[card.image_url])
-      .map((card) => card.image_url)
+  const recommendationKey = useMemo(
+    () => cards.map((card) => `${card.point_id}:${card.generation_gate ?? ''}:${card.community_match_card_id ?? ''}:${card.status}`).join('|'),
+    [cards],
+  )
 
-    if (freshPaths.length === 0) {
-      return
+  useEffect(() => {
+    if (points.length === 0 || cards.length === 0) return
+    let active = true
+
+    void getSessionRecommendations(sessionId)
+      .then((rows) => {
+        if (!active) return
+        setRecommendations(rows.reduce<Record<string, SessionRecommendationRecord>>((acc, row) => {
+          acc[row.point_id] = row
+          return acc
+        }, {}))
+      })
+      .catch((error) => console.error('Recommendation sync failed:', error))
+
+    return () => {
+      active = false
     }
+  }, [sessionId, points.length, cards.length, recommendationKey])
+
+  useEffect(() => {
+    const freshPaths = cards.filter((card) => card.status === 'complete' && !cardUrls[card.image_url]).map((card) => card.image_url)
+    if (freshPaths.length === 0) return
 
     void getSignedCardUrls(freshPaths)
-      .then((urls) => {
-        setCardUrls((current) => ({ ...current, ...urls }))
-      })
+      .then((urls) => setCardUrls((current) => ({ ...current, ...urls })))
       .catch(console.error)
   }, [cardUrls, cards])
 
-  function handleRetry() {
+  function handleRetrySession() {
     startRetryTransition(() => {
       void restartSession(sessionId).then(() => {
         setPoints(EMPTY_POINTS)
         setCards(EMPTY_CARDS)
+        setRecommendations({})
         setCardUrls({})
         setStatus('processing')
         processingStartedRef.current = false
@@ -211,76 +228,92 @@ export default function ProcessingView({
     })
   }
 
+  function runCardAction(pointId: string, cardId: string, action: 'use' | 'generate' | 'remix', referenceCardId?: string | null) {
+    setCardActionTarget(pointId)
+    startCardActionTransition(() => {
+      const task =
+        action === 'use'
+          ? applyCommunityMatch(cardId, referenceCardId ?? '')
+          : generateCard(pointId, cardId, {
+              mode: action === 'remix' ? 'remix' : 'default',
+              referenceCardId: referenceCardId ?? null,
+            })
+
+      void task.catch((error) => console.error('Card action failed:', error)).finally(() => setCardActionTarget(null))
+    })
+  }
+
   const completeCards = cards.filter((card) => card.status === 'complete')
-  const generatingCards = cards.filter((card) => card.status === 'generating')
-  const queuedCards = cards.filter((card) => card.status === 'queued')
-  const erroredCards = cards.filter((card) => card.status === 'error')
-  const totalPoints = points.length || session?.point_count || 0
-  const progressWidth = totalPoints > 0 ? (completeCards.length / totalPoints) * 100 : 0
   const pointsById = useMemo(() => new Map(points.map((point) => [point.id, point])), [points])
+  const cardsByPointId = useMemo(() => new Map(cards.map((card) => [card.point_id, card])), [cards])
+
+  const orderedPoints = useMemo(
+    () => [...points].sort((left, right) => {
+      const roleDelta = getRolePriority(left.note_role) - getRolePriority(right.note_role)
+      return roleDelta !== 0 ? roleDelta : left.sort_order - right.sort_order
+    }),
+    [points],
+  )
+
+  const visibleCards = useMemo(
+    () =>
+      [...cards]
+        .filter((card) => {
+          const point = pointsById.get(card.point_id)
+          return card.status === 'complete' || card.status === 'generating' || card.status === 'error' || point?.note_role === 'hero'
+        })
+        .sort((left, right) => {
+          const roleDelta = getRolePriority(pointsById.get(left.point_id)?.note_role) - getRolePriority(pointsById.get(right.point_id)?.note_role)
+          return roleDelta !== 0 ? roleDelta : (left.card_order ?? 0) - (right.card_order ?? 0)
+        }),
+    [cards, pointsById],
+  )
+
+  const nextPoints = useMemo(
+    () => orderedPoints.filter((point) => point.note_role !== 'hero' && cardsByPointId.get(point.id)?.status !== 'complete'),
+    [cardsByPointId, orderedPoints],
+  )
+
+  const activePipelineCards = cards.filter((card) => card.status === 'generating' || ((card.generation_gate === 'automatic' || card.generation_gate === 'premium') && card.status === 'queued'))
+  const suggestionCount = nextPoints.filter((point) => cardsByPointId.get(point.id)?.generation_gate === 'community-first').length
+  const manualCount = Math.max(0, nextPoints.length - suggestionCount)
+  const progressWidth = status === 'complete' ? 100 : Math.max(8, Math.min(100, (completeCards.length / Math.max(activePipelineCards.length, 1)) * 100))
   const supportCount = Number(Boolean(sourceImageUrl)) + Number(Boolean(remixSource))
-  const isSettledView = status === 'complete' && generatingCards.length === 0 && queuedCards.length === 0
+  const isSessionPublished = session?.visibility === 'published'
 
   const statusTitle =
     status === 'complete'
-      ? 'Cards ready.'
+      ? nextPoints.length > 0
+        ? 'Lesson ready.'
+        : 'Cards ready.'
       : status === 'processing'
         ? 'Extracting points.'
         : status === 'error'
           ? 'Generation paused.'
           : status === 'loading'
             ? 'Loading session.'
-            : 'Building cards.'
+            : 'Building the first card.'
 
   const statusCopy =
     status === 'complete'
-      ? 'Open any card or review the source note.'
+      ? nextPoints.length > 0
+        ? 'Hero first. Reuse community cards or generate more only when you need them.'
+        : 'Open any card or review the source note.'
       : status === 'processing'
-        ? 'Extracting points first.'
+        ? 'Pulling teachable points from the note first.'
         : status === 'error'
-          ? 'Retry the session or a single card.'
-          : 'Open cards as they appear.'
-
-  const displayCards =
-    cards.length > 0
-      ? cards
-      : points.map((point, index) => ({
-          id: `shadow-${point.id}`,
-          point_id: point.id,
-          session_id: sessionId,
-          image_url: '',
-          title: getFallbackCardTitle(point.text),
-          status: 'queued' as const,
-          card_order: index,
-        }))
-
-  const isSessionPublished = session?.visibility === 'published'
+          ? 'Retry the session or rerun a single card.'
+          : 'One automatic hero card starts the session. The rest stay lightweight until you ask for more.'
 
   function handleToggleSessionVisibility(nextPublishedState: boolean) {
     startPublishTransition(() => {
-      setSession((current) =>
-        current
-          ? {
-              ...current,
-              visibility: nextPublishedState ? 'published' : 'private',
-            }
-          : current,
-      )
+      setSession((current) => current ? { ...current, visibility: nextPublishedState ? 'published' : 'private' } : current)
 
       void (nextPublishedState ? publishSession(sessionId) : unpublishSession(sessionId))
-        .then(() => {
-          setPublishPrompt(null)
-        })
+        .then(() => setPublishPrompt(null))
         .catch((error) => {
           console.error('Failed to update session visibility', error)
-          setSession((current) =>
-            current
-              ? {
-                  ...current,
-                  visibility: nextPublishedState ? 'private' : 'published',
-                }
-              : current,
-          )
+          setSession((current) => current ? { ...current, visibility: nextPublishedState ? 'private' : 'published' } : current)
           setPublishPrompt(null)
         })
     })
@@ -299,54 +332,30 @@ export default function ProcessingView({
               <h2 className={styles.statusTitle}>{statusTitle}</h2>
               <p className={styles.statusCopy}>{statusCopy}</p>
             </div>
-
-            <div className={styles.statusCount}>{completeCards.length} / {totalPoints || '?'}</div>
+            <div className={styles.statusCount}>{completeCards.length} / {points.length || '?'}</div>
           </div>
 
           <div className={styles.statusFooter}>
             <div className={styles.statusLedger}>
               <div className={styles.statusChip}>Ready {completeCards.length}</div>
-              <div className={styles.statusChip}>Generating {generatingCards.length}</div>
-              <div className={styles.statusChip}>Queued {queuedCards.length}</div>
-              {erroredCards.length > 0 ? <div className={styles.statusChip}>Errors {erroredCards.length}</div> : null}
+              <div className={styles.statusChip}>Live {activePipelineCards.length}</div>
+              <div className={styles.statusChip}>Reuse {suggestionCount}</div>
+              <div className={styles.statusChip}>Later {manualCount}</div>
             </div>
-
             <div className={styles.statusActions}>
               {status === 'error' ? (
-                <button type="button" className={styles.primaryAction} onClick={handleRetry} disabled={isRetrying}>
+                <button type="button" className={styles.primaryAction} onClick={handleRetrySession} disabled={isRetrying}>
                   {isRetrying ? 'Restarting...' : 'Restart session'}
                 </button>
               ) : null}
-              <button
-                type="button"
-                className={styles.secondaryAction}
-                onClick={() => setPublishPrompt(isSessionPublished ? 'unpublish' : 'publish')}
-                disabled={isPublishing}
-              >
-                {isPublishing ? (
-                  'Saving...'
-                ) : isSessionPublished ? (
-                  <>
-                    <Lock size={14} aria-hidden="true" />
-                    <span>Unpublish all</span>
-                  </>
-                ) : (
-                  <>
-                    <Globe size={14} aria-hidden="true" />
-                    <span>Publish all</span>
-                  </>
-                )}
+              <button type="button" className={styles.secondaryAction} onClick={() => setPublishPrompt(isSessionPublished ? 'unpublish' : 'publish')} disabled={isPublishing}>
+                {isPublishing ? 'Saving...' : isSessionPublished ? <><Lock size={14} /><span>Unpublish all</span></> : <><Globe size={14} /><span>Publish all</span></>}
               </button>
             </div>
           </div>
 
           <div className={styles.progressRail}>
-            <motion.div
-              className={styles.progressFill}
-              initial={{ width: 0 }}
-              animate={{ width: `${progressWidth}%` }}
-              transition={{ type: 'spring', damping: 22, stiffness: 90 }}
-            />
+            <motion.div className={styles.progressFill} initial={{ width: 0 }} animate={{ width: `${progressWidth}%` }} transition={{ type: 'spring', damping: 22, stiffness: 90 }} />
           </div>
         </div>
       </section>
@@ -354,22 +363,14 @@ export default function ProcessingView({
       {sourceImageUrl || remixSource ? (
         <section className={`${styles.supportGrid} ${supportCount === 1 ? styles.supportGridSingle : ''}`}>
           {sourceImageUrl ? (
-            <section
-              className={`${styles.panel} ${styles.sourcePanel} ${supportCount === 1 ? styles.sourcePanelSingle : ''}`}
-            >
+            <section className={`${styles.panel} ${styles.sourcePanel} ${supportCount === 1 ? styles.sourcePanelSingle : ''}`}>
               <div className={`${styles.panelInner} ${styles.sourceInner}`}>
                 <div className={styles.sourceCopy}>
-                  <div className={styles.panelEyebrow}>
-                    <ScanText size={14} aria-hidden="true" />
-                    <span>Original note</span>
-                  </div>
+                  <div className={styles.panelEyebrow}><ScanText size={14} /><span>Original note</span></div>
                   <h3 className={styles.panelTitle}>Source scan</h3>
                   <p className={styles.panelCopy}>The uploaded page that started this session.</p>
-                  <Link href="/library" className={styles.inlineAction}>
-                    Back to sessions
-                  </Link>
+                  <Link href="/library" className={styles.inlineAction}>Back to sessions</Link>
                 </div>
-
                 <div className={styles.sourcePreview}>
                   <ImagePreview src={sourceImageUrl} alt="Original note scan" variant="document" />
                 </div>
@@ -378,31 +379,16 @@ export default function ProcessingView({
           ) : null}
 
           {remixSource ? (
-            <section className={`${styles.panel} ${styles.sourcePanel}`}>
+            <section className={styles.panel}>
               <div className={`${styles.panelInner} ${styles.sourceInner}`}>
                 <div className={styles.sourceCopy}>
-                  <div className={styles.panelEyebrow}>
-                    <Repeat2 size={14} aria-hidden="true" />
-                    <span>Reference card</span>
-                  </div>
+                  <div className={styles.panelEyebrow}><Repeat2 size={14} /><span>Reference card</span></div>
                   <h3 className={styles.panelTitle}>{remixSource.title || 'Community card reference'}</h3>
-                  <p className={styles.panelCopy}>
-                    Pinned from community so this session can trace back to the card you remixed.
-                  </p>
-                  <Link href="/community" className={styles.inlineAction}>
-                    Open community
-                  </Link>
-                  <Link href={`/scan?remix=${remixSource.card_id}`} className={styles.inlineAction}>
-                    Reopen remix source
-                  </Link>
+                  <p className={styles.panelCopy}>This session can still trace back to the community card that started the remix.</p>
+                  <Link href="/community" className={styles.inlineAction}>Open community</Link>
                 </div>
-
                 <div className={styles.sourcePreview}>
-                  {remixSource.signedUrl ? (
-                    <ImagePreview src={remixSource.signedUrl} alt={remixSource.title || 'Community card reference'} />
-                  ) : (
-                    <div className={styles.referenceFallback}>Reference preview unavailable.</div>
-                  )}
+                  {remixSource.signedUrl ? <ImagePreview src={remixSource.signedUrl} alt={remixSource.title || 'Community card reference'} /> : <div className={styles.referenceFallback}>Reference preview unavailable.</div>}
                 </div>
               </div>
             </section>
@@ -410,32 +396,33 @@ export default function ProcessingView({
         </section>
       ) : null}
 
-      <div className={`${styles.content} ${isSettledView ? styles.contentComplete : ''}`}>
+      <div className={styles.content}>
         <section className={`${styles.panel} ${styles.cardsPanel}`}>
           <div className={styles.panelInner}>
             <div className={styles.panelHeader}>
               <div>
                 <h3 className={styles.panelTitle}>Cards</h3>
-                <p className={styles.panelCopy}>{isSettledView ? 'Open any card.' : 'Live build state.'}</p>
+                <p className={styles.panelCopy}>Hero first. Completed and in-flight cards land here.</p>
               </div>
-              <div className={styles.panelCount}>{displayCards.length}</div>
+              <div className={styles.panelCount}>{visibleCards.length}</div>
             </div>
 
-            {displayCards.length === 0 ? (
+            {visibleCards.length === 0 ? (
               <div className={styles.cardsEmpty}>
-                <p className={styles.cardsEmptyTitle}>No cards yet</p>
-                <p className={styles.cardsEmptyCopy}>As soon as the queue starts, each card appears here on its own.</p>
+                <p className={styles.cardsEmptyTitle}>No card has started yet</p>
+                <p className={styles.cardsEmptyCopy}>Once the hero card spins up, it will appear here first.</p>
               </div>
             ) : (
               <div className={styles.cardGrid}>
                 <AnimatePresence mode="popLayout">
-                  {displayCards.map((card) => {
-                    const signedUrl = card.image_url ? cardUrls[card.image_url] : undefined
-                    const statusLabel = getCardStatusLabel(card.status)
-                    const isPersisted = !card.id.startsWith('shadow-')
-                    const showRetry = card.status === 'error' && isPersisted
+                  {visibleCards.map((card) => {
                     const linkedPoint = pointsById.get(card.point_id)
+                    const recommendation = recommendations[card.point_id]
+                    const signedUrl = card.image_url ? cardUrls[card.image_url] : undefined
+                    const statusLabel = getCardStatusLabel(card, linkedPoint?.note_role, recommendation)
                     const pointPreview = linkedPoint ? getPointPreview(linkedPoint.text) : ''
+                    const isClickable = card.status === 'complete'
+                    const isBusy = isCardActionPending && cardActionTarget === card.point_id
 
                     return (
                       <motion.article
@@ -443,48 +430,43 @@ export default function ProcessingView({
                         layout
                         initial={{ opacity: 0, scale: 0.97 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className={styles.cardItem}
-                        role={isPersisted ? 'button' : undefined}
-                        tabIndex={isPersisted ? 0 : -1}
-                        onClick={isPersisted ? () => router.push(`/cards/${card.id}`) : undefined}
-                        onKeyDown={
-                          isPersisted
-                            ? (event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                  event.preventDefault()
-                                  router.push(`/cards/${card.id}`)
-                                }
-                              }
-                            : undefined
-                        }
+                        className={`${styles.cardItem} ${isClickable ? styles.cardItemInteractive : ''}`}
+                        role={isClickable ? 'button' : undefined}
+                        tabIndex={isClickable ? 0 : -1}
+                        onClick={isClickable ? () => router.push(`/cards/${card.id}`) : undefined}
+                        onKeyDown={isClickable ? (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            router.push(`/cards/${card.id}`)
+                          }
+                        } : undefined}
                       >
                         <div className={styles.cardVisual}>
                           <div className={styles.cardStatus}>{statusLabel}</div>
+                          <div className={styles.cardRole}>{getRoleLabel(linkedPoint?.note_role)}</div>
 
                           {card.status === 'complete' && signedUrl ? (
                             <div className={styles.cardFrame}>
-                              <Image
-                                src={signedUrl}
-                                alt={card.title || 'Generated card'}
-                                fill
-                                unoptimized
-                                sizes="(max-width: 767px) 100vw, (max-width: 1439px) 50vw, 33vw"
-                                className={styles.cardImage}
-                              />
+                              <Image src={signedUrl} alt={card.title || 'Generated card'} fill unoptimized sizes="(max-width: 767px) 100vw, (max-width: 1439px) 50vw, 33vw" className={styles.cardImage} />
                             </div>
                           ) : (
                             <div className={`${styles.cardPlaceholder} ${card.status === 'generating' ? styles.shimmering : ''}`}>
                               <div className={styles.cardPlaceholderBody}>
-                                <span className={styles.cardPlaceholderText}>
-                                  {card.status === 'queued'
-                                    ? 'Waiting in queue'
-                                    : card.status === 'generating'
-                                      ? 'Rendering image'
-                                      : card.status === 'error'
-                                        ? 'Stopped before finish'
-                                        : 'Preparing card'}
-                                </span>
-                                {pointPreview ? <p className={styles.cardPreview}>{pointPreview}</p> : null}
+                                <div>
+                                  <span className={styles.cardPlaceholderText}>
+                                    {card.status === 'queued' ? linkedPoint?.note_role === 'hero' ? 'Preparing the hero card' : 'Waiting for your signal' : card.status === 'generating' ? 'Rendering image' : 'Stopped before finish'}
+                                  </span>
+                                  {pointPreview ? <p className={styles.cardPreview}>{pointPreview}</p> : null}
+                                </div>
+                                {card.status === 'error' ? (
+                                  <button type="button" className={styles.inlineRetry} onClick={(event) => {
+                                    event.preventDefault()
+                                    event.stopPropagation()
+                                    runCardAction(card.point_id, card.id, 'generate')
+                                  }} disabled={isBusy}>
+                                    {isBusy ? 'Retrying...' : 'Retry'}
+                                  </button>
+                                ) : null}
                               </div>
                             </div>
                           )}
@@ -493,30 +475,8 @@ export default function ProcessingView({
                         <div className={styles.cardMeta}>
                           <div className={styles.cardTextBlock}>
                             <p className={styles.cardTitle}>{card.title || 'Learning card'}</p>
-                            <p className={styles.cardHint}>
-                              {card.status === 'complete'
-                                ? 'Open card'
-                                : card.status === 'error'
-                                  ? 'Retry or open detail'
-                                  : 'Live batch state'}
-                            </p>
+                            <p className={styles.cardHint}>{getCardHint(card, linkedPoint?.note_role)}</p>
                           </div>
-
-                          {showRetry ? (
-                            <button
-                              type="button"
-                              className={styles.inlineRetry}
-                              onClick={(event) => {
-                                event.preventDefault()
-                                event.stopPropagation()
-                                void generateCard(card.point_id, card.id).catch((error) => {
-                                  console.error('Refinement failed:', error)
-                                })
-                              }}
-                            >
-                              Retry
-                            </button>
-                          ) : null}
                         </div>
                       </motion.article>
                     )
@@ -527,109 +487,139 @@ export default function ProcessingView({
           </div>
         </section>
 
-        <section className={`${styles.panel} ${styles.queuePanel} ${isSettledView ? styles.queuePanelSettled : ''}`}>
+        <section className={styles.panel}>
           <div className={styles.panelInner}>
             <div className={styles.panelHeader}>
               <div>
-                <h3 className={styles.panelTitle}>Queue</h3>
-                <p className={styles.panelCopy}>{isSettledView ? 'Source points.' : 'Point order.'}</p>
+                <h3 className={styles.panelTitle}>Next cards</h3>
+                <p className={styles.panelCopy}>Community first, then render on demand.</p>
               </div>
-              <div className={styles.panelCount}>{points.length}</div>
+              <div className={styles.panelCount}>{nextPoints.length}</div>
             </div>
 
-            <div className={`${styles.pointScroll} ${isSettledView ? styles.pointScrollSettled : ''}`}>
-              <AnimatePresence mode="popLayout">
-                {points.map((point, index) => {
-                  const card = cards.find((candidate) => candidate.point_id === point.id)
-                  const pointState = getCardStatusLabel(card?.status ?? 'queued')
-                  const isDone = pointState === 'Ready'
+            {nextPoints.length === 0 ? (
+              <div className={styles.pointEmpty}>
+                <p className={styles.cardsEmptyTitle}>All grouped concepts are ready</p>
+                <p className={styles.cardsEmptyCopy}>Nothing is waiting on a manual decision right now.</p>
+              </div>
+            ) : (
+              <div className={styles.pointScroll}>
+                <AnimatePresence mode="popLayout">
+                  {nextPoints.map((point, index) => {
+                    const card = cardsByPointId.get(point.id)
+                    const recommendation = recommendations[point.id] ?? null
+                    const match = recommendation?.match ?? null
+                    const isBusy = isCardActionPending && cardActionTarget === point.id
 
-                  return (
-                    <motion.div
-                      key={point.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={styles.pointItem}
-                    >
-                      <div className={styles.pointMain}>
-                        <div className={styles.pointIndex}>{index + 1}</div>
-                        <div className={styles.pointBody}>
-                          <div className={styles.pointTopRow}>
-                            <span className={styles.pointState}>{pointState}</span>
-                            {isDone ? <CheckCircle2 size={14} className={styles.doneIcon} /> : null}
+                    return (
+                      <motion.div key={point.id} layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={styles.pointItem}>
+                        <div className={styles.pointMain}>
+                          <div className={styles.pointIndex}>{index + 1}</div>
+                          <div className={styles.pointBody}>
+                            <div className={styles.pointTopRow}>
+                              <div className={styles.pointBadges}>
+                                <span className={styles.pointRole}>{getRoleLabel(point.note_role)}</span>
+                                <span className={styles.pointState}>{getCardStatusLabel(card, point.note_role, recommendation)}</span>
+                              </div>
+                              {card?.status === 'complete' ? <CheckCircle2 size={14} className={styles.doneIcon} /> : null}
+                            </div>
+
+                            <p className={styles.pointText}>{getPointPreview(point.text)}</p>
+                            <p className={styles.pointHint}>
+                              {match ? 'Capsule found a similar published card you can reuse or remix first.' : point.note_role === 'overflow' ? 'This stays out of the auto pipeline until you ask for it.' : 'Generate this only if the hero card is not enough.'}
+                            </p>
+
+                            {match && card?.status !== 'complete' ? (
+                              <div className={styles.matchCard}>
+                                <div className={styles.matchFrame}>
+                                  {match.signed_url ? (
+                                    <Image src={match.signed_url} alt={match.title || 'Matched community card'} fill unoptimized sizes="160px" className={styles.matchImage} />
+                                  ) : (
+                                    <div className={styles.matchFallback}>Preview unavailable</div>
+                                  )}
+                                </div>
+                                <div className={styles.matchMeta}>
+                                  <p className={styles.matchTitle}>{match.title || 'Community match'}</p>
+                                  <p className={styles.matchCopy}>{match.author_name ? `From ${match.author_name}` : 'Published community card'}</p>
+                                </div>
+                              </div>
+                            ) : null}
+
+                            <div className={styles.pointActions}>
+                              {card?.status === 'generating' ? (
+                                <div className={styles.pointInlineStatus}>Rendering now.</div>
+                              ) : card?.status === 'error' ? (
+                                <button type="button" className={styles.pointActionPrimary} onClick={() => runCardAction(point.id, card.id, 'generate')} disabled={isBusy}>
+                                  <RefreshCcw size={14} />
+                                  <span>{isBusy ? 'Retrying...' : 'Retry render'}</span>
+                                </button>
+                              ) : card?.status === 'complete' ? (
+                                <Link href={`/cards/${card.id}`} className={styles.pointActionPrimary}>
+                                  <ArrowRight size={14} />
+                                  <span>Open card</span>
+                                </Link>
+                              ) : match && card ? (
+                                <>
+                                  <button type="button" className={styles.pointActionPrimary} onClick={() => runCardAction(point.id, card.id, 'use', match.card_id)} disabled={isBusy}>
+                                    <CheckCircle2 size={14} />
+                                    <span>{isBusy ? 'Applying...' : 'Use this'}</span>
+                                  </button>
+                                  <button type="button" className={styles.pointAction} onClick={() => runCardAction(point.id, card.id, 'remix', match.card_id)} disabled={isBusy}>
+                                    <Repeat2 size={14} />
+                                    <span>Remix</span>
+                                  </button>
+                                  <button type="button" className={styles.pointAction} onClick={() => runCardAction(point.id, card.id, 'generate')} disabled={isBusy}>
+                                    <Wand2 size={14} />
+                                    <span>Generate new</span>
+                                  </button>
+                                </>
+                              ) : card ? (
+                                <button type="button" className={styles.pointActionPrimary} onClick={() => runCardAction(point.id, card.id, 'generate')} disabled={isBusy}>
+                                  <Wand2 size={14} />
+                                  <span>{isBusy ? 'Queueing...' : point.note_role === 'overflow' ? 'Generate later' : 'Generate card'}</span>
+                                </button>
+                              ) : null}
+                            </div>
                           </div>
-                          <p className={styles.pointText}>{getPointPreview(point.text)}</p>
                         </div>
-                      </div>
-                    </motion.div>
-                  )
-                })}
-              </AnimatePresence>
-
-              {status === 'processing' ? <div className={styles.pointSkeleton} /> : null}
-            </div>
+                      </motion.div>
+                    )
+                  })}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
         </section>
       </div>
 
       {publishPrompt ? (
         <div className={styles.publishPromptOverlay} role="presentation" onClick={() => setPublishPrompt(null)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="session-publish-title"
-            className={styles.publishPrompt}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              className={styles.publishPromptClose}
-              onClick={() => setPublishPrompt(null)}
-              aria-label="Close publish dialog"
-            >
+          <div role="dialog" aria-modal="true" aria-labelledby="session-publish-title" className={styles.publishPrompt} onClick={(event) => event.stopPropagation()}>
+            <button type="button" className={styles.publishPromptClose} onClick={() => setPublishPrompt(null)} aria-label="Close publish dialog">
               <X size={16} />
             </button>
 
             <div className={styles.publishPromptEyebrow}>
-              {publishPrompt === 'publish' ? <Globe size={14} aria-hidden="true" /> : <Lock size={14} aria-hidden="true" />}
+              {publishPrompt === 'publish' ? <Globe size={14} /> : <Lock size={14} />}
               <span>{publishPrompt === 'publish' ? 'Community' : 'Private library'}</span>
             </div>
             <h3 id="session-publish-title" className={styles.publishPromptTitle}>
               {publishPrompt === 'publish' ? 'Publish this session?' : 'Unpublish this session?'}
             </h3>
             <p className={styles.publishPromptCopy}>
-              {publishPrompt === 'publish'
-                ? 'Completed cards become visible in community now. Any queued cards appear there automatically when they finish.'
-                : 'This removes the session cards from community. You can publish again whenever you are ready.'}
+              {publishPrompt === 'publish' ? 'Completed cards become visible in community now. On-demand cards will publish as they finish.' : 'This removes the session cards from community. You can publish again whenever you are ready.'}
             </p>
 
             <div className={styles.publishPromptLedger}>
               <div className={styles.publishPromptChip}>Ready {completeCards.length}</div>
-              <div className={styles.publishPromptChip}>Pending {generatingCards.length + queuedCards.length}</div>
-              {erroredCards.length > 0 ? <div className={styles.publishPromptChip}>Errors {erroredCards.length}</div> : null}
+              <div className={styles.publishPromptChip}>Reuse {suggestionCount}</div>
+              <div className={styles.publishPromptChip}>Later {manualCount}</div>
             </div>
 
             <div className={styles.publishPromptActions}>
-              <button
-                type="button"
-                className={styles.secondaryAction}
-                onClick={() => setPublishPrompt(null)}
-                disabled={isPublishing}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={publishPrompt === 'publish' ? styles.primaryAction : styles.destructiveAction}
-                onClick={() => handleToggleSessionVisibility(publishPrompt === 'publish')}
-                disabled={isPublishing}
-              >
-                {isPublishing
-                  ? 'Saving...'
-                  : publishPrompt === 'publish'
-                    ? 'Publish all cards'
-                    : 'Unpublish session'}
+              <button type="button" className={styles.secondaryAction} onClick={() => setPublishPrompt(null)} disabled={isPublishing}>Cancel</button>
+              <button type="button" className={publishPrompt === 'publish' ? styles.primaryAction : styles.destructiveAction} onClick={() => handleToggleSessionVisibility(publishPrompt === 'publish')} disabled={isPublishing}>
+                {isPublishing ? 'Saving...' : publishPrompt === 'publish' ? 'Publish all cards' : 'Unpublish session'}
               </button>
             </div>
           </div>

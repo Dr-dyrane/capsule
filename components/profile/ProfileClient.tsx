@@ -3,11 +3,12 @@
 import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Bookmark, Flag, Globe, Layers, Loader2, LogOut, Monitor, Sparkles, Stethoscope } from 'lucide-react'
+import { BadgeDollarSign, Bookmark, Flag, Globe, Layers, Loader2, LogOut, Monitor, Sparkles, Stethoscope } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 import SettingRow from './SettingRow'
 import { updateUserPreferences, signOut, type UserPreferences } from '@/app/actions/user'
+import type { UserEntitlementRecord } from '@/lib/types'
 import styles from '@/app/(app)/profile/ProfilePage.module.css'
 
 interface ProfileClientProps {
@@ -29,6 +30,8 @@ interface ProfileClientProps {
   publishedCount: number
   savedCount: number
   reportedCount: number
+  entitlement: UserEntitlementRecord
+  isAdmin: boolean
 }
 
 const SPECIALTIES = [
@@ -41,7 +44,15 @@ const SPECIALTIES = [
   'Pediatrics'
 ]
 
-export default function ProfileClient({ user, cardCount, publishedCount, savedCount, reportedCount }: ProfileClientProps) {
+export default function ProfileClient({
+  user,
+  cardCount,
+  publishedCount,
+  savedCount,
+  reportedCount,
+  entitlement,
+  isAdmin,
+}: ProfileClientProps) {
   const [isPending, startTransition] = useTransition()
   
   const initialPrefs = user.user_metadata.preferences || {}
@@ -90,6 +101,21 @@ export default function ProfileClient({ user, cardCount, publishedCount, savedCo
           {isPending && <Loader2 size={12} className={styles.spinner} />}
         </div>
       </header>
+
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Access</h3>
+        <div className={styles.settingGroup}>
+          <SettingRow label="Plan" icon={<BadgeDollarSign size={18} />}>
+            <span className={styles.countText}>{entitlement.plan.replace('_', ' ')}</span>
+          </SettingRow>
+          <SettingRow label="Support renders" icon={<Layers size={18} />}>
+            <span className={styles.countText}>{entitlement.support_renders_remaining} left</span>
+          </SettingRow>
+          <SettingRow label="Premium renders" icon={<Sparkles size={18} />}>
+            <span className={styles.countText}>{entitlement.premium_renders_remaining} left</span>
+          </SettingRow>
+        </div>
+      </section>
 
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Medical Archive</h3>
@@ -211,6 +237,16 @@ export default function ProfileClient({ user, cardCount, publishedCount, savedCo
         <Link href="/community/reports" className={styles.actionItem}>
           <Flag size={20} />
           <span>Review reports</span>
+        </Link>
+        {isAdmin ? (
+          <Link href="/profile/admin" className={styles.actionItem}>
+            <BadgeDollarSign size={20} />
+            <span>Admin tools</span>
+          </Link>
+        ) : null}
+        <Link href="/donate" className={styles.actionItem}>
+          <Globe size={20} />
+          <span>Support students</span>
         </Link>
         <form action={signOut}>
           <button 

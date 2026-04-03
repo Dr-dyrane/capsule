@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 
 import type { PlannerMode } from '@/lib/types'
-import { IMAGE_MODEL, PROMPT_VERSION } from './prompt-profiles'
+import { PROMPT_VERSION } from './prompt-profiles'
 import { TOON_VERSION } from './toon/toon-rules'
 import type { ToonRouteLevel, ToonTemplateId } from './toon/toon-types'
 
@@ -20,6 +20,9 @@ export function buildRenderCacheKey(input: {
   routeLevel: ToonRouteLevel
   density?: string
   specialty?: string
+  model: string
+  quality: string
+  size: string
 }) {
   const payload = JSON.stringify({
     pointText: normalizeText(input.pointText),
@@ -33,7 +36,9 @@ export function buildRenderCacheKey(input: {
     toonVersion: TOON_VERSION,
     density: normalizeText(input.density),
     specialty: normalizeText(input.specialty),
-    model: IMAGE_MODEL,
+    model: input.model,
+    quality: input.quality,
+    size: input.size,
     promptVersion: PROMPT_VERSION,
   })
 

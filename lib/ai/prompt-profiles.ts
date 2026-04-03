@@ -1,7 +1,7 @@
 import type { ToonTemplateId } from './toon/toon-types'
 
-export const IMAGE_MODEL = 'gpt-image-1.5'
-export const PLANNER_MODEL = 'gpt-4.1'
+export const DEFAULT_IMAGE_MODEL = 'gpt-image-1.5'
+export const DEFAULT_PLANNER_MODEL = 'gpt-4.1'
 export const IMAGE_SIZE = '1536x1024'
 export const PROMPT_VERSION = 'capsule-2026-04-02-v2'
 

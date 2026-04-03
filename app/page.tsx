@@ -59,8 +59,8 @@ export default async function MarketingPage() {
           </Link>
 
           <div className={styles.navActions}>
-            <Link href="#showcase" className={`${styles.quietNavLink} ${styles.examplesLink}`}>
-              Examples
+            <Link href="/donate" className={`${styles.quietNavLink} ${styles.examplesLink}`}>
+              Donate
             </Link>
             <Link href="/login" className={styles.navButton}>
               Log in
@@ -85,6 +85,17 @@ export default async function MarketingPage() {
         </section>
 
         <footer aria-label="Appearance" className={styles.footer}>
+          <div className={styles.footerLinks}>
+            <Link href="/donate" className={styles.footerLink}>
+              Support students
+            </Link>
+            <a href="mailto:hello@dyrane.tech?subject=Capsule%20sponsorship" className={styles.footerLink}>
+              Sponsor access
+            </a>
+            <a href="mailto:hello@dyrane.tech" className={styles.footerLink}>
+              hello@dyrane.tech
+            </a>
+          </div>
           <ThemeToggle />
         </footer>
       </div>

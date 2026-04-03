@@ -1,4 +1,5 @@
 import { User } from 'lucide-react'
+import { getCurrentUserEntitlement, isCapsuleAdminEmail, syncCurrentUserDirectory } from '@/lib/billing/entitlements'
 import { isCommunitySchemaError } from '@/lib/community/schema'
 import { createPublicClient } from '@/lib/supabase/public'
 import { createClient } from '@/lib/supabase/server'
@@ -14,6 +15,10 @@ export default async function ProfilePage() {
   } = await supabase.auth.getUser()
 
   if (!user) return null
+
+  await syncCurrentUserDirectory(supabase, user)
+  const entitlement = await getCurrentUserEntitlement(supabase)
+  const isAdmin = isCapsuleAdminEmail(user.email)
 
   // Fetch real usage stats (Phase 2 Utility)
   const { count } = await supabase
@@ -62,6 +67,8 @@ export default async function ProfilePage() {
         publishedCount={publishedCount || 0}
         savedCount={savedCount || 0}
         reportedCount={reportedCount}
+        entitlement={entitlement}
+        isAdmin={isAdmin}
       />
     </div>
   )

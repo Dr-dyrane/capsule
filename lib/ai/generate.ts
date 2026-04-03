@@ -2,33 +2,25 @@ import 'server-only'
 import OpenAI from 'openai'
 
 import type { PlannerMode } from '@/lib/types'
-import { routePromptProfile } from './prompt-router'
 import {
   buildCompactPlannerGuidance,
   buildDeterministicPlan,
-  IMAGE_MODEL,
   IMAGE_SIZE,
-  PLANNER_MODEL,
+  DEFAULT_IMAGE_MODEL,
+  DEFAULT_PLANNER_MODEL,
   PROMPT_VERSION,
   trimText,
-  type PromptProfileId,
   type VisualPlan,
 } from './prompt-profiles'
 import { buildToonImagePrompt } from './toon/toon-builder'
 import { encodeToonPayload, isToonTemplateId } from './toon/toon-encode'
-import { selectToonTemplate } from './toon/toon-selector'
 import type { ToonRouteLevel, ToonTemplateId } from './toon/toon-types'
+import { resolveGenerationStrategy, type GenerationStrategy } from './strategy'
+import type { ImageModel, ImageQuality, PlannerModel } from '@/lib/generation/render-policy'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
-
-export type GenerationStrategy = {
-  profileId: PromptProfileId
-  plannerMode: PlannerMode
-  templateId: ToonTemplateId
-  routeLevel: ToonRouteLevel
-}
 
 function uniqueShortList(values: unknown, maxItems: number, maxLength: number) {
   if (!Array.isArray(values)) {
@@ -154,34 +146,15 @@ function buildPlannerPayload(input: {
   })
 }
 
-export function resolveGenerationStrategy(
-  pointText: string,
-  category?: string | null,
-  concept?: string | null,
-): GenerationStrategy {
-  const route = routePromptProfile(pointText, category, concept)
-  const toon = selectToonTemplate({
-    profileId: route.profileId,
-    plannerMode: route.plannerMode,
-    pointText,
-    category,
-    concept,
-  })
-
-  return {
-    profileId: route.profileId,
-    plannerMode: toon.plannerMode,
-    templateId: toon.templateId,
-    routeLevel: toon.routeLevel,
-  }
-}
-
 export async function generateVisualPlan(
   pointText: string,
   category: string,
   sessionContext: string,
   preferences?: { density?: string; specialty?: string },
   strategy?: GenerationStrategy,
+  options?: {
+    plannerModel?: PlannerModel
+  },
 ): Promise<{
   plan: VisualPlan
   plannerMode: PlannerMode
@@ -195,6 +168,7 @@ export async function generateVisualPlan(
   } | null
 }> {
   const resolvedStrategy = strategy ?? resolveGenerationStrategy(pointText, category, category)
+  const plannerModel = options?.plannerModel ?? DEFAULT_PLANNER_MODEL
   const deterministicPlan = buildDeterministicPlan(resolvedStrategy.profileId, pointText, category)
 
   if (resolvedStrategy.plannerMode === 'deterministic' && deterministicPlan) {
@@ -210,7 +184,7 @@ export async function generateVisualPlan(
 
   try {
     const response = await openai.chat.completions.create({
-      model: PLANNER_MODEL,
+      model: plannerModel,
       temperature: 0.25,
       response_format: { type: 'json_object' },
       messages: [
@@ -275,6 +249,10 @@ export async function generateCardImage(
   preferences?: { density?: string; specialty?: string },
   options?: {
     strategy?: GenerationStrategy
+    imageModel?: ImageModel
+    plannerModel?: PlannerModel
+    quality?: ImageQuality
+    size?: typeof IMAGE_SIZE
   },
 ): Promise<{
   imageBase64: string
@@ -285,8 +263,8 @@ export async function generateCardImage(
   templateId: ToonTemplateId
   routeLevel: ToonRouteLevel
   model: string
-  plannerModel: typeof PLANNER_MODEL
-  quality: 'high'
+  plannerModel: PlannerModel
+  quality: ImageQuality
   size: typeof IMAGE_SIZE
   promptVersion: string
   plannerUsage: {
@@ -308,21 +286,27 @@ export async function generateCardImage(
     } | null
   } | null
 }> {
+  const imageModel = options?.imageModel ?? DEFAULT_IMAGE_MODEL
+  const plannerModel = options?.plannerModel ?? DEFAULT_PLANNER_MODEL
+  const quality = options?.quality ?? 'high'
+  const size = options?.size ?? IMAGE_SIZE
+
   const { plan, plannerMode, profileId, templateId, routeLevel, plannerUsage } = await generateVisualPlan(
     text,
     category,
     sessionContext,
     preferences,
     options?.strategy,
+    { plannerModel },
   )
   const prompt = buildToonImagePrompt(text, category, sessionContext, plan, templateId)
 
   const response = await openai.images.generate({
-    model: IMAGE_MODEL,
+    model: imageModel,
     prompt,
     n: 1,
-    size: IMAGE_SIZE,
-    quality: 'high',
+    size,
+    quality,
     output_format: 'png',
   })
 
@@ -339,10 +323,10 @@ export async function generateCardImage(
     profileId,
     templateId,
     routeLevel,
-    model: IMAGE_MODEL,
-    plannerModel: PLANNER_MODEL,
-    quality: 'high',
-    size: IMAGE_SIZE,
+    model: imageModel,
+    plannerModel,
+    quality,
+    size,
     promptVersion: PROMPT_VERSION,
     plannerUsage,
     imageUsage: response.usage
