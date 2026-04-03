@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ZoomIn } from 'lucide-react'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import styles from './ImagePreview.module.css'
 
 interface ImagePreviewProps {
@@ -43,8 +44,10 @@ export default function ImagePreview({ src, alt, variant = 'card' }: ImagePrevie
             src={src}
             alt={alt}
             fill
-            unoptimized
             sizes="(max-width: 1023px) 100vw, 60vw"
+            quality={80}
+            placeholder="blur"
+            blurDataURL={APP_IMAGE_BLUR_DATA_URL}
             className={`${styles.image} ${isDocument ? styles.documentImage : ''}`}
           />
         </div>
@@ -76,7 +79,10 @@ export default function ImagePreview({ src, alt, variant = 'card' }: ImagePrevie
                   src={src}
                   alt={alt}
                   fill
-                  unoptimized
+                  sizes="100vw"
+                  quality={86}
+                  placeholder="blur"
+                  blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                   className={`${styles.fullscreenImage} ${isDocument ? styles.documentFullscreenImage : ''}`}
                 />
               </div>

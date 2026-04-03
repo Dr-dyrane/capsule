@@ -29,6 +29,7 @@ import { processNote, restartSession } from '@/app/actions/process'
 import ImagePreview from '@/components/cards/ImagePreview'
 import AdaptiveSheet from '@/components/ui/AdaptiveSheet'
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import { createClient } from '@/lib/supabase/client'
 import type { CardRecord, NoteRole, PointRecord, SessionRecommendationRecord, SessionRecord, SessionStatus } from '@/lib/types'
 
@@ -449,7 +450,16 @@ export default function ProcessingView({
 
                           {card.status === 'complete' && signedUrl ? (
                             <div className={styles.cardFrame}>
-                              <Image src={signedUrl} alt={card.title || 'Generated card'} fill unoptimized sizes="(max-width: 767px) 100vw, (max-width: 1439px) 50vw, 33vw" className={styles.cardImage} />
+                              <Image
+                                src={signedUrl}
+                                alt={card.title || 'Generated card'}
+                                fill
+                                sizes="(max-width: 767px) 100vw, (max-width: 1439px) 50vw, 33vw"
+                                quality={70}
+                                placeholder="blur"
+                                blurDataURL={APP_IMAGE_BLUR_DATA_URL}
+                                className={styles.cardImage}
+                              />
                             </div>
                           ) : (
                             <div className={`${styles.cardPlaceholder} ${card.status === 'generating' ? styles.shimmering : ''}`}>
@@ -535,7 +545,16 @@ export default function ProcessingView({
                               <div className={styles.matchCard}>
                                 <div className={styles.matchFrame}>
                                   {match.signed_url ? (
-                                    <Image src={match.signed_url} alt={match.title || 'Matched community card'} fill unoptimized sizes="160px" className={styles.matchImage} />
+                                    <Image
+                                      src={match.signed_url}
+                                      alt={match.title || 'Matched community card'}
+                                      fill
+                                      sizes="160px"
+                                      quality={58}
+                                      placeholder="blur"
+                                      blurDataURL={APP_IMAGE_BLUR_DATA_URL}
+                                      className={styles.matchImage}
+                                    />
                                   ) : (
                                     <div className={styles.matchFallback}>Preview unavailable</div>
                                   )}

@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { Bookmark, Flag, Globe, Heart, Repeat2, User } from 'lucide-react'
 
 import type { CommunityCardRecord } from '@/app/actions/community'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import PendingLink from '@/components/ui/PendingLink'
 import styles from './CommunityCard.module.css'
 
@@ -49,7 +50,9 @@ export default function CommunityCard({
                       alt={authorName}
                       width={18}
                       height={18}
-                      unoptimized
+                      quality={60}
+                      placeholder="blur"
+                      blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                       className={styles.avatar}
                     />
                   ) : (
@@ -72,8 +75,10 @@ export default function CommunityCard({
                 src={imageUrl}
                 alt={card.title || 'Community card'}
                 fill
-                unoptimized
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                quality={68}
+                placeholder="blur"
+                blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                 className={styles.image}
               />
             ) : (

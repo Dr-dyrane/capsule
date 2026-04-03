@@ -24,7 +24,7 @@ export default async function CardsPage() {
   const completedCards = (cards ?? []).filter(c => c.status === 'complete')
   const signedUrls = await createSignedObjectUrlsSafe(
     'cards',
-    completedCards.map((card) => card.image_url),
+    completedCards.slice(0, 12).map((card) => card.image_url),
   )
 
   if (!cards || cards.length === 0) {

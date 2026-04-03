@@ -7,6 +7,7 @@ import { getCommunityCardByIdWithUrl } from '@/app/actions/community'
 import { getSafeCommunityVisibility, isCommunitySchemaError } from '@/lib/community/schema'
 import { createSignedObjectUrlSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 
 import shellStyles from '../../AppScreen.module.css'
 import styles from './CardDetailPage.module.css'
@@ -169,8 +170,10 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
                         src={sourceNoteUrl}
                         alt="Original note"
                         fill
-                        unoptimized
                         sizes="72px"
+                        quality={55}
+                        placeholder="blur"
+                        blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                         className={styles.sourceThumbImage}
                       />
                     </div>
@@ -196,8 +199,10 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
                         src={remixSource.signedUrl}
                         alt={remixSource.title || 'Reference card'}
                         fill
-                        unoptimized
                         sizes="72px"
+                        quality={55}
+                        placeholder="blur"
+                        blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                         className={styles.sourceThumbImage}
                       />
                     </div>

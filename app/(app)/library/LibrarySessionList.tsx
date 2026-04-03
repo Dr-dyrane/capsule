@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react'
 
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
 import PendingLink from '@/components/ui/PendingLink'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import type { SessionRecord } from '@/lib/types'
 
 import styles from './LibraryPage.module.css'
@@ -47,7 +48,15 @@ export default function LibrarySessionList({ items }: { items: LibrarySessionLis
                   <div className={styles.thumb}>
                     <div className={styles.thumbFrame}>
                       {imageUrl ? (
-                        <Image src={imageUrl} alt="Uploaded note" fill unoptimized sizes="56px" />
+                        <Image
+                          src={imageUrl}
+                          alt="Uploaded note"
+                          fill
+                          sizes="56px"
+                          quality={55}
+                          placeholder="blur"
+                          blurDataURL={APP_IMAGE_BLUR_DATA_URL}
+                        />
                       ) : (
                         <div className={styles.thumbFallback}>Note</div>
                       )}

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Camera, CheckCircle2, CircleAlert, Loader2, Repeat2, ScanLine, Upload, X } from 'lucide-react'
 
 import { uploadNote } from '@/app/actions/upload'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 
 import shellStyles from '../AppScreen.module.css'
 import styles from './ScanPage.module.css'
@@ -139,8 +140,10 @@ export default function ScanPageClient({
                 src={remixSource.signedUrl}
                 alt={remixSource.title || 'Community card reference'}
                 fill
-                unoptimized
                 sizes="96px"
+                quality={60}
+                placeholder="blur"
+                blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                 className={styles.remixThumbImage}
               />
             </div>

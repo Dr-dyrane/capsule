@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { Flag, Globe } from 'lucide-react'
 
 import { getCreatorModerationCardsWithUrls } from '@/app/actions/community'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import styles from '../../AppScreen.module.css'
 import reportStyles from './ReportsPage.module.css'
 
@@ -41,8 +42,10 @@ export default async function CommunityReportsPage() {
                       src={signedUrls[card.image_url]}
                       alt={card.title || 'Reported card'}
                       fill
-                      unoptimized
                       sizes="(max-width: 1023px) 100vw, 33vw"
+                      quality={66}
+                      placeholder="blur"
+                      blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                       className={reportStyles.image}
                     />
                   ) : (

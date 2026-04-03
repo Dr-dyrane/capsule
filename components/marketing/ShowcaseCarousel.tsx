@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { useEffect, useRef, useState, useCallback } from 'react'
 
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import styles from './ShowcaseCarousel.module.css'
 
 type ShowcaseCard = {
@@ -143,12 +144,14 @@ export default function ShowcaseCarousel({ cards }: Props) {
                     alt=""
                     aria-hidden="true"
                     fill
-                    unoptimized
                     sizes={
                       isActive
                         ? '(max-width: 1023px) min(100vw - 48px, 36rem), 42vw'
                         : '(max-width: 1023px) 38vw, 24vw'
                     }
+                    quality={60}
+                    placeholder="blur"
+                    blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                     className={`${styles.cardImage} ${styles.fallbackImage} ${showPrimary ? styles.fallbackHidden : ''}`}
                   />
                   <Image
@@ -156,7 +159,6 @@ export default function ShowcaseCarousel({ cards }: Props) {
                     alt={card.alt}
                     fill
                     priority={isActive}
-                    unoptimized
                     onLoad={() => {
                       setLoadedCards((current) => {
                         if (current[card.src]) return current
@@ -174,6 +176,9 @@ export default function ShowcaseCarousel({ cards }: Props) {
                         ? '(max-width: 1023px) min(100vw - 48px, 36rem), 42vw'
                         : '(max-width: 1023px) 38vw, 24vw'
                     }
+                    quality={72}
+                    placeholder="blur"
+                    blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                     className={`${styles.cardImage} ${styles.primaryImage} ${showPrimary ? styles.primaryReady : ''}`}
                   />
                 </span>

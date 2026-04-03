@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { Archive, ChevronRight, User } from 'lucide-react'
 
 import type { CommunityLibraryRecord } from '@/app/actions/community'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import PendingLink from '@/components/ui/PendingLink'
 import styles from './CommunityLibraryCard.module.css'
 
@@ -24,8 +25,10 @@ export default function CommunityLibraryCard({
               src={imageUrl}
               alt={library.title || 'Published library'}
               fill
-              unoptimized
               sizes="(max-width: 767px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              quality={66}
+              placeholder="blur"
+              blurDataURL={APP_IMAGE_BLUR_DATA_URL}
               className={styles.image}
             />
           ) : (

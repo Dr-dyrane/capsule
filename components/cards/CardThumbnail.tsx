@@ -7,6 +7,7 @@ import { Trash2, Edit3, Loader2, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { deleteCard } from '@/app/actions/card-actions'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import type { CardRecord } from '@/lib/types'
 import styles from './CardThumbnail.module.css'
 
@@ -136,8 +137,10 @@ export default function CardThumbnail({
                 src={imageUrl}
                 alt={card.title || 'Generated card'}
                 fill
-                unoptimized
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                quality={68}
+                placeholder="blur"
+                blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                 className={styles.image}
               />
             </div>

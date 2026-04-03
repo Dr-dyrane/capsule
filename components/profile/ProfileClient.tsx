@@ -8,6 +8,7 @@ import { motion } from 'framer-motion'
 
 import SettingRow from './SettingRow'
 import { updateUserPreferences, signOut, type UserPreferences } from '@/app/actions/user'
+import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import type { UserEntitlementRecord } from '@/lib/types'
 import styles from '@/app/(app)/profile/ProfilePage.module.css'
 
@@ -90,7 +91,15 @@ export default function ProfileClient({
       <header className={styles.header}>
         <div className={styles.avatar}>
           {avatarUrl ? (
-            <Image src={avatarUrl} alt={displayName} fill unoptimized sizes="88px" />
+            <Image
+              src={avatarUrl}
+              alt={displayName}
+              fill
+              sizes="88px"
+              quality={60}
+              placeholder="blur"
+              blurDataURL={APP_IMAGE_BLUR_DATA_URL}
+            />
           ) : (
             user.email?.[0].toUpperCase() || 'U'
           )}
