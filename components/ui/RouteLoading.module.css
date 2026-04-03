@@ -7,7 +7,7 @@
 .shine {
   position: relative;
   overflow: hidden;
-  background: color-mix(in srgb, var(--surface-2) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--surface-1));
 }
 
 .shine::after {
@@ -235,13 +235,50 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
-.card {
-  aspect-ratio: 4 / 5;
+.cardSkeleton {
+  display: grid;
+  gap: 14px;
+}
+
+.cardMedia {
+  aspect-ratio: 16 / 10;
+  border-radius: 28px;
+}
+
+.cardBody {
+  display: grid;
+  gap: 12px;
+}
+
+.cardCopyGroup {
+  display: grid;
+  gap: 10px;
+}
+
+.cardActions {
+  display: flex;
+  gap: 10px;
+}
+
+.actionPill {
+  width: 116px;
+  height: 40px;
+  border-radius: 999px;
 }
 
 .detail {
   display: grid;
   gap: 18px;
+}
+
+.detailHero {
+  display: grid;
+  gap: 16px;
+}
+
+.detailMedia {
+  min-height: 320px;
+  border-radius: 30px;
 }
 
 .panel {
@@ -280,6 +317,17 @@
   gap: 12px;
   padding: 18px;
   border-radius: 24px;
+}
+
+.rowThumb {
+  width: 100%;
+  min-height: 188px;
+  border-radius: 22px;
+}
+
+.rowBody {
+  display: grid;
+  gap: 10px;
 }
 
 .list {
@@ -430,22 +478,52 @@
     gap: 14px;
   }
 
-  .card {
-    aspect-ratio: 16 / 11;
-    border-radius: 20px;
+  .cardSkeleton {
+    gap: 10px;
+  }
+
+  .cardMedia {
+    aspect-ratio: 16 / 9.6;
+    border-radius: 22px;
+  }
+
+  .cardBody {
+    gap: 10px;
+  }
+
+  .cardCopyGroup {
+    gap: 8px;
+  }
+
+  .cardActions {
+    gap: 8px;
+  }
+
+  .actionPill {
+    width: 94px;
+    height: 36px;
   }
 
   .detail {
-    gap: 14px;
+    gap: 12px;
+  }
+
+  .detailHero {
+    gap: 12px;
+  }
+
+  .detailMedia {
+    min-height: 232px;
+    border-radius: 24px;
   }
 
   .panel {
-    min-height: 220px;
+    min-height: 188px;
     border-radius: 24px;
   }
 
   .panelShort {
-    min-height: 108px;
+    min-height: 96px;
   }
 
   .metaGroup {
@@ -462,6 +540,11 @@
     gap: 10px;
     padding: 14px;
     border-radius: 20px;
+  }
+
+  .rowThumb {
+    min-height: 140px;
+    border-radius: 18px;
   }
 }
 
@@ -488,7 +571,11 @@
     min-height: 250px;
   }
 
-  .card {
-    aspect-ratio: 16 / 12;
+  .cardMedia {
+    aspect-ratio: 16 / 10.4;
+  }
+
+  .detailMedia {
+    min-height: 280px;
   }
 }

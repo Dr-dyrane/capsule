@@ -148,6 +148,37 @@
   font-size: 14px;
 }
 
+@media (max-width: 767px) {
+  .screen {
+    gap: 16px;
+  }
+
+  .header {
+    gap: 8px;
+  }
+
+  .eyebrow {
+    padding: 7px 11px;
+    font-size: 11px;
+  }
+
+  .title {
+    font-size: clamp(2.1rem, 13vw, 3.25rem);
+    line-height: 0.92;
+    letter-spacing: -0.075em;
+  }
+
+  .copy {
+    max-width: 22rem;
+    font-size: 15px;
+    line-height: 1.38;
+  }
+
+  .panelInner {
+    padding: 20px;
+  }
+}
+
 @media (min-width: 640px) {
   .screen {
     gap: 28px;

@@ -1,5 +1,5 @@
 .button {
-  min-height: 40px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -32,19 +32,99 @@
   opacity: 0.72;
 }
 
-.confirm {
-  color: var(--text-on-accent);
-  background: color-mix(in srgb, var(--destructive) 88%, black 8%);
+.spinner {
+  animation: spin 1s linear infinite;
 }
 
-.confirm:hover,
-.confirm:focus-visible {
+.dialogMeta {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 94%, transparent), var(--surface-1));
+  box-shadow: var(--shadow-sm);
+}
+
+.dialogLead {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.dialogCopy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.dialogError {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--destructive-surface);
+  color: var(--destructive);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.dialogAction,
+.dialogConfirm {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple),
+    opacity 150ms var(--ease-apple);
+}
+
+.dialogAction {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.dialogConfirm {
   color: var(--text-on-accent);
+  background: color-mix(in srgb, var(--destructive) 88%, black 8%);
+  box-shadow: var(--shadow-md);
+}
+
+.dialogAction:hover,
+.dialogAction:focus-visible,
+.dialogConfirm:hover,
+.dialogConfirm:focus-visible {
+  transform: translateY(-1px);
+}
+
+.dialogAction:hover,
+.dialogAction:focus-visible {
+  background: var(--surface-3);
+}
+
+.dialogConfirm:hover,
+.dialogConfirm:focus-visible {
   background: color-mix(in srgb, var(--destructive) 84%, white);
 }
 
-.spinner {
-  animation: spin 1s linear infinite;
+.dialogAction:disabled,
+.dialogConfirm:disabled {
+  opacity: 0.72;
 }
 
 @keyframes spin {

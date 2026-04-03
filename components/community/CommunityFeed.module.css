@@ -321,16 +321,23 @@
 }
 
 @media (max-width: 767px) {
+  .feed {
+    gap: 20px;
+  }
+
   .toolbar {
-    gap: 16px;
+    gap: 12px;
   }
 
   .searchRow {
     align-items: stretch;
+    gap: 10px;
   }
 
   .searchBar {
     max-width: none;
+    min-height: 50px;
+    padding-inline: 14px;
   }
 
   .mobileActions {

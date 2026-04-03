@@ -8,6 +8,36 @@ function Block({ className }: { className?: string }) {
   return <div className={`${styles.shine} ${className ?? ''}`.trim()} aria-hidden="true" />
 }
 
+function CardSkeleton() {
+  return (
+    <div className={styles.cardSkeleton}>
+      <Block className={styles.cardMedia} />
+      <div className={styles.cardBody}>
+        <div className={styles.cardCopyGroup}>
+          <Block className={`${styles.metaLine} ${styles.metaLineWide}`} />
+          <Block className={`${styles.metaLine} ${styles.metaLineMedium}`} />
+        </div>
+        <div className={styles.cardActions}>
+          <Block className={styles.actionPill} />
+          <Block className={styles.actionPill} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function LibraryRowSkeleton() {
+  return (
+    <div className={styles.listRow}>
+      <Block className={styles.rowThumb} />
+      <div className={styles.rowBody}>
+        <Block className={`${styles.metaLine} ${styles.metaLineWide}`} />
+        <Block className={`${styles.metaLine} ${styles.metaLineMedium}`} />
+      </div>
+    </div>
+  )
+}
+
 export function MarketingRouteLoading() {
   return (
     <main className={styles.marketingPage}>
@@ -71,7 +101,14 @@ export function AppRouteLoading({ mode = 'browse' }: AppRouteLoadingProps) {
         </div>
 
         <div className={styles.detail}>
-          <Block className={styles.panel} />
+          <div className={styles.detailHero}>
+            <Block className={styles.detailMedia} />
+            <div className={styles.metaGroup}>
+              <Block className={`${styles.metaLine} ${styles.metaLineWide}`} />
+              <Block className={`${styles.metaLine} ${styles.metaLineMedium}`} />
+              <Block className={`${styles.metaLine} ${styles.metaLineShort}`} />
+            </div>
+          </div>
           <div className={styles.metaGroup}>
             <Block className={`${styles.metaLine} ${styles.metaLineWide}`} />
             <Block className={`${styles.metaLine} ${styles.metaLineMedium}`} />
@@ -93,9 +130,9 @@ export function AppRouteLoading({ mode = 'browse' }: AppRouteLoadingProps) {
         </div>
 
         <div className={styles.list}>
-          <Block className={styles.listRow} />
-          <Block className={styles.listRow} />
-          <Block className={styles.listRow} />
+          <LibraryRowSkeleton />
+          <LibraryRowSkeleton />
+          <LibraryRowSkeleton />
         </div>
       </div>
     )
@@ -114,9 +151,9 @@ export function AppRouteLoading({ mode = 'browse' }: AppRouteLoadingProps) {
           <Block className={styles.panelShort} />
           <Block className={styles.panel} />
           <div className={styles.grid}>
-            <Block className={styles.card} />
-            <Block className={styles.card} />
-            <Block className={styles.card} />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
           </div>
         </div>
       </div>
@@ -144,9 +181,9 @@ export function AppRouteLoading({ mode = 'browse' }: AppRouteLoadingProps) {
       </div>
 
       <div className={styles.grid}>
-        <Block className={styles.card} />
-        <Block className={styles.card} />
-        <Block className={styles.card} />
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
       </div>
     </div>
   )

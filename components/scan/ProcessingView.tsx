@@ -14,7 +14,6 @@ import {
   ScanText,
   Sparkles,
   Wand2,
-  X,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -28,6 +27,7 @@ import {
 } from '@/app/actions/generate'
 import { processNote, restartSession } from '@/app/actions/process'
 import ImagePreview from '@/components/cards/ImagePreview'
+import AdaptiveSheet from '@/components/ui/AdaptiveSheet'
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
 import { createClient } from '@/lib/supabase/client'
 import type { CardRecord, NoteRole, PointRecord, SessionRecommendationRecord, SessionRecord, SessionStatus } from '@/lib/types'
@@ -594,39 +594,52 @@ export default function ProcessingView({
         </section>
       </div>
 
-      {publishPrompt ? (
-        <div className={styles.publishPromptOverlay} role="presentation" onClick={() => setPublishPrompt(null)}>
-          <div role="dialog" aria-modal="true" aria-labelledby="session-publish-title" className={styles.publishPrompt} onClick={(event) => event.stopPropagation()}>
-            <button type="button" className={styles.publishPromptClose} onClick={() => setPublishPrompt(null)} aria-label="Close publish dialog">
-              <X size={16} />
-            </button>
-
-            <div className={styles.publishPromptEyebrow}>
+      <AdaptiveSheet
+        open={Boolean(publishPrompt)}
+        onClose={() => setPublishPrompt(null)}
+        title={publishPrompt === 'publish' ? 'Publish this session?' : 'Unpublish this session?'}
+        description={
+          publishPrompt === 'publish'
+            ? 'Completed cards go live now. The remaining cards publish as they finish.'
+            : 'This removes the session from community. You can publish again any time.'
+        }
+        eyebrow={
+          publishPrompt ? (
+            <>
               {publishPrompt === 'publish' ? <Globe size={14} /> : <Lock size={14} />}
               <span>{publishPrompt === 'publish' ? 'Community' : 'Private library'}</span>
-            </div>
-            <h3 id="session-publish-title" className={styles.publishPromptTitle}>
-              {publishPrompt === 'publish' ? 'Publish this session?' : 'Unpublish this session?'}
-            </h3>
-            <p className={styles.publishPromptCopy}>
-              {publishPrompt === 'publish' ? 'Completed cards become visible in community now. On-demand cards will publish as they finish.' : 'This removes the session cards from community. You can publish again whenever you are ready.'}
-            </p>
-
-            <div className={styles.publishPromptLedger}>
-              <div className={styles.publishPromptChip}>Ready {completeCards.length}</div>
-              <div className={styles.publishPromptChip}>Reuse {suggestionCount}</div>
-              <div className={styles.publishPromptChip}>Later {manualCount}</div>
-            </div>
-
-            <div className={styles.publishPromptActions}>
-              <button type="button" className={styles.secondaryAction} onClick={() => setPublishPrompt(null)} disabled={isPublishing}>Cancel</button>
-              <button type="button" className={publishPrompt === 'publish' ? styles.primaryAction : styles.destructiveAction} onClick={() => handleToggleSessionVisibility(publishPrompt === 'publish')} disabled={isPublishing}>
-                {isPublishing ? 'Saving...' : publishPrompt === 'publish' ? 'Publish all cards' : 'Unpublish session'}
-              </button>
-            </div>
-          </div>
+            </>
+          ) : null
+        }
+        size="compact"
+        closeLabel="Close session visibility dialog"
+        footer={
+          <>
+            <button
+              type="button"
+              className={styles.secondaryAction}
+              onClick={() => setPublishPrompt(null)}
+              disabled={isPublishing}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={publishPrompt === 'publish' ? styles.primaryAction : styles.destructiveAction}
+              onClick={() => handleToggleSessionVisibility(publishPrompt === 'publish')}
+              disabled={isPublishing}
+            >
+              {isPublishing ? 'Saving...' : publishPrompt === 'publish' ? 'Publish all cards' : 'Unpublish session'}
+            </button>
+          </>
+        }
+      >
+        <div className={styles.publishPromptLedger}>
+          <div className={styles.publishPromptChip}>Ready {completeCards.length}</div>
+          <div className={styles.publishPromptChip}>Reuse {suggestionCount}</div>
+          <div className={styles.publishPromptChip}>Later {manualCount}</div>
         </div>
-      ) : null}
+      </AdaptiveSheet>
     </div>
   )
 }

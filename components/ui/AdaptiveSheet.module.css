@@ -1,0 +1,240 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px 12px max(12px, env(safe-area-inset-bottom, 0px));
+  background: color-mix(in srgb, var(--scrim-strong) 84%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: overlay-fade var(--duration-standard) var(--ease-apple);
+}
+
+.viewport {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.panel {
+  --sheet-width: 34rem;
+
+  position: relative;
+  width: min(100%, var(--sheet-width));
+  max-height: min(86vh, 52rem);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  border-radius: 30px 30px 0 0;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-3) 98%, var(--surface-1) 2%),
+      color-mix(in srgb, var(--surface-2) 94%, var(--surface-1) 6%)
+    );
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  animation: sheet-enter var(--duration-standard) var(--ease-apple);
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 7rem;
+  background: radial-gradient(circle at top center, var(--ambient-highlight), transparent 70%);
+  pointer-events: none;
+}
+
+.compact {
+  --sheet-width: 28rem;
+}
+
+.regular {
+  --sheet-width: 34rem;
+}
+
+.wide {
+  --sheet-width: 44rem;
+}
+
+.handle {
+  width: 42px;
+  height: 5px;
+  margin: 0 auto;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--text-tertiary) 70%, transparent);
+}
+
+.header,
+.content,
+.footer {
+  position: relative;
+  z-index: 1;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.titleStack {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.eyebrow {
+  width: fit-content;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.65rem, 7vw, 2.15rem);
+  line-height: 0.96;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  text-wrap: balance;
+  color: var(--text-primary);
+}
+
+.description {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.closeButton {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    transform var(--duration-micro) var(--ease-apple),
+    background-color var(--duration-micro) var(--ease-standard),
+    color var(--duration-micro) var(--ease-standard);
+}
+
+.closeButton:hover,
+.closeButton:focus-visible {
+  transform: translateY(-1px);
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.content {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  overflow-y: auto;
+  padding-bottom: 4px;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@keyframes overlay-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (min-width: 768px) {
+  .overlay {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .viewport {
+    align-items: center;
+  }
+
+  .panel {
+    max-height: min(80vh, 48rem);
+    padding: 18px 20px 20px;
+    border-radius: 32px;
+    animation-name: dialog-enter;
+  }
+
+  .handle {
+    display: none;
+  }
+
+  .title {
+    font-size: clamp(1.85rem, 3.2vw, 2.3rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel {
+    animation: none;
+  }
+
+  .closeButton {
+    transition: none;
+  }
+}

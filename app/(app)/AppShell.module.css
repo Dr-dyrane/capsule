@@ -30,7 +30,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-16);
-  padding: 8px 2px;
+  padding: 4px 0;
 }
 
 .mobileBrand {
