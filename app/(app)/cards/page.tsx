@@ -1,4 +1,5 @@
 import { Images } from 'lucide-react'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import CardLibrary from '@/components/cards/CardLibrary'
@@ -24,6 +25,10 @@ export default async function CardsPage() {
     'cards',
     completedCards.map((card) => card.image_url),
   )
+
+  if (!cards || cards.length === 0) {
+    redirect('/community?source=cards')
+  }
 
   // 3. Extract unique categories for filtering
   const categories = Array.from(

@@ -2,15 +2,23 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home } from 'lucide-react'
 
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import Logo from '@/components/ui/Logo'
+import UserMenu from '@/components/profile/UserMenu'
 
 import { navigationItems } from './nav-items'
 import styles from './Sidebar.module.css'
 
-export default function Sidebar() {
+interface SidebarProps {
+  user?: {
+    username?: string
+    avatar_url?: string
+    email?: string
+  }
+}
+
+export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname()
 
   return (
@@ -52,10 +60,16 @@ export default function Sidebar() {
           <div className={styles.compactToggle}>
             <ThemeToggle compact />
           </div>
-          <Link href="/" className={styles.homeLink}>
-            <Home size={16} aria-hidden="true" />
-            <span className={styles.homeCopy}>Home</span>
-          </Link>
+          {user && (
+            <>
+              <div className={styles.userMenuWrapper}>
+                <UserMenu user={user} />
+              </div>
+              <div className={styles.compactUserMenu}>
+                <UserMenu user={user} compact />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </aside>

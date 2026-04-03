@@ -1,5 +1,6 @@
 'use server'
 
+import { isCommunitySchemaError } from '@/lib/community/schema'
 import { createClient } from '@/lib/supabase/server'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -18,6 +19,10 @@ function getSafeFileExtension(file: File) {
 function toUploadErrorMessage(error: unknown) {
   if (error instanceof Error) {
     const message = error.message.toLowerCase()
+
+    if (message.includes('community publishing is not available')) {
+      return 'Upload worked, but community publishing is not available yet.'
+    }
 
     if (message.includes('bucket not found')) {
       return 'Storage is unavailable right now. Please try again in a moment.'
@@ -65,18 +70,49 @@ export async function uploadNote(formData: FormData) {
     if (uploadError) throw uploadError
 
     // 2. Create Session Record
-    const { data: session, error: sessionError } = await supabase
+    const wantsPublish = formData.get('publish') === 'true'
+    const baseSession = {
+      id: sessionId,
+      user_id: user.id,
+      source_url: filePath,
+      status: 'processing',
+    }
+
+    let session:
+      | {
+          id: string
+        }
+      | null = null
+
+    const initialInsert = await supabase
       .from('sessions')
       .insert({
-        id: sessionId,
-        user_id: user.id,
-        source_url: filePath,
-        status: 'processing'
+        ...baseSession,
+        visibility: wantsPublish ? 'published' : 'private',
       })
       .select()
       .single()
 
-    if (sessionError) throw sessionError
+    if (initialInsert.error) {
+      if (!isCommunitySchemaError(initialInsert.error)) {
+        throw initialInsert.error
+      }
+
+      const fallbackInsert = await supabase
+        .from('sessions')
+        .insert(baseSession)
+        .select()
+        .single()
+
+      if (fallbackInsert.error) throw fallbackInsert.error
+      session = fallbackInsert.data
+    } else {
+      session = initialInsert.data
+    }
+
+    if (!session) {
+      throw new Error('We could not create the session. Please try again.')
+    }
 
     return session
   } catch (error) {

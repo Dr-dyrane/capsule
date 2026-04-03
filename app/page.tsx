@@ -3,6 +3,7 @@ import Link from 'next/link'
 import ShowcaseCarousel from '@/components/marketing/ShowcaseCarousel'
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import Logo from '@/components/ui/Logo'
+import { fetchCommunityCardsWithUrls } from '@/app/actions/community'
 import styles from './MarketingPage.module.css'
 
 const showcaseCards = [
@@ -20,7 +21,46 @@ const showcaseCards = [
   },
 ]
 
-export default function MarketingPage() {
+export default async function MarketingPage() {
+  let displayCards = showcaseCards
+  try {
+    const { cards, signedUrls } = await fetchCommunityCardsWithUrls(0, 10)
+    const uniqueTemplates = new Set<string>()
+    const dynamicCards = cards
+      .reduce<Array<{ src: string; alt: string }>>((acc, card) => {
+        const src = card.image_url ? signedUrls[card.image_url] : ''
+        const templateKey = card.community_template || 'mechanism-board'
+
+        if (!src) {
+          return acc
+        }
+
+        if (!uniqueTemplates.has(templateKey)) {
+          uniqueTemplates.add(templateKey)
+          acc.push({
+            src,
+            alt: card.title || 'Community learning card',
+          })
+          return acc
+        }
+
+        if (acc.length < 6) {
+          acc.push({
+            src,
+            alt: card.title || 'Community learning card',
+          })
+        }
+
+        return acc
+      }, [])
+
+    if (dynamicCards.length >= 3) {
+      displayCards = dynamicCards
+    }
+  } catch (error) {
+    console.error('Failed to load community cards for hero fallback', error)
+  }
+
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -51,7 +91,7 @@ export default function MarketingPage() {
           </div>
 
           <div id="showcase" className={styles.showcase}>
-            <ShowcaseCarousel cards={showcaseCards} />
+            <ShowcaseCarousel cards={displayCards} />
           </div>
         </section>
 

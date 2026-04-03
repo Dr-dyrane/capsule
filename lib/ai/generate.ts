@@ -11,12 +11,24 @@ import {
   PLANNER_MODEL,
   PROMPT_VERSION,
   trimText,
+  type PromptProfileId,
   type VisualPlan,
 } from './prompt-profiles'
+import { buildToonImagePrompt } from './toon/toon-builder'
+import { encodeToonPayload, isToonTemplateId } from './toon/toon-encode'
+import { selectToonTemplate } from './toon/toon-selector'
+import type { ToonRouteLevel, ToonTemplateId } from './toon/toon-types'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
+
+export type GenerationStrategy = {
+  profileId: PromptProfileId
+  plannerMode: PlannerMode
+  templateId: ToonTemplateId
+  routeLevel: ToonRouteLevel
+}
 
 function uniqueShortList(values: unknown, maxItems: number, maxLength: number) {
   if (!Array.isArray(values)) {
@@ -47,6 +59,7 @@ function uniqueShortList(values: unknown, maxItems: number, maxLength: number) {
 function buildFallbackPlan(pointText: string, concept: string, sessionContext: string): VisualPlan {
   return {
     conceptType: concept || 'medical concept',
+    coreTeachingPoint: 'Show what is happening, where intervention or change occurs, and what follows.',
     learningObjective: 'Show what is happening, where intervention or change occurs, and what follows.',
     densityMode: 'quick-scan card',
     visualStory: 'One clear medical teaching scene with a simple left-to-right explanatory flow.',
@@ -58,6 +71,12 @@ function buildFallbackPlan(pointText: string, concept: string, sessionContext: s
       4,
       24,
     ),
+    mainEntities: uniqueShortList([concept, 'target', 'action', 'outcome'], 4, 24),
+    causalLinks: ['problem -> intervention -> outcome'],
+    sequence: ['problem', 'intervention', 'outcome'],
+    contrastAxes: [],
+    warnings: [],
+    mustKeep: ['main teaching point'],
     supportingCues: uniqueShortList([sessionContext], 2, 80),
     avoid: [
       'black background',
@@ -67,6 +86,93 @@ function buildFallbackPlan(pointText: string, concept: string, sessionContext: s
       'generic stock infographic look',
     ],
     sceneDescription: trimText(pointText, 280),
+    recommendedTemplateId: 'mechanism-board',
+  }
+}
+
+function sanitizePlan(
+  parsed: Partial<VisualPlan>,
+  fallbackCategory: string,
+  fallbackPointText: string,
+  fallbackTemplateId: ToonTemplateId,
+): VisualPlan {
+  const recommendedTemplateId = isToonTemplateId(parsed.recommendedTemplateId)
+    ? parsed.recommendedTemplateId
+    : fallbackTemplateId
+
+  return {
+    conceptType: trimText(parsed.conceptType, 64) || fallbackCategory || 'medical concept',
+    coreTeachingPoint:
+      trimText(parsed.coreTeachingPoint, 220) ||
+      trimText(parsed.learningObjective, 220) ||
+      'Show what is happening, where the intervention acts, and what follows.',
+    learningObjective:
+      trimText(parsed.learningObjective, 220) ||
+      'Show what is happening, where the intervention acts, and what follows.',
+    densityMode: trimText(parsed.densityMode, 64) || 'quick-scan card',
+    visualStory: trimText(parsed.visualStory, 220) || 'One clear medical teaching story.',
+    visualStructure: trimText(parsed.visualStructure, 64) || 'mechanism strip',
+    dominantScanPath: trimText(parsed.dominantScanPath, 64) || 'left to right',
+    titleText: trimText(parsed.titleText, 48) || trimText(fallbackCategory || 'Learning card', 48),
+    microLabels: uniqueShortList(parsed.microLabels, 4, 28),
+    mainEntities: uniqueShortList(parsed.mainEntities, 5, 28),
+    causalLinks: uniqueShortList(parsed.causalLinks, 4, 72),
+    sequence: uniqueShortList(parsed.sequence, 5, 48),
+    contrastAxes: uniqueShortList(parsed.contrastAxes, 4, 48),
+    warnings: uniqueShortList(parsed.warnings, 3, 48),
+    mustKeep: uniqueShortList(parsed.mustKeep, 4, 64),
+    supportingCues: uniqueShortList(parsed.supportingCues, 4, 80),
+    avoid: uniqueShortList(parsed.avoid, 8, 80),
+    sceneDescription: trimText(parsed.sceneDescription, 420) || trimText(fallbackPointText, 280),
+    recommendedTemplateId,
+  }
+}
+
+function buildPlannerPayload(input: {
+  pointText: string
+  category: string
+  sessionContext: string
+  preferences?: { density?: string; specialty?: string }
+  strategy: GenerationStrategy
+}) {
+  return encodeToonPayload({
+    lesson: {
+      pt: trimText(input.pointText, 320),
+      cat: trimText(input.category || 'Not specified', 64),
+      ctx: trimText(input.sessionContext || 'None', 1400),
+    },
+    prefs: {
+      density: input.preferences?.density || 'balanced',
+      specialty: input.preferences?.specialty || 'General Medicine',
+    },
+    route: {
+      profile: input.strategy.profileId,
+      planner: input.strategy.plannerMode,
+      template: input.strategy.templateId,
+      level: input.strategy.routeLevel,
+    },
+  })
+}
+
+export function resolveGenerationStrategy(
+  pointText: string,
+  category?: string | null,
+  concept?: string | null,
+): GenerationStrategy {
+  const route = routePromptProfile(pointText, category, concept)
+  const toon = selectToonTemplate({
+    profileId: route.profileId,
+    plannerMode: route.plannerMode,
+    pointText,
+    category,
+    concept,
+  })
+
+  return {
+    profileId: route.profileId,
+    plannerMode: toon.plannerMode,
+    templateId: toon.templateId,
+    routeLevel: toon.routeLevel,
   }
 }
 
@@ -75,19 +181,24 @@ export async function generateVisualPlan(
   category: string,
   sessionContext: string,
   preferences?: { density?: string; specialty?: string },
+  strategy?: GenerationStrategy,
 ): Promise<{
   plan: VisualPlan
   plannerMode: PlannerMode
   profileId: string
+  templateId: ToonTemplateId
+  routeLevel: ToonRouteLevel
 }> {
-  const route = routePromptProfile(pointText, category, category)
-  const deterministicPlan = buildDeterministicPlan(route.profileId, pointText, category)
+  const resolvedStrategy = strategy ?? resolveGenerationStrategy(pointText, category, category)
+  const deterministicPlan = buildDeterministicPlan(resolvedStrategy.profileId, pointText, category)
 
-  if (route.plannerMode === 'deterministic' && deterministicPlan) {
+  if (resolvedStrategy.plannerMode === 'deterministic' && deterministicPlan) {
     return {
       plan: deterministicPlan,
-      plannerMode: route.plannerMode,
-      profileId: route.profileId,
+      plannerMode: resolvedStrategy.plannerMode,
+      profileId: resolvedStrategy.profileId,
+      templateId: resolvedStrategy.templateId,
+      routeLevel: resolvedStrategy.routeLevel,
     }
   }
 
@@ -103,13 +214,18 @@ export async function generateVisualPlan(
         },
         {
           role: 'user',
-          content: `Teaching point: ${pointText}
-Category: ${category || 'Not specified'}
-Session context: ${trimText(sessionContext, 1400) || 'None'}
-User Preference - Density: ${preferences?.density || 'balanced'}
-User Preference - Specialty: ${preferences?.specialty || 'General Medicine'}
-
-Choose the best single-image teaching approach for this one point. Keep the plan rich enough for the image model to understand the lesson, but compact enough to stay clean and scannable.`,
+          content: [
+            'Choose the best single-image teaching approach for this one point.',
+            'Keep the plan rich enough for the image model to understand the lesson, but compact enough to stay clean and scannable.',
+            'Payload (TOON):',
+            buildPlannerPayload({
+              pointText,
+              category,
+              sessionContext,
+              preferences,
+              strategy: resolvedStrategy,
+            }),
+          ].join('\n\n'),
         },
       ],
     })
@@ -117,87 +233,25 @@ Choose the best single-image teaching approach for this one point. Keep the plan
     const raw = response.choices[0]?.message?.content ?? ''
     const parsed = JSON.parse(raw) as Partial<VisualPlan>
 
+    const plan = sanitizePlan(parsed, category, pointText, resolvedStrategy.templateId)
+
     return {
-      plannerMode: 'planner',
-      profileId: route.profileId,
-      plan: {
-        conceptType: trimText(parsed.conceptType, 64) || category || 'medical concept',
-        learningObjective:
-          trimText(parsed.learningObjective, 220) ||
-          'Show what is happening, where the intervention acts, and what follows.',
-        densityMode: trimText(parsed.densityMode, 64) || 'quick-scan card',
-        visualStory: trimText(parsed.visualStory, 220) || 'One clear medical teaching story.',
-        visualStructure: trimText(parsed.visualStructure, 64) || 'mechanism strip',
-        dominantScanPath: trimText(parsed.dominantScanPath, 64) || 'left to right',
-        titleText: trimText(parsed.titleText, 48) || trimText(category || 'Learning card', 48),
-        microLabels: uniqueShortList(parsed.microLabels, 5, 28),
-        supportingCues: uniqueShortList(parsed.supportingCues, 4, 80),
-        avoid: uniqueShortList(parsed.avoid, 8, 80),
-        sceneDescription: trimText(parsed.sceneDescription, 420) || trimText(pointText, 280),
-      },
+      plannerMode: resolvedStrategy.plannerMode,
+      profileId: resolvedStrategy.profileId,
+      templateId: plan.recommendedTemplateId || resolvedStrategy.templateId,
+      routeLevel: resolvedStrategy.routeLevel,
+      plan,
     }
   } catch (error) {
     console.error('Visual planning failed:', error)
     return {
       plan: buildFallbackPlan(pointText, category, sessionContext),
-      plannerMode: 'planner',
-      profileId: route.profileId,
+      plannerMode: resolvedStrategy.plannerMode,
+      profileId: resolvedStrategy.profileId,
+      templateId: resolvedStrategy.templateId,
+      routeLevel: resolvedStrategy.routeLevel,
     }
   }
-}
-
-export function buildCardImagePrompt(
-  pointText: string,
-  concept: string,
-  sessionContext: string,
-  plan: VisualPlan,
-) {
-  const contextLine = trimText(sessionContext, 320)
-  const labelLine =
-    plan.microLabels.length > 0
-      ? plan.microLabels.map((label) => `"${label}"`).join(', ')
-      : 'Use only a short title and the smallest number of micro-labels needed for clarity.'
-  const cueLine =
-    plan.supportingCues.length > 0 ? plan.supportingCues.join('; ') : 'No extra supporting cues unless they improve understanding.'
-  const avoidItems = uniqueShortList(
-    [
-      ...plan.avoid,
-      'black background',
-      'dense paragraphs',
-      'overcrowded labels',
-      'prompt artifact text',
-      'unrelated diseases or mechanisms',
-      'generic startup illustration style',
-      'childish cartoon look',
-    ],
-    10,
-    80,
-  )
-
-  return [
-    'Use case: infographic-diagram',
-    'Asset type: 16:9 medical learning card',
-    `Primary request: create a polished, easy-to-scan illustrative medical learning card for "${trimText(pointText, 180)}"`,
-    `Concept type: ${plan.conceptType}`,
-    `Learning objective: ${plan.learningObjective}`,
-    `Density mode: ${plan.densityMode}`,
-    `Visual story: ${plan.visualStory}`,
-    `Chosen structure: ${plan.visualStructure}`,
-    `Dominant scan path: ${plan.dominantScanPath}`,
-    `Main scene: ${plan.sceneDescription}`,
-    contextLine ? `Context for accuracy: ${contextLine}` : '',
-    `Title text if needed: "${plan.titleText || trimText(concept || 'Learning card', 40)}"`,
-    `Allowed micro-labels only if essential: ${labelLine}`,
-    `Supporting cues: ${cueLine}`,
-    'Style/medium: premium editorial medical infographic, soft anatomy and cellular illustration, clear academic hierarchy, clean clinical composition, crisp boxed modules or flow rails only when they improve comprehension.',
-    'Composition/framing: one dominant scene or one tightly controlled modular board, visually understandable in a few seconds, strong foreground subject, generous spacing, calm negative space, no decorative clutter.',
-    'Text rules: keep text sparse, short, and purposeful. Use at most one short title and a few tiny labels. Prefer icons, arrows, and symbol chips over extra words. If a label would be longer than two words, convert it into iconography instead. No paragraphs. No provenance text. No prompt notes. No page numbers. No repeated labels.',
-    'Medical rules: concept-pure, mechanism-accurate, no imported logic from unrelated diseases or drug classes.',
-    `Avoid: ${avoidItems.join('; ')}`,
-    'Quality: high',
-  ]
-    .filter(Boolean)
-    .join('\n')
 }
 
 export async function generateCardImage(
@@ -205,17 +259,28 @@ export async function generateCardImage(
   category: string,
   sessionContext: string,
   preferences?: { density?: string; specialty?: string },
+  options?: {
+    strategy?: GenerationStrategy
+  },
 ): Promise<{
   imageBase64: string
   prompt: string
   plan: VisualPlan
   plannerMode: PlannerMode
   profileId: string
+  templateId: ToonTemplateId
+  routeLevel: ToonRouteLevel
   model: string
   promptVersion: string
 }> {
-  const { plan, plannerMode, profileId } = await generateVisualPlan(text, category, sessionContext, preferences)
-  const prompt = buildCardImagePrompt(text, category, sessionContext, plan)
+  const { plan, plannerMode, profileId, templateId, routeLevel } = await generateVisualPlan(
+    text,
+    category,
+    sessionContext,
+    preferences,
+    options?.strategy,
+  )
+  const prompt = buildToonImagePrompt(text, category, sessionContext, plan, templateId)
 
   const response = await openai.images.generate({
     model: IMAGE_MODEL,
@@ -237,6 +302,8 @@ export async function generateCardImage(
     plan,
     plannerMode,
     profileId,
+    templateId,
+    routeLevel,
     model: IMAGE_MODEL,
     promptVersion: PROMPT_VERSION,
   }

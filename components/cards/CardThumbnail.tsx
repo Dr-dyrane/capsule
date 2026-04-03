@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Trash2, Edit3, Loader2 } from 'lucide-react'
+import { Trash2, Edit3, Loader2, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 import { deleteCard } from '@/app/actions/card-actions'
@@ -13,11 +13,17 @@ import styles from './CardThumbnail.module.css'
 export default function CardThumbnail({ 
   card, 
   imageUrl,
-  onEdit 
+  onEdit,
+  selectionMode = false,
+  selected = false,
+  onToggleSelect,
 }: { 
   card: CardRecord; 
   imageUrl?: string;
   onEdit?: (card: CardRecord) => void;
+  selectionMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (cardId: string) => void
 }) {
   const [isDeleting, startDeleteTransition] = useTransition()
   const [showConfirm, setShowConfirm] = useState(false)
@@ -56,50 +62,73 @@ export default function CardThumbnail({
     onEdit?.(card)
   }
 
+  function handleToggleSelect(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    onToggleSelect?.(card.id)
+  }
+
   return (
-    <div className={styles.root}>
-      <Link href={`/cards/${card.id}`} className={styles.cardLink}>
+    <div className={`${styles.root} ${selectionMode ? styles.selectionMode : ''} ${selected ? styles.selected : ''}`}>
+      <Link
+        href={`/cards/${card.id}`}
+        className={styles.cardLink}
+        onClick={selectionMode ? handleToggleSelect : undefined}
+      >
         <div className={styles.imageWrap}>
           <div className={styles.status}>{statusLabel}</div>
-          
-          <AnimatePresence>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              whileHover={{ opacity: 1 }}
-              className={styles.actionsOverlay}
+
+          {selectionMode ? (
+            <button
+              type="button"
+              className={`${styles.selectionBadge} ${selected ? styles.selectionBadgeActive : ''}`}
+              onClick={handleToggleSelect}
+              aria-pressed={selected}
+              aria-label={selected ? 'Deselect card' : 'Select card'}
             >
-              <div className={styles.actionGroup}>
-                <button 
-                  className={styles.actionBtn} 
-                  onClick={handleEdit}
-                  title="Edit title"
-                >
-                  <Edit3 size={14} />
-                </button>
-                <button 
-                  className={`${styles.actionBtn} ${showConfirm ? styles.confirmDelete : ''}`} 
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  title={showConfirm ? "Confirm Delete" : "Delete card"}
-                >
-                  {isDeleting ? (
-                    <Loader2 size={14} className={styles.spinner} />
-                  ) : (
-                    <Trash2 size={14} />
-                  )}
-                </button>
-              </div>
-              {showConfirm && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={styles.confirmTip}
-                >
-                  Click again to confirm
-                </motion.div>
-              )}
-            </motion.div>
-          </AnimatePresence>
+              {selected ? <Check size={14} /> : null}
+              <span>{selected ? 'Selected' : 'Select'}</span>
+            </button>
+          ) : (
+            <AnimatePresence>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                whileHover={{ opacity: 1 }}
+                className={styles.actionsOverlay}
+              >
+                <div className={styles.actionGroup}>
+                  <button 
+                    className={styles.actionBtn} 
+                    onClick={handleEdit}
+                    title="Edit title"
+                  >
+                    <Edit3 size={14} />
+                  </button>
+                  <button 
+                    className={`${styles.actionBtn} ${showConfirm ? styles.confirmDelete : ''}`} 
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    title={showConfirm ? "Confirm Delete" : "Delete card"}
+                  >
+                    {isDeleting ? (
+                      <Loader2 size={14} className={styles.spinner} />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
+                  </button>
+                </div>
+                {showConfirm && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={styles.confirmTip}
+                  >
+                    Click again to confirm
+                  </motion.div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          )}
 
           {imageUrl ? (
             <div className={styles.imageFrame}>

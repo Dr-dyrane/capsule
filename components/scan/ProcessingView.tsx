@@ -4,10 +4,11 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, ScanText, Sparkles } from 'lucide-react'
+import { CheckCircle2, Globe, Lock, ScanText, Sparkles } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { getSignedCardUrls } from '@/app/actions/assets'
+import { publishSession, unpublishSession } from '@/app/actions/community'
 import { ensureCardPlaceholders, generateCard } from '@/app/actions/generate'
 import { processNote, restartSession } from '@/app/actions/process'
 import ImagePreview from '@/components/cards/ImagePreview'
@@ -53,6 +54,7 @@ export default function ProcessingView({
   const [cardUrls, setCardUrls] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<SessionStatus | 'loading'>('loading')
   const [isRetrying, startRetryTransition] = useTransition()
+  const [isPublishing, startPublishTransition] = useTransition()
 
   const placeholderSyncRef = useRef(false)
   const processingStartedRef = useRef(false)
@@ -242,6 +244,35 @@ export default function ProcessingView({
           card_order: index,
         }))
 
+  const isSessionPublished = session?.visibility === 'published'
+
+  function handleToggleSessionVisibility() {
+    startPublishTransition(() => {
+      const nextPublishedState = !isSessionPublished
+
+      setSession((current) =>
+        current
+          ? {
+              ...current,
+              visibility: nextPublishedState ? 'published' : 'private',
+            }
+          : current,
+      )
+
+      void (nextPublishedState ? publishSession(sessionId) : unpublishSession(sessionId)).catch((error) => {
+        console.error('Failed to update session visibility', error)
+        setSession((current) =>
+          current
+            ? {
+                ...current,
+                visibility: nextPublishedState ? 'private' : 'published',
+              }
+            : current,
+        )
+      })
+    })
+  }
+
   return (
     <div className={styles.root}>
       <section className={styles.statusPanel}>
@@ -271,8 +302,51 @@ export default function ProcessingView({
               <button type="button" className={styles.primaryAction} onClick={handleRetry} disabled={isRetrying}>
                 {isRetrying ? 'Restarting...' : 'Restart session'}
               </button>
+              <button
+                type="button"
+                className={styles.secondaryAction}
+                onClick={handleToggleSessionVisibility}
+                disabled={isPublishing}
+              >
+                {isPublishing ? (
+                  'Saving...'
+                ) : isSessionPublished ? (
+                  <>
+                    <Lock size={14} aria-hidden="true" />
+                    <span>Unpublish all</span>
+                  </>
+                ) : (
+                  <>
+                    <Globe size={14} aria-hidden="true" />
+                    <span>Publish all</span>
+                  </>
+                )}
+              </button>
             </div>
-          ) : null}
+          ) : (
+            <div className={styles.statusActions}>
+              <button
+                type="button"
+                className={styles.secondaryAction}
+                onClick={handleToggleSessionVisibility}
+                disabled={isPublishing}
+              >
+                {isPublishing ? (
+                  'Saving...'
+                ) : isSessionPublished ? (
+                  <>
+                    <Lock size={14} aria-hidden="true" />
+                    <span>Unpublish all</span>
+                  </>
+                ) : (
+                  <>
+                    <Globe size={14} aria-hidden="true" />
+                    <span>Publish all</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
 
           <div className={styles.progressRail}>
             <motion.div

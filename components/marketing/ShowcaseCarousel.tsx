@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 
 import styles from './ShowcaseCarousel.module.css'
 
@@ -24,9 +24,17 @@ export default function ShowcaseCarousel({ cards }: Props) {
     setActiveIndex((index + cards.length) % cards.length)
   }
 
-  function goToNext() {
+  const goToNext = useCallback(() => {
     setActiveIndex((current) => (current + 1) % cards.length)
-  }
+  }, [cards.length])
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      goToNext()
+    }, 4000)
+
+    return () => clearInterval(timer)
+  }, [goToNext])
 
   function goToPrevious() {
     setActiveIndex((current) => (current - 1 + cards.length) % cards.length)
@@ -123,18 +131,23 @@ export default function ShowcaseCarousel({ cards }: Props) {
               aria-label={label}
               aria-pressed={isActive}
             >
-              <Image
-                src={card.src}
-                alt={card.alt}
-                fill
-                priority={isActive}
-                sizes={
-                  isActive
-                    ? '(max-width: 1023px) min(100vw - 48px, 36rem), 42vw'
-                    : '(max-width: 1023px) 38vw, 24vw'
-                }
-                className={styles.cardImage}
-              />
+              <span className={styles.cardStage}>
+                <span className={styles.cardFrame}>
+                  <Image
+                    src={card.src}
+                    alt={card.alt}
+                    fill
+                    priority={isActive}
+                    unoptimized
+                    sizes={
+                      isActive
+                        ? '(max-width: 1023px) min(100vw - 48px, 36rem), 42vw'
+                        : '(max-width: 1023px) 38vw, 24vw'
+                    }
+                    className={styles.cardImage}
+                  />
+                </span>
+              </span>
             </button>
           )
         })}

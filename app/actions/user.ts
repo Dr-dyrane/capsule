@@ -1,5 +1,6 @@
 'use server'
 
+import { isCommunitySchemaError } from '@/lib/community/schema'
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -8,6 +9,7 @@ export type UserPreferences = {
   density?: 'focused' | 'detailed'
   specialty?: string
   theme?: 'dark' | 'light'
+  auto_publish?: boolean
 }
 
 /**
@@ -31,7 +33,24 @@ export async function updateUserPreferences(preferences: UserPreferences) {
 
   if (error) throw error
 
+  if (typeof preferences.auto_publish === 'boolean') {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .upsert(
+        {
+          id: user.id,
+          auto_publish: preferences.auto_publish,
+        },
+        { onConflict: 'id' },
+      )
+
+    if (profileError && !isCommunitySchemaError(profileError)) {
+      throw profileError
+    }
+  }
+
   revalidatePath('/profile')
+  revalidatePath('/scan')
   return { success: true }
 }
 

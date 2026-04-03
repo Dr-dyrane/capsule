@@ -3,12 +3,14 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import { ChevronLeft, Images, ScanText, Sparkles } from 'lucide-react'
 
+import { getSafeCommunityVisibility, isCommunitySchemaError } from '@/lib/community/schema'
 import { createSignedObjectUrlSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
 
 import shellStyles from '../../AppScreen.module.css'
 import styles from './CardDetailPage.module.css'
 import ImagePreview from '@/components/cards/ImagePreview'
+import PublishToggle from '@/components/cards/PublishToggle'
 
 
 type CardDetailPageProps = {
@@ -19,13 +21,38 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: card, error } = await supabase
+  const cardWithCommunity = await supabase
     .from('cards')
-    .select('id, title, image_url, created_at, status, session_id, points(text, category)')
+    .select('id, title, image_url, created_at, status, session_id, visibility, points(text, category)')
     .eq('id', id)
     .single()
 
-  if (error || !card) {
+  let card = cardWithCommunity.data
+  let communityEnabled = true
+
+  if (cardWithCommunity.error) {
+    if (!isCommunitySchemaError(cardWithCommunity.error)) {
+      redirect('/cards')
+    }
+
+    const fallbackCard = await supabase
+      .from('cards')
+      .select('id, title, image_url, created_at, status, session_id, points(text, category)')
+      .eq('id', id)
+      .single()
+
+    if (fallbackCard.error || !fallbackCard.data) {
+      redirect('/cards')
+    }
+
+    card = {
+      ...fallbackCard.data,
+      visibility: 'private',
+    }
+    communityEnabled = false
+  }
+
+  if (!card) {
     redirect('/cards')
   }
 
@@ -100,6 +127,9 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
         <section className={shellStyles.panel}>
           <div className={`${shellStyles.panelInner} ${styles.infoPanel}`}>
             <div className={styles.metaRow}>
+              {communityEnabled ? (
+                <PublishToggle cardId={card.id} initialVisibility={getSafeCommunityVisibility(card.visibility)} />
+              ) : null}
               <div className={styles.chip}>
                 <Sparkles size={14} aria-hidden="true" />
                 <span>{category}</span>

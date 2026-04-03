@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto'
 
 import type { PlannerMode } from '@/lib/types'
 import { IMAGE_MODEL, PROMPT_VERSION } from './prompt-profiles'
+import { TOON_VERSION } from './toon/toon-rules'
+import type { ToonRouteLevel, ToonTemplateId } from './toon/toon-types'
 
 function normalizeText(value: string | null | undefined) {
   return (value ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -14,6 +16,8 @@ export function buildRenderCacheKey(input: {
   sessionContext?: string | null
   plannerMode: PlannerMode
   profileId: string
+  toonTemplateId: ToonTemplateId
+  routeLevel: ToonRouteLevel
   density?: string
   specialty?: string
 }) {
@@ -24,6 +28,9 @@ export function buildRenderCacheKey(input: {
     sessionContext: normalizeText(input.sessionContext),
     plannerMode: input.plannerMode,
     profileId: input.profileId,
+    toonTemplateId: input.toonTemplateId,
+    routeLevel: input.routeLevel,
+    toonVersion: TOON_VERSION,
     density: normalizeText(input.density),
     specialty: normalizeText(input.specialty),
     model: IMAGE_MODEL,

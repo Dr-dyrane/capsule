@@ -4,11 +4,9 @@
   aspect-ratio: 16 / 9; /* Default, but will be overridden for immersive full-height if needed */
   overflow: hidden;
   cursor: pointer;
-  padding: 12px;
-  border-radius: 28px;
+    border-radius: 28px;
   background: var(--image-stage-bg);
-  border: 1px solid var(--image-stage-border);
-  box-shadow: var(--image-stage-shadow);
+    box-shadow: var(--image-stage-shadow);
   transition: transform 200ms var(--ease-apple);
 }
 
@@ -18,9 +16,9 @@
 
 .frame {
   position: absolute;
-  inset: 12px;
+  inset: 0;
   overflow: hidden;
-  border-radius: 20px;
+  border-radius: inherit;
   background: var(--image-stage-surface);
 }
 
@@ -30,10 +28,10 @@
 
 .overlay {
   position: absolute;
-  inset: 12px;
+  inset: 0;
   display: grid;
   place-items: center;
-  border-radius: 20px;
+  border-radius: inherit;
   background: rgba(0, 0, 0, 0.2);
   opacity: 0;
   transition: opacity 200ms var(--ease-apple);
@@ -72,8 +70,7 @@
   overflow: hidden;
   border-radius: 28px;
   background: var(--image-stage-bg);
-  border: 1px solid var(--image-stage-border);
-  box-shadow: var(--image-stage-shadow);
+    box-shadow: var(--image-stage-shadow);
 }
 
 .fullscreenImage {

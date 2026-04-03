@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { queueCardForRetry, syncGenerationRunState } from '@/lib/generation/card-worker'
 import { registerGenerationSession } from '@/lib/generation/run-manager'
 import { routePromptProfile } from '@/lib/ai/prompt-router'
+import { isCommunitySchemaError } from '@/lib/community/schema'
 import { createClient } from '@/lib/supabase/server'
 import type { CardRecord, PointRecord } from '@/lib/types'
 
@@ -13,40 +14,67 @@ function getCardTitle(text: string) {
   return title || 'Learning card'
 }
 
-function buildPlaceholderCard(point: PointRecord, sessionId: string, userId: string): CardRecord {
+function buildPlaceholderCard(point: PointRecord, session: { id: string; user_id: string; visibility?: string }): CardRecord {
   const cardId = crypto.randomUUID()
 
-  return {
+  const placeholder: CardRecord = {
     id: cardId,
     point_id: point.id,
-    session_id: sessionId,
-    image_url: `${userId}/${sessionId}/${cardId}.png`,
+    session_id: session.id,
+    image_url: `${session.user_id}/${session.id}/${cardId}.png`,
     title: getCardTitle(point.text),
     status: 'queued',
     card_order: point.sort_order ?? 1,
   }
+
+  if (session.visibility) {
+    placeholder.visibility = session.visibility === 'published' ? 'published' : 'private'
+  }
+
+  return placeholder
 }
 
 async function ensureGenerationArtifacts(sessionId: string) {
   const supabase = await createClient()
 
-  const [{ data: session, error: sessionError }, { data: points, error: pointsError }, { data: existingCards }, { data: existingJobs }] =
-    await Promise.all([
-      supabase.from('sessions').select('id, user_id').eq('id', sessionId).single(),
-      supabase.from('points').select('*').eq('session_id', sessionId).order('sort_order', { ascending: true }),
-      supabase.from('cards').select('*').eq('session_id', sessionId),
-      supabase.from('card_jobs').select('card_id').eq('session_id', sessionId),
-    ])
+  const sessionWithVisibility = await supabase
+    .from('sessions')
+    .select('id, user_id, visibility')
+    .eq('id', sessionId)
+    .single()
 
-  if (sessionError) throw sessionError
+  let session = sessionWithVisibility.data as { id: string; user_id: string; visibility?: string } | null
+
+  if (sessionWithVisibility.error) {
+    if (!isCommunitySchemaError(sessionWithVisibility.error)) {
+      throw sessionWithVisibility.error
+    }
+
+    const sessionFallback = await supabase
+      .from('sessions')
+      .select('id, user_id')
+      .eq('id', sessionId)
+      .single()
+
+    if (sessionFallback.error) throw sessionFallback.error
+    session = sessionFallback.data
+  }
+
+  const [{ data: points, error: pointsError }, { data: existingCards }, { data: existingJobs }] = await Promise.all([
+    supabase.from('points').select('*').eq('session_id', sessionId).order('sort_order', { ascending: true }),
+    supabase.from('cards').select('*').eq('session_id', sessionId),
+    supabase.from('card_jobs').select('card_id').eq('session_id', sessionId),
+  ])
+
   if (pointsError) throw pointsError
+  if (!session) throw new Error('Session not found')
 
   const typedPoints = (points ?? []) as PointRecord[]
   const typedExistingCards = (existingCards ?? []) as CardRecord[]
   const cardByPointId = new Map(typedExistingCards.map((card) => [card.point_id, card]))
   const placeholderCards = typedPoints
     .filter((point) => !cardByPointId.has(point.id))
-    .map((point) => buildPlaceholderCard(point, sessionId, session.user_id))
+    .map((point) => buildPlaceholderCard(point, session))
 
   if (placeholderCards.length > 0) {
     const { error: cardsError } = await supabase.from('cards').insert(placeholderCards)

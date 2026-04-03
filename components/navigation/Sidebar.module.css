@@ -122,35 +122,13 @@
     color: var(--text-tertiary);
   }
 
-  .homeLink {
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 14px;
-    border-radius: var(--radius-full);
-    color: var(--text-secondary);
-    background: var(--surface-2);
-    box-shadow: var(--shadow-sm);
-    transition:
-      transform 150ms var(--ease-apple),
-      color 150ms var(--ease-apple),
-      background-color 150ms var(--ease-apple);
+  .userMenuWrapper {
+    width: 100%;
+    margin-top: 4px;
   }
 
-  .homeLink:hover,
-  .homeLink:focus-visible {
-    color: var(--text-primary);
-    background: var(--surface-3);
-  }
-
-  .homeLink:active {
-    transform: scale(0.98);
-  }
-
-  .homeCopy {
-    display: inline;
+  .compactUserMenu {
+    display: none;
   }
 }
 
@@ -179,8 +157,7 @@
   }
 
   .label,
-  .footerMeta,
-  .homeCopy {
+  .footerMeta {
     display: none;
   }
 
@@ -193,6 +170,14 @@
   }
 
   .compactToggle {
+    display: block;
+  }
+
+  .userMenuWrapper {
+    display: none;
+  }
+
+  .compactUserMenu {
     display: block;
   }
 }

@@ -5,6 +5,10 @@ export type SessionStatus =
   | 'complete'
   | 'error'
 
+export type CommunityVisibility = 'private' | 'published'
+export type CommunityReactionKind = 'like' | 'save'
+export type CommunitySort = 'recent' | 'trending'
+
 export interface SessionRecord {
   id: string
   user_id: string
@@ -13,6 +17,7 @@ export interface SessionRecord {
   point_count: number | null
   card_count: number | null
   session_context: string | null
+  visibility?: CommunityVisibility
   created_at?: string
   updated_at?: string
 }
@@ -36,8 +41,42 @@ export interface CardRecord {
   title: string | null
   status: 'queued' | 'generating' | 'complete' | 'error'
   card_order?: number | null
+  visibility?: CommunityVisibility
+  published_at?: string | null
+  published_by?: string | null
+  community_template?: string | null
+  community_hash?: string | null
   created_at?: string
   points?: PointRecord | PointRecord[]
+}
+
+export interface ProfileRecord {
+  id: string
+  username: string | null
+  avatar_url: string | null
+  auto_publish?: boolean
+  updated_at?: string
+}
+
+export interface CommunityIndexRecord {
+  card_id: string
+  session_id: string
+  image_url: string
+  title: string | null
+  published_at: string | null
+  published_by: string | null
+  community_template: string | null
+  author_name: string | null
+  author_avatar_url: string | null
+  like_count: number
+  save_count: number
+  trend_score: number
+}
+
+export interface CommunityViewerState {
+  liked: boolean
+  saved: boolean
+  reported?: boolean
 }
 
 export type GenerationRunStatus = 'queued' | 'running' | 'complete' | 'error' | 'cancelled'

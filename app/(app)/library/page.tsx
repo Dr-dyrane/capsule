@@ -52,10 +52,15 @@ export default async function LibraryPage() {
         <div className={styles.panel}>
           <div className={`${styles.panelInner} ${styles.emptyState}`}>
             <p className={styles.emptyTitle}>Your library is empty</p>
-            <p className={styles.emptyCopy}>Sessions will appear here.</p>
-            <Link href="/scan" className={styles.accentLink}>
-              Scan note
-            </Link>
+            <p className={styles.emptyCopy}>Generate your first card or explore what the community has already shared.</p>
+            <div className={listStyles.emptyActions}>
+              <Link href="/community" className={styles.accentLink}>
+                Explore community
+              </Link>
+              <Link href="/scan" className={listStyles.secondaryLink}>
+                Scan note
+              </Link>
+            </div>
           </div>
         </div>
       ) : (
@@ -67,17 +72,19 @@ export default async function LibraryPage() {
                 {items.map((session) => (
                   <Link key={session.id} href={`/scan/${session.id}`} className={listStyles.item}>
                     <div className={listStyles.thumb}>
-                      {signedNoteUrls[session.source_url] ? (
-                        <Image
-                          src={signedNoteUrls[session.source_url]}
-                          alt="Uploaded note"
-                          fill
-                          unoptimized
-                          sizes="56px"
-                        />
-                      ) : (
-                        <div className={listStyles.thumbFallback}>Note</div>
-                      )}
+                      <div className={listStyles.thumbFrame}>
+                        {signedNoteUrls[session.source_url] ? (
+                          <Image
+                            src={signedNoteUrls[session.source_url]}
+                            alt="Uploaded note"
+                            fill
+                            unoptimized
+                            sizes="56px"
+                          />
+                        ) : (
+                          <div className={listStyles.thumbFallback}>Note</div>
+                        )}
+                      </div>
                       <div className={listStyles.thumbLabel}>Original note</div>
                     </div>
                     <div className={listStyles.info}>

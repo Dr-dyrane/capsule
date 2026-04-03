@@ -3,8 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { buildRenderCacheKey, buildPromptHash } from '@/lib/ai/cache-keys'
-import { generateCardImage } from '@/lib/ai/generate'
-import { routePromptProfile } from '@/lib/ai/prompt-router'
+import { generateCardImage, resolveGenerationStrategy } from '@/lib/ai/generate'
 import { upsertRenderCache, findRenderCache } from '@/lib/ai/render-cache'
 import type { CardJobRecord, GenerationRunStatus } from '@/lib/types'
 
@@ -131,7 +130,7 @@ export async function processCardJob(supabase: SupabaseClient, jobId: string) {
   if (sessionError) throw sessionError
   if (cardError) throw cardError
 
-  const route = routePromptProfile(point.text, point.category, point.concept)
+  const strategy = resolveGenerationStrategy(point.text, point.category, point.concept)
 
   const { data: authData } = await supabase.auth.getUser()
   const preferences = authData.user?.user_metadata?.preferences || {}
@@ -141,8 +140,10 @@ export async function processCardJob(supabase: SupabaseClient, jobId: string) {
     category: point.category,
     concept: point.concept,
     sessionContext: session.session_context,
-    plannerMode: route.plannerMode,
-    profileId: route.profileId,
+    plannerMode: strategy.plannerMode,
+    profileId: strategy.profileId,
+    toonTemplateId: strategy.templateId,
+    routeLevel: strategy.routeLevel,
     density: preferences.density,
     specialty: preferences.specialty,
   })
@@ -151,7 +152,7 @@ export async function processCardJob(supabase: SupabaseClient, jobId: string) {
     .from('card_jobs')
     .update({
       status: 'running',
-      planner_mode: route.plannerMode,
+      planner_mode: strategy.plannerMode,
       cache_key: cacheKey,
       attempt_count: typedJob.attempt_count + 1,
       claimed_at: new Date().toISOString(),
@@ -182,6 +183,8 @@ export async function processCardJob(supabase: SupabaseClient, jobId: string) {
           image_url: cached.image_url,
           title: getCardTitle(point.text),
           status: 'complete',
+          community_template: strategy.templateId,
+          community_hash: cacheKey,
         })
         .eq('id', typedJob.card_id)
 
@@ -205,11 +208,12 @@ export async function processCardJob(supabase: SupabaseClient, jobId: string) {
       return { fromCache: true }
     }
 
-    const { imageBase64, prompt, plan, plannerMode, model, promptVersion } = await generateCardImage(
+    const { imageBase64, prompt, plan, plannerMode, templateId, model, promptVersion } = await generateCardImage(
       point.text,
       point.concept || point.category || 'Learning card',
       session.session_context || '',
       preferences,
+      { strategy },
     )
 
     const promptHash = buildPromptHash(prompt)
@@ -242,6 +246,8 @@ export async function processCardJob(supabase: SupabaseClient, jobId: string) {
           image_url: cacheImagePath,
           title: getCardTitle(point.text),
           status: 'complete',
+          community_template: templateId,
+          community_hash: cacheKey,
         })
         .eq('id', typedJob.card_id),
       supabase

@@ -29,7 +29,27 @@ export function routePromptProfile(pointText: string, category?: string | null, 
     return { profileId: 'comparison', plannerMode: 'deterministic' }
   }
 
-  if (compactText.includes('+') && compactText.length <= 180) {
+  if (
+    hasAny(text, [
+      /\bsyndrome\b/,
+      /\blysis\b/,
+      /\bcascade\b/,
+      /\bpathophys/,
+      /\bpathology\b/,
+      /\brelease\b/,
+      /\bresults? in\b/,
+      /\bleads? to\b/,
+      /\bcharacterized by\b/,
+    ])
+  ) {
+    return { profileId: 'cascade', plannerMode: 'planner' }
+  }
+
+  if (
+    compactText.length <= 220 &&
+    (compactText.includes('+') ||
+      hasAny(text, [/\bcombined with\b/, /\bplus\b/, /\bregimen\b/, /\binduction\b/, /\bmaintenance\b/, /\bprotocol\b/]))
+  ) {
     return { profileId: 'regimen', plannerMode: 'planner' }
   }
 

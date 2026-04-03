@@ -17,6 +17,19 @@ export default async function ProfilePage() {
     .from('cards')
     .select('*', { count: 'exact', head: true })
 
+  const [{ count: publishedCount }, { count: savedCount }] = await Promise.all([
+    supabase
+      .from('cards')
+      .select('*', { count: 'exact', head: true })
+      .eq('visibility', 'published')
+      .eq('published_by', user.id),
+    supabase
+      .from('community_reactions')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('kind', 'save'),
+  ])
+
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
@@ -28,7 +41,12 @@ export default async function ProfilePage() {
         <p className={styles.copy}>Clinical identity & generation controls.</p>
       </header>
 
-      <ProfileClient user={user} cardCount={count || 0} />
+      <ProfileClient
+        user={user}
+        cardCount={count || 0}
+        publishedCount={publishedCount || 0}
+        savedCount={savedCount || 0}
+      />
     </div>
   )
 }

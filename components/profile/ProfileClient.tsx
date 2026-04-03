@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useTransition, useEffect } from 'react'
-import { LogOut, Monitor, Layers, Eye, ShieldCheck, Database, Stethoscope, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { Bookmark, Globe, Layers, Loader2, LogOut, Monitor, Sparkles, Stethoscope } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { useRouter } from 'next/navigation'
 
 import SettingRow from './SettingRow'
-import { updateUserPreferences, signOut } from '@/app/actions/user'
+import { updateUserPreferences, signOut, type UserPreferences } from '@/app/actions/user'
 import styles from '@/app/(app)/profile/ProfilePage.module.css'
 
 interface ProfileClientProps {
@@ -18,10 +18,13 @@ interface ProfileClientProps {
         density?: 'focused' | 'detailed'
         theme?: 'dark' | 'light'
         specialty?: string
+        auto_publish?: boolean
       }
     }
   }
   cardCount: number
+  publishedCount: number
+  savedCount: number
 }
 
 const SPECIALTIES = [
@@ -34,14 +37,14 @@ const SPECIALTIES = [
   'Pediatrics'
 ]
 
-export default function ProfileClient({ user, cardCount }: ProfileClientProps) {
-  const router = useRouter()
+export default function ProfileClient({ user, cardCount, publishedCount, savedCount }: ProfileClientProps) {
   const [isPending, startTransition] = useTransition()
   
   const initialPrefs = user.user_metadata.preferences || {}
   const [density, setDensity] = useState<'focused' | 'detailed'>(initialPrefs.density || 'focused')
   const [theme, setTheme] = useState<'dark' | 'light'>(initialPrefs.theme || 'dark')
   const [specialty, setSpecialty] = useState(initialPrefs.specialty || SPECIALTIES[0])
+  const [autoPublish, setAutoPublish] = useState(Boolean(initialPrefs.auto_publish))
 
   // Theme Sync (Capsule Design Standards)
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function ProfileClient({ user, cardCount }: ProfileClientProps) {
     window.dispatchEvent(new Event('capsule-theme-change'))
   }, [theme])
 
-  async function handleUpdate(updates: any) {
+  async function handleUpdate(updates: UserPreferences) {
     startTransition(async () => {
       try {
         await updateUserPreferences(updates)
@@ -81,8 +84,16 @@ export default function ProfileClient({ user, cardCount }: ProfileClientProps) {
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Medical Archive</h3>
         <div className={styles.settingGroup}>
-          <SettingRow label="Stored Illustrations" icon={<Database size={18} />}>
+          <SettingRow label="Stored Illustrations" icon={<Layers size={18} />}>
             <span className={styles.countText}>{cardCount} saved</span>
+          </SettingRow>
+          <SettingRow label="Published Cards" icon={<Globe size={18} />}>
+            <span className={styles.countText}>{publishedCount} live</span>
+          </SettingRow>
+          <SettingRow label="Saved from Community" icon={<Bookmark size={18} />}>
+            <Link href="/community" className={styles.inlineLink}>
+              {savedCount} saved
+            </Link>
           </SettingRow>
         </div>
       </section>
@@ -130,6 +141,34 @@ export default function ProfileClient({ user, cardCount }: ProfileClientProps) {
       </section>
 
       <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Community</h3>
+        <div className={styles.settingGroup}>
+          <SettingRow label="Publish default" icon={<Globe size={18} />}>
+            <div className={styles.toggleGroup}>
+              <button
+                className={`${styles.toggleBtn} ${!autoPublish ? styles.activeToggle : ''}`}
+                onClick={() => {
+                  setAutoPublish(false)
+                  handleUpdate({ auto_publish: false })
+                }}
+              >
+                Ask
+              </button>
+              <button
+                className={`${styles.toggleBtn} ${autoPublish ? styles.activeToggle : ''}`}
+                onClick={() => {
+                  setAutoPublish(true)
+                  handleUpdate({ auto_publish: true })
+                }}
+              >
+                Publish
+              </button>
+            </div>
+          </SettingRow>
+        </div>
+      </section>
+
+      <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Display</h3>
         <div className={styles.settingGroup}>
           <SettingRow label="Appearance" icon={<Monitor size={18} />}>
@@ -137,7 +176,7 @@ export default function ProfileClient({ user, cardCount }: ProfileClientProps) {
               className={styles.select}
               value={theme}
               onChange={(e) => {
-                const val = e.target.value as any
+                const val = e.target.value as 'dark' | 'light'
                 setTheme(val)
                 handleUpdate({ theme: val })
               }}
@@ -150,6 +189,10 @@ export default function ProfileClient({ user, cardCount }: ProfileClientProps) {
       </section>
 
       <div className={styles.actions}>
+        <Link href="/community" className={styles.actionItem}>
+          <Sparkles size={20} />
+          <span>Explore community</span>
+        </Link>
         <form action={signOut}>
           <button 
             type="submit" 
