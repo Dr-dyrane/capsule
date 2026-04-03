@@ -1,2 +1,2 @@
--- Migration to add session_context to sessions table
-ALTER TABLE public.sessions ADD COLUMN IF NOT EXISTS session_context TEXT;
+-- Compatibility stub.
+-- Folded into 20260402093000_initial_capsule_schema.sql.

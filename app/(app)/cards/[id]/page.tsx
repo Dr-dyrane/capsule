@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
-import { ChevronLeft, Images, ScanText, Sparkles } from 'lucide-react'
+import { ChevronLeft, Images, Repeat2, ScanText, Sparkles } from 'lucide-react'
 
+import { getCommunityCardByIdWithUrl } from '@/app/actions/community'
 import { getSafeCommunityVisibility, isCommunitySchemaError } from '@/lib/community/schema'
 import { createSignedObjectUrlSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
@@ -59,11 +60,14 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
   const signedUrl = card.status === 'complete' ? await createSignedObjectUrlSafe('cards', card.image_url) : null
   const { data: session } = await supabase
     .from('sessions')
-    .select('id, source_url')
+    .select('id, source_url, remix_source_card_id')
     .eq('id', card.session_id)
     .single()
 
   const sourceNoteUrl = session?.source_url ? await createSignedObjectUrlSafe('notes', session.source_url) : null
+  const remixSource = session?.remix_source_card_id
+    ? await getCommunityCardByIdWithUrl(session.remix_source_card_id)
+    : null
   const point = Array.isArray(card.points) ? card.points[0] : card.points
   const category = point?.category ?? 'Learning card'
   const statusLabel =
@@ -159,6 +163,33 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
                       <Image
                         src={sourceNoteUrl}
                         alt="Original note"
+                        fill
+                        unoptimized
+                        sizes="72px"
+                        className={styles.sourceThumbImage}
+                      />
+                    </div>
+                  ) : null}
+                </Link>
+              </div>
+            ) : null}
+
+            {remixSource ? (
+              <div className={styles.section}>
+                <p className={styles.label}>Reference card</p>
+                <Link href={`/scan?remix=${remixSource.card_id}`} className={styles.sourceLink}>
+                  <div className={styles.sourceLinkCopy}>
+                    <div className={styles.sourceLinkTitle}>
+                      <Repeat2 size={14} aria-hidden="true" />
+                      <span>{remixSource.title || 'Reopen remix reference'}</span>
+                    </div>
+                    <p className={styles.sourceLinkHint}>This session was started from a published community card.</p>
+                  </div>
+                  {remixSource.signedUrl ? (
+                    <div className={styles.sourceThumb}>
+                      <Image
+                        src={remixSource.signedUrl}
+                        alt={remixSource.title || 'Reference card'}
                         fill
                         unoptimized
                         sizes="72px"

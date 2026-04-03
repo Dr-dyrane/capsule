@@ -155,7 +155,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: inherit;
+  border-radius: 16px;
   color: var(--text-primary);
   background: var(--surface-3);
   box-shadow: var(--shadow-md);

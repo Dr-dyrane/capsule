@@ -1,36 +1,32 @@
-import { Globe } from 'lucide-react'
+import { notFound } from 'next/navigation'
+import { User } from 'lucide-react'
+
 import {
   fetchCommunityCardsWithUrls,
+  getCommunityAuthorSummary,
   getCommunityFilters,
   getViewerCommunityReactions,
   getViewerCommunityReports,
 } from '@/app/actions/community'
 import CommunityFeed from '@/components/community/CommunityFeed'
-import styles from '../AppScreen.module.css'
+import styles from '../../../AppScreen.module.css'
 
-export default async function CommunityPage({
-  searchParams,
+export default async function CommunityAuthorPage({
+  params,
 }: {
-  searchParams?: Promise<{
-    q?: string
-    template?: string
-    category?: string
-    topic?: string
-    sort?: string
-    saved?: string
-  }>
+  params: Promise<{ id: string }>
 }) {
-  const params = searchParams ? await searchParams : {}
-  const initialFilters = {
-    search: params?.q ?? '',
-    template: params?.template ?? null,
-    category: params?.category ?? null,
-    topic: params?.topic ?? null,
-    sort: params?.sort === 'trending' ? 'trending' : 'recent',
-    savedOnly: params?.saved === '1',
-  } as const
+  const { id } = await params
+  const author = await getCommunityAuthorSummary(id)
 
-  const { cards, signedUrls } = await fetchCommunityCardsWithUrls(0, 20, initialFilters)
+  if (!author) {
+    notFound()
+  }
+
+  const { cards, signedUrls } = await fetchCommunityCardsWithUrls(0, 20, {
+    authorId: id,
+    sort: 'recent',
+  })
   const filterMeta = await getCommunityFilters()
   const cardIds = cards.map((card) => card.card_id)
   const [viewerReactions, viewerReports] = await Promise.all([
@@ -53,19 +49,23 @@ export default async function CommunityPage({
     <div className={styles.screen}>
       <header className={styles.header}>
         <div className={styles.eyebrow}>
-          <Globe size={14} aria-hidden="true" />
-          <span>Community</span>
+          <User size={14} aria-hidden="true" />
+          <span>Author</span>
         </div>
-        <h1 className={styles.title}>Shared knowledge.</h1>
-        <p className={styles.copy}>Discover visual clinical concepts published by the community.</p>
+        <h1 className={styles.title}>{author.username}</h1>
+        <p className={styles.copy}>
+          {author.cardCount} published cards <span aria-hidden="true">&middot;</span> {author.likeCount} likes{' '}
+          <span aria-hidden="true">&middot;</span> {author.saveCount} saves
+        </p>
       </header>
 
-      <CommunityFeed 
-        initialCards={cards} 
+      <CommunityFeed
+        initialCards={cards}
         initialSignedUrls={signedUrls}
         initialViewerReactions={initialViewerState}
         filterMeta={filterMeta}
-        initialFilters={initialFilters}
+        initialFilters={{ sort: 'recent' }}
+        lockedAuthor={{ id, name: author.username }}
       />
     </div>
   )

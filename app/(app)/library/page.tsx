@@ -2,6 +2,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Archive, ChevronRight } from 'lucide-react'
 
+import { getSavedCommunityCardsWithUrls } from '@/app/actions/community'
+import CommunityCard from '@/components/cards/CommunityCard'
 import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
 import type { SessionRecord } from '@/lib/types'
@@ -17,7 +19,10 @@ export default async function LibraryPage() {
 
   if (!user) return null
 
-  const { data: sessions } = await supabase.from('sessions').select('*').order('created_at', { ascending: false })
+  const [{ data: sessions }, { cards: savedCards, signedUrls: savedCardUrls }] = await Promise.all([
+    supabase.from('sessions').select('*').order('created_at', { ascending: false }),
+    getSavedCommunityCardsWithUrls(12),
+  ])
 
   const signedNoteUrls = await createSignedObjectUrlsSafe(
     'notes',
@@ -37,6 +42,9 @@ export default async function LibraryPage() {
     groups[date].push(typedSession)
   })
 
+  const hasSessions = Object.keys(groups).length > 0
+  const hasSavedCards = savedCards.length > 0
+
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
@@ -48,7 +56,7 @@ export default async function LibraryPage() {
         <p className={styles.copy}>Open any capture.</p>
       </header>
 
-      {Object.keys(groups).length === 0 ? (
+      {!hasSessions && !hasSavedCards ? (
         <div className={styles.panel}>
           <div className={`${styles.panelInner} ${styles.emptyState}`}>
             <p className={styles.emptyTitle}>Your library is empty</p>
@@ -65,6 +73,30 @@ export default async function LibraryPage() {
         </div>
       ) : (
         <div className={listStyles.sections}>
+          {hasSavedCards ? (
+            <section className={listStyles.savedSection}>
+              <div className={listStyles.savedHeader}>
+                <div>
+                  <h2 className={listStyles.savedTitle}>Saved from community</h2>
+                  <p className={listStyles.savedCopy}>Cards you kept without regenerating.</p>
+                </div>
+                <Link href="/community?saved=1" className={listStyles.savedLink}>
+                  View saved feed
+                </Link>
+              </div>
+
+              <div className={listStyles.savedGrid}>
+                {savedCards.map((card) => (
+                  <CommunityCard
+                    key={card.card_id}
+                    card={card}
+                    imageUrl={card.image_url ? savedCardUrls[card.image_url] : undefined}
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {Object.entries(groups).map(([date, items]) => (
             <section key={date} className={listStyles.group}>
               <h2 className={listStyles.date}>{date}</h2>
@@ -91,6 +123,11 @@ export default async function LibraryPage() {
                       <p className={listStyles.name}>Note session</p>
                       <p className={listStyles.meta}>
                         {session.card_count} cards <span aria-hidden="true">&middot;</span> {session.status}
+                        {session.remix_source_card_id ? (
+                          <>
+                            <span aria-hidden="true">&middot;</span> Remix
+                          </>
+                        ) : null}
                       </p>
                     </div>
                     <ChevronRight size={18} className={listStyles.chevron} />

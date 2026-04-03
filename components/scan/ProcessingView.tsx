@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, Globe, Lock, ScanText, Sparkles } from 'lucide-react'
+import { CheckCircle2, Globe, Lock, Repeat2, ScanText, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { getSignedCardUrls } from '@/app/actions/assets'
@@ -44,9 +44,16 @@ function getPointPreview(text: string) {
 export default function ProcessingView({
   sessionId,
   sourceImageUrl,
+  remixSource,
 }: {
   sessionId: string
   sourceImageUrl?: string | null
+  remixSource?: {
+    card_id: string
+    title: string | null
+    signedUrl: string | null
+    author_name?: string | null
+  } | null
 }) {
   const [session, setSession] = useState<SessionRecord | null>(null)
   const [points, setPoints] = useState<PointRecord[]>(EMPTY_POINTS)
@@ -55,6 +62,7 @@ export default function ProcessingView({
   const [status, setStatus] = useState<SessionStatus | 'loading'>('loading')
   const [isRetrying, startRetryTransition] = useTransition()
   const [isPublishing, startPublishTransition] = useTransition()
+  const [publishPrompt, setPublishPrompt] = useState<'publish' | 'unpublish' | null>(null)
 
   const placeholderSyncRef = useRef(false)
   const processingStartedRef = useRef(false)
@@ -246,10 +254,8 @@ export default function ProcessingView({
 
   const isSessionPublished = session?.visibility === 'published'
 
-  function handleToggleSessionVisibility() {
+  function handleToggleSessionVisibility(nextPublishedState: boolean) {
     startPublishTransition(() => {
-      const nextPublishedState = !isSessionPublished
-
       setSession((current) =>
         current
           ? {
@@ -259,17 +265,22 @@ export default function ProcessingView({
           : current,
       )
 
-      void (nextPublishedState ? publishSession(sessionId) : unpublishSession(sessionId)).catch((error) => {
-        console.error('Failed to update session visibility', error)
-        setSession((current) =>
-          current
-            ? {
-                ...current,
-                visibility: nextPublishedState ? 'private' : 'published',
-              }
-            : current,
-        )
-      })
+      void (nextPublishedState ? publishSession(sessionId) : unpublishSession(sessionId))
+        .then(() => {
+          setPublishPrompt(null)
+        })
+        .catch((error) => {
+          console.error('Failed to update session visibility', error)
+          setSession((current) =>
+            current
+              ? {
+                  ...current,
+                  visibility: nextPublishedState ? 'private' : 'published',
+                }
+              : current,
+          )
+          setPublishPrompt(null)
+        })
     })
   }
 
@@ -305,7 +316,7 @@ export default function ProcessingView({
               <button
                 type="button"
                 className={styles.secondaryAction}
-                onClick={handleToggleSessionVisibility}
+                onClick={() => setPublishPrompt(isSessionPublished ? 'unpublish' : 'publish')}
                 disabled={isPublishing}
               >
                 {isPublishing ? (
@@ -328,7 +339,7 @@ export default function ProcessingView({
               <button
                 type="button"
                 className={styles.secondaryAction}
-                onClick={handleToggleSessionVisibility}
+                onClick={() => setPublishPrompt(isSessionPublished ? 'unpublish' : 'publish')}
                 disabled={isPublishing}
               >
                 {isPublishing ? (
@@ -359,25 +370,60 @@ export default function ProcessingView({
         </div>
       </section>
 
-      {sourceImageUrl ? (
-        <section className={`${styles.panel} ${styles.sourcePanel}`}>
-          <div className={`${styles.panelInner} ${styles.sourceInner}`}>
-            <div className={styles.sourceCopy}>
-              <div className={styles.panelEyebrow}>
-                <ScanText size={14} aria-hidden="true" />
-                <span>Original note</span>
-              </div>
-              <h3 className={styles.panelTitle}>Source scan</h3>
-              <p className={styles.panelCopy}>The note image that started this session.</p>
-              <Link href="/library" className={styles.inlineAction}>
-                Back to sessions
-              </Link>
-            </div>
+      {sourceImageUrl || remixSource ? (
+        <section className={styles.supportGrid}>
+          {sourceImageUrl ? (
+            <section className={`${styles.panel} ${styles.sourcePanel}`}>
+              <div className={`${styles.panelInner} ${styles.sourceInner}`}>
+                <div className={styles.sourceCopy}>
+                  <div className={styles.panelEyebrow}>
+                    <ScanText size={14} aria-hidden="true" />
+                    <span>Original note</span>
+                  </div>
+                  <h3 className={styles.panelTitle}>Source scan</h3>
+                  <p className={styles.panelCopy}>The uploaded page that started this session.</p>
+                  <Link href="/library" className={styles.inlineAction}>
+                    Back to sessions
+                  </Link>
+                </div>
 
-            <div className={styles.sourcePreview}>
-              <ImagePreview src={sourceImageUrl} alt="Original note scan" />
-            </div>
-          </div>
+                <div className={styles.sourcePreview}>
+                  <ImagePreview src={sourceImageUrl} alt="Original note scan" />
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {remixSource ? (
+            <section className={`${styles.panel} ${styles.sourcePanel}`}>
+              <div className={`${styles.panelInner} ${styles.sourceInner}`}>
+                <div className={styles.sourceCopy}>
+                  <div className={styles.panelEyebrow}>
+                    <Repeat2 size={14} aria-hidden="true" />
+                    <span>Reference card</span>
+                  </div>
+                  <h3 className={styles.panelTitle}>{remixSource.title || 'Community card reference'}</h3>
+                  <p className={styles.panelCopy}>
+                    Pinned from community so this session can trace back to the card you remixed.
+                  </p>
+                  <Link href="/community" className={styles.inlineAction}>
+                    Open community
+                  </Link>
+                  <Link href={`/scan?remix=${remixSource.card_id}`} className={styles.inlineAction}>
+                    Reopen remix source
+                  </Link>
+                </div>
+
+                <div className={styles.sourcePreview}>
+                  {remixSource.signedUrl ? (
+                    <ImagePreview src={remixSource.signedUrl} alt={remixSource.title || 'Community card reference'} />
+                  ) : (
+                    <div className={styles.referenceFallback}>Reference preview unavailable.</div>
+                  )}
+                </div>
+              </div>
+            </section>
+          ) : null}
         </section>
       ) : null}
 
@@ -543,6 +589,69 @@ export default function ProcessingView({
           </div>
         </section>
       </div>
+
+      {publishPrompt ? (
+        <div className={styles.publishPromptOverlay} role="presentation" onClick={() => setPublishPrompt(null)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="session-publish-title"
+            className={styles.publishPrompt}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.publishPromptClose}
+              onClick={() => setPublishPrompt(null)}
+              aria-label="Close publish dialog"
+            >
+              <X size={16} />
+            </button>
+
+            <div className={styles.publishPromptEyebrow}>
+              {publishPrompt === 'publish' ? <Globe size={14} aria-hidden="true" /> : <Lock size={14} aria-hidden="true" />}
+              <span>{publishPrompt === 'publish' ? 'Community' : 'Private library'}</span>
+            </div>
+            <h3 id="session-publish-title" className={styles.publishPromptTitle}>
+              {publishPrompt === 'publish' ? 'Publish this session?' : 'Unpublish this session?'}
+            </h3>
+            <p className={styles.publishPromptCopy}>
+              {publishPrompt === 'publish'
+                ? 'Completed cards become visible in community now. Any queued cards appear there automatically when they finish.'
+                : 'This removes the session cards from community. You can publish again whenever you are ready.'}
+            </p>
+
+            <div className={styles.publishPromptLedger}>
+              <div className={styles.publishPromptChip}>Ready {completeCards.length}</div>
+              <div className={styles.publishPromptChip}>Pending {generatingCards.length + queuedCards.length}</div>
+              {erroredCards.length > 0 ? <div className={styles.publishPromptChip}>Errors {erroredCards.length}</div> : null}
+            </div>
+
+            <div className={styles.publishPromptActions}>
+              <button
+                type="button"
+                className={styles.secondaryAction}
+                onClick={() => setPublishPrompt(null)}
+                disabled={isPublishing}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={publishPrompt === 'publish' ? styles.primaryAction : styles.destructiveAction}
+                onClick={() => handleToggleSessionVisibility(publishPrompt === 'publish')}
+                disabled={isPublishing}
+              >
+                {isPublishing
+                  ? 'Saving...'
+                  : publishPrompt === 'publish'
+                    ? 'Publish all cards'
+                    : 'Unpublish session'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

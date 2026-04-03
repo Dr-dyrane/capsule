@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { User } from 'lucide-react'
 
 import styles from './UserMenu.module.css'
@@ -25,7 +26,7 @@ export default function UserMenu({ user, compact = false }: UserMenuProps) {
     >
       <div className={styles.avatar}>
         {user.avatar_url ? (
-          <img src={user.avatar_url} alt={displayName} />
+          <Image src={user.avatar_url} alt={displayName} fill unoptimized sizes="28px" />
         ) : (
           <User size={18} />
         )}

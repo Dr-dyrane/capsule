@@ -2,7 +2,16 @@
 
 import Link from 'next/link'
 import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react'
-import { Globe, Loader2, Search, TrendingUp, X, LayoutGrid, List } from 'lucide-react'
+import {
+  Bookmark,
+  Globe,
+  LayoutGrid,
+  List,
+  Loader2,
+  Search,
+  TrendingUp,
+  X,
+} from 'lucide-react'
 
 import {
   fetchCommunityCardsWithUrls,
@@ -12,7 +21,12 @@ import {
   toggleCommunityReaction,
   type CommunityCardRecord,
 } from '@/app/actions/community'
-import type { CommunityReactionKind, CommunitySort, CommunityViewerState } from '@/lib/types'
+import type {
+  CommunityFilterMeta,
+  CommunityReactionKind,
+  CommunitySort,
+  CommunityViewerState,
+} from '@/lib/types'
 import CommunityCard from '@/components/cards/CommunityCard'
 import styles from './CommunityFeed.module.css'
 
@@ -20,14 +34,28 @@ interface CommunityFeedProps {
   initialCards: CommunityCardRecord[]
   initialSignedUrls: Record<string, string>
   initialViewerReactions: Record<string, CommunityViewerState>
-  templates: string[]
+  filterMeta: CommunityFilterMeta
+  initialFilters?: {
+    search?: string
+    template?: string | null
+    category?: string | null
+    topic?: string | null
+    sort?: CommunitySort
+    savedOnly?: boolean
+  }
+  lockedAuthor?: {
+    id: string
+    name: string
+  } | null
 }
 
 export default function CommunityFeed({
   initialCards,
   initialSignedUrls,
   initialViewerReactions,
-  templates,
+  filterMeta,
+  initialFilters,
+  lockedAuthor = null,
 }: CommunityFeedProps) {
   const [cards, setCards] = useState<CommunityCardRecord[]>(initialCards)
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>(initialSignedUrls)
@@ -35,11 +63,13 @@ export default function CommunityFeed({
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(initialCards.length === 20)
   const [isLoading, setIsLoading] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
-  const [sort, setSort] = useState<CommunitySort>('recent')
+  const [searchQuery, setSearchQuery] = useState(initialFilters?.search ?? '')
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(initialFilters?.template ?? null)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialFilters?.category ?? null)
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(initialFilters?.topic ?? null)
+  const [sort, setSort] = useState<CommunitySort>(initialFilters?.sort ?? 'recent')
   const [layout, setLayout] = useState<'grid' | 'list'>('grid')
-  const [savedOnly, setSavedOnly] = useState(false)
+  const [savedOnly, setSavedOnly] = useState(Boolean(initialFilters?.savedOnly) && !lockedAuthor)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const hydratedRef = useRef(false)
   const deferredSearch = useDeferredValue(searchQuery)
@@ -53,6 +83,7 @@ export default function CommunityFeed({
         getViewerCommunityReactions(ids),
         getViewerCommunityReports(ids),
       ])
+
       setViewerReactions((current) => ({
         ...current,
         ...Object.fromEntries(
@@ -80,8 +111,11 @@ export default function CommunityFeed({
         const { cards: nextCards, signedUrls: nextUrls } = await fetchCommunityCardsWithUrls(nextPage, 20, {
           search: normalizedSearch,
           template: selectedTemplate,
+          category: selectedCategory,
+          topic: selectedTopic,
           sort,
           savedOnly,
+          authorId: lockedAuthor?.id ?? null,
         })
 
         const nextIds = nextCards.map((card) => card.card_id)
@@ -105,7 +139,7 @@ export default function CommunityFeed({
         setIsLoading(false)
       }
     },
-    [deferredSearch, mergeViewerState, selectedTemplate, sort, savedOnly],
+    [deferredSearch, lockedAuthor, mergeViewerState, savedOnly, selectedCategory, selectedTemplate, selectedTopic, sort],
   )
 
   useEffect(() => {
@@ -119,26 +153,29 @@ export default function CommunityFeed({
     }, 160)
 
     return () => window.clearTimeout(timer)
-  }, [deferredSearch, selectedTemplate, sort, savedOnly, loadPage])
+  }, [deferredSearch, selectedTemplate, selectedCategory, selectedTopic, sort, savedOnly, loadPage])
 
   const loadMore = useCallback(async () => {
     if (isLoading || !hasMore) return
     await loadPage(page + 1, 'append')
   }, [hasMore, isLoading, loadPage, page])
 
-  const lastCardRef = useCallback((node: HTMLDivElement | null) => {
-    if (isLoading) return
+  const lastCardRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isLoading) return
 
-    if (observerRef.current) observerRef.current.disconnect()
+      if (observerRef.current) observerRef.current.disconnect()
 
-    observerRef.current = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting && hasMore) {
-        void loadMore()
-      }
-    })
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting && hasMore) {
+          void loadMore()
+        }
+      })
 
-    if (node) observerRef.current.observe(node)
-  }, [hasMore, isLoading, loadMore])
+      if (node) observerRef.current.observe(node)
+    },
+    [hasMore, isLoading, loadMore],
+  )
 
   async function handleToggleReaction(cardId: string, kind: CommunityReactionKind) {
     const key = kind === 'like' ? 'liked' : 'saved'
@@ -191,9 +228,7 @@ export default function CommunityFeed({
 
   async function handleReport(cardId: string) {
     const currentState = viewerReactions[cardId] ?? { liked: false, saved: false, reported: false }
-    if (currentState.reported) {
-      return
-    }
+    if (currentState.reported) return
 
     setViewerReactions((current) => ({
       ...current,
@@ -214,7 +249,23 @@ export default function CommunityFeed({
     }
   }
 
-  const showingFilters = Boolean(searchQuery.trim() || selectedTemplate || savedOnly || sort === 'trending')
+  function resetFilters() {
+    setSearchQuery('')
+    setSelectedTemplate(null)
+    setSelectedCategory(null)
+    setSelectedTopic(null)
+    setSort('recent')
+    setSavedOnly(false)
+  }
+
+  const showingFilters = Boolean(
+    searchQuery.trim() ||
+      selectedTemplate ||
+      selectedCategory ||
+      selectedTopic ||
+      savedOnly ||
+      sort === 'trending',
+  )
 
   if (cards.length === 0) {
     return (
@@ -224,7 +275,7 @@ export default function CommunityFeed({
             <Search size={18} className={styles.searchIcon} />
             <input
               type="text"
-              placeholder="Search community cards..."
+              placeholder={lockedAuthor ? `Search ${lockedAuthor.name}'s cards...` : 'Search community cards...'}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               className={styles.searchInput}
@@ -234,26 +285,30 @@ export default function CommunityFeed({
 
         <div className={styles.empty}>
           <Globe size={48} className={styles.emptyIcon} />
-          <h2>{showingFilters ? 'No cards match this view' : 'Nothing published yet'}</h2>
+          <h2>
+            {lockedAuthor
+              ? `${lockedAuthor.name} has no cards in this view`
+              : showingFilters
+                ? 'No cards match this view'
+                : 'Nothing published yet'}
+          </h2>
           <p>
-            {showingFilters
-              ? 'Clear the filters or try another search.'
-              : 'Be the first to share a clean learning card with the community.'}
+            {lockedAuthor
+              ? 'Try a different search or return to the full community feed.'
+              : showingFilters
+                ? 'Clear the filters or try another search.'
+                : 'Be the first to share a clean learning card with the community.'}
           </p>
           <div className={styles.emptyActions}>
             {showingFilters ? (
-              <button
-                type="button"
-                className={styles.resetButton}
-                onClick={() => {
-                  setSearchQuery('')
-                  setSelectedTemplate(null)
-                  setSort('recent')
-                  setSavedOnly(false)
-                }}
-              >
+              <button type="button" className={styles.resetButton} onClick={resetFilters}>
                 Reset filters
               </button>
+            ) : null}
+            {lockedAuthor ? (
+              <Link href="/community" className={styles.secondaryLink}>
+                Back to community
+              </Link>
             ) : (
               <>
                 <Link href="/scan" className={styles.primaryLink}>
@@ -277,7 +332,9 @@ export default function CommunityFeed({
           <Search size={18} className={styles.searchIcon} />
           <input
             type="text"
-            placeholder="Search by title or author..."
+            placeholder={
+              lockedAuthor ? `Search ${lockedAuthor.name}'s cards...` : 'Search by title, author, topic, or category...'
+            }
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             className={styles.searchInput}
@@ -290,68 +347,109 @@ export default function CommunityFeed({
         </div>
 
         <div className={styles.controls}>
-          <div className={styles.filterRow}>
-            <button
-              type="button"
-              className={`${styles.filterChip} ${selectedTemplate === null ? styles.activeFilter : ''}`}
-              onClick={() => setSelectedTemplate(null)}
-            >
-              All
-            </button>
-            {templates.slice(0, 5).map((template) => (
+          <div className={styles.filterStack}>
+            <div className={styles.filterRow}>
               <button
-                key={template}
                 type="button"
-                className={`${styles.filterChip} ${selectedTemplate === template ? styles.activeFilter : ''}`}
-                onClick={() => setSelectedTemplate(template)}
+                className={`${styles.filterChip} ${selectedTemplate === null ? styles.activeFilter : ''}`}
+                onClick={() => setSelectedTemplate(null)}
               >
-                {template.replace(/-/g, ' ')}
+                All templates
               </button>
-            ))}
-            <button
-              type="button"
-              className={`${styles.filterChip} ${savedOnly ? styles.activeFilter : ''}`}
-              onClick={() => setSavedOnly((current) => !current)}
-            >
-              Saved
-            </button>
+              {filterMeta.templates.slice(0, 5).map((template) => (
+                <button
+                  key={template}
+                  type="button"
+                  className={`${styles.filterChip} ${selectedTemplate === template ? styles.activeFilter : ''}`}
+                  onClick={() => setSelectedTemplate(template)}
+                >
+                  {template.replace(/-/g, ' ')}
+                </button>
+              ))}
+              {!lockedAuthor ? (
+                <button
+                  type="button"
+                  className={`${styles.filterChip} ${savedOnly ? styles.activeFilter : ''}`}
+                  onClick={() => setSavedOnly((current) => !current)}
+                >
+                  <Bookmark size={14} />
+                  <span>Saved</span>
+                </button>
+              ) : null}
+            </div>
+
+            <div className={styles.metaRow}>
+              <label className={styles.selectWrap}>
+                <span className={styles.selectLabel}>Category</span>
+                <select
+                  value={selectedCategory ?? 'all'}
+                  className={styles.filterSelect}
+                  onChange={(event) => setSelectedCategory(event.target.value === 'all' ? null : event.target.value)}
+                >
+                  <option value="all">All categories</option>
+                  {filterMeta.categories.map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className={styles.selectWrap}>
+                <span className={styles.selectLabel}>Topic</span>
+                <select
+                  value={selectedTopic ?? 'all'}
+                  className={styles.filterSelect}
+                  onChange={(event) => setSelectedTopic(event.target.value === 'all' ? null : event.target.value)}
+                >
+                  <option value="all">All topics</option>
+                  {filterMeta.topics.map((topic) => (
+                    <option key={topic} value={topic}>
+                      {topic}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
 
-          <div className={styles.sortRow}>
-            <button
-              type="button"
-              className={`${styles.sortChip} ${sort === 'recent' ? styles.activeSort : ''}`}
-              onClick={() => setSort('recent')}
-            >
-              Recent
-            </button>
-            <button
-              type="button"
-              className={`${styles.sortChip} ${sort === 'trending' ? styles.activeSort : ''}`}
-              onClick={() => setSort('trending')}
-            >
-              <TrendingUp size={14} />
-              <span>Trending</span>
-            </button>
-          </div>
+          <div className={styles.utilityStack}>
+            <div className={styles.sortRow}>
+              <button
+                type="button"
+                className={`${styles.sortChip} ${sort === 'recent' ? styles.activeSort : ''}`}
+                onClick={() => setSort('recent')}
+              >
+                Recent
+              </button>
+              <button
+                type="button"
+                className={`${styles.sortChip} ${sort === 'trending' ? styles.activeSort : ''}`}
+                onClick={() => setSort('trending')}
+              >
+                <TrendingUp size={14} />
+                <span>Trending</span>
+              </button>
+            </div>
 
-          <div className={styles.viewToggles}>
-            <button
-              type="button"
-              className={`${styles.viewBtn} ${layout === 'grid' ? styles.activeView : ''}`}
-              onClick={() => setLayout('grid')}
-              title="Grid view"
-            >
-              <LayoutGrid size={16} />
-            </button>
-            <button
-              type="button"
-              className={`${styles.viewBtn} ${layout === 'list' ? styles.activeView : ''}`}
-              onClick={() => setLayout('list')}
-              title="List view"
-            >
-              <List size={16} />
-            </button>
+            <div className={styles.viewToggles}>
+              <button
+                type="button"
+                className={`${styles.viewBtn} ${layout === 'grid' ? styles.activeView : ''}`}
+                onClick={() => setLayout('grid')}
+                title="Grid view"
+              >
+                <LayoutGrid size={16} />
+              </button>
+              <button
+                type="button"
+                className={`${styles.viewBtn} ${layout === 'list' ? styles.activeView : ''}`}
+                onClick={() => setLayout('list')}
+                title="List view"
+              >
+                <List size={16} />
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
-import { Bookmark, Globe, Layers, Loader2, LogOut, Monitor, Sparkles, Stethoscope } from 'lucide-react'
+import { Bookmark, Flag, Globe, Layers, Loader2, LogOut, Monitor, Sparkles, Stethoscope } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 import SettingRow from './SettingRow'
@@ -25,6 +25,7 @@ interface ProfileClientProps {
   cardCount: number
   publishedCount: number
   savedCount: number
+  reportedCount: number
 }
 
 const SPECIALTIES = [
@@ -37,7 +38,7 @@ const SPECIALTIES = [
   'Pediatrics'
 ]
 
-export default function ProfileClient({ user, cardCount, publishedCount, savedCount }: ProfileClientProps) {
+export default function ProfileClient({ user, cardCount, publishedCount, savedCount, reportedCount }: ProfileClientProps) {
   const [isPending, startTransition] = useTransition()
   
   const initialPrefs = user.user_metadata.preferences || {}
@@ -93,6 +94,11 @@ export default function ProfileClient({ user, cardCount, publishedCount, savedCo
           <SettingRow label="Saved from Community" icon={<Bookmark size={18} />}>
             <Link href="/community" className={styles.inlineLink}>
               {savedCount} saved
+            </Link>
+          </SettingRow>
+          <SettingRow label="Reports on public cards" icon={<Flag size={18} />}>
+            <Link href="/community/reports" className={styles.inlineLink}>
+              {reportedCount} reports
             </Link>
           </SettingRow>
         </div>
@@ -192,6 +198,10 @@ export default function ProfileClient({ user, cardCount, publishedCount, savedCo
         <Link href="/community" className={styles.actionItem}>
           <Sparkles size={20} />
           <span>Explore community</span>
+        </Link>
+        <Link href="/community/reports" className={styles.actionItem}>
+          <Flag size={20} />
+          <span>Review reports</span>
         </Link>
         <form action={signOut}>
           <button 

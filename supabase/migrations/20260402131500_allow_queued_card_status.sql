@@ -1,6 +1,2 @@
-alter table public.cards
-  drop constraint if exists cards_status_check;
-
-alter table public.cards
-  add constraint cards_status_check
-  check (status in ('queued', 'generating', 'complete', 'error'));
+-- Compatibility stub.
+-- Folded into 20260402093000_initial_capsule_schema.sql.

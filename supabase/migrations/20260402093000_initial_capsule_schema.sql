@@ -1,3 +1,4 @@
+-- Core migration 1/3: base Capsule app schema
 create extension if not exists pgcrypto with schema extensions;
 
 create or replace function public.set_updated_at()
@@ -15,6 +16,7 @@ create table if not exists public.sessions (
   user_id uuid references auth.users(id) on delete cascade not null,
   source_url text not null,
   status text not null default 'uploading' check (status in ('uploading', 'processing', 'generating', 'complete', 'error')),
+  session_context text,
   point_count integer not null default 0,
   card_count integer not null default 0,
   created_at timestamptz not null default timezone('utc', now()),
@@ -51,7 +53,7 @@ create index if not exists idx_cards_session on public.cards(session_id);
 create index if not exists idx_cards_point on public.cards(point_id);
 create index if not exists idx_cards_status_created_at on public.cards(status, created_at desc);
 
-grant usage on schema public to authenticated;
+grant usage on schema public to anon, authenticated;
 grant select, insert, update, delete on public.sessions to authenticated;
 grant select, insert, update, delete on public.points to authenticated;
 grant select, insert, update, delete on public.cards to authenticated;

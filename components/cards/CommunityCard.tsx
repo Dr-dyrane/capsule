@@ -27,8 +27,11 @@ export default function CommunityCard({
   onReport?: () => void
 }) {
   const authorName = card.author_name || 'Anonymous'
-  const cardHref = `/cards/${card.card_id}`
+  const cardHref = `/scan?remix=${card.card_id}`
   const remixHref = `/scan?remix=${card.card_id}`
+  const authorHref = card.published_by ? `/community/author/${card.published_by}` : null
+  const topic = card.concept || card.category
+  const showInteractiveActions = Boolean(onToggleLike || onToggleSave || onReport)
 
   return (
     <article className={`${styles.root} ${layout === 'list' ? styles.list : ''}`}>
@@ -37,11 +40,12 @@ export default function CommunityCard({
           <div className={styles.imageFrame}>
             <div className={styles.authorBadge}>
               {card.author_avatar_url ? (
-                <img
+                <Image
                   src={card.author_avatar_url}
                   alt={authorName}
                   width={18}
                   height={18}
+                  unoptimized
                   className={styles.avatar}
                 />
               ) : (
@@ -71,47 +75,72 @@ export default function CommunityCard({
             )}
           </div>
         </div>
-
-        <div className={styles.meta}>
-          <p className={styles.title}>{card.title || 'Untitled'}</p>
-          <div className={styles.metaRow}>
-            <span className={styles.hint}>{(card.community_template || 'mechanism-board').replace(/-/g, ' ')}</span>
-            <span className={styles.dot}>•</span>
-            <span className={styles.hint}>by {authorName}</span>
-          </div>
-        </div>
       </Link>
 
+      <div className={styles.meta}>
+        <Link href={cardHref} className={styles.titleLink}>
+          <p className={styles.title}>{card.title || 'Untitled'}</p>
+        </Link>
+        <div className={styles.metaRow}>
+          <span className={styles.hint}>{(card.community_template || 'mechanism-board').replace(/-/g, ' ')}</span>
+          {topic ? (
+            <>
+              <span className={styles.dot}>&middot;</span>
+              <span className={styles.hint}>{topic}</span>
+            </>
+          ) : null}
+          <span className={styles.dot}>&middot;</span>
+          {authorHref ? (
+            <Link href={authorHref} className={styles.authorLink}>
+              by {authorName}
+            </Link>
+          ) : (
+            <span className={styles.hint}>by {authorName}</span>
+          )}
+        </div>
+      </div>
+
       <div className={styles.footer}>
-        <button
-          type="button"
-          className={`${styles.actionChip} ${liked ? styles.actionChipActive : ''}`}
-          onClick={onToggleLike}
-        >
-          <Heart size={14} />
-          <span>{card.like_count}</span>
-        </button>
-        <button
-          type="button"
-          className={`${styles.actionChip} ${saved ? styles.actionChipActive : ''}`}
-          onClick={onToggleSave}
-        >
-          <Bookmark size={14} />
-          <span>{card.save_count}</span>
-        </button>
+        {showInteractiveActions ? (
+          <>
+            <button
+              type="button"
+              className={`${styles.actionChip} ${liked ? styles.actionChipActive : ''}`}
+              onClick={onToggleLike}
+            >
+              <Heart size={14} />
+              <span>{card.like_count}</span>
+            </button>
+            <button
+              type="button"
+              className={`${styles.actionChip} ${saved ? styles.actionChipActive : ''}`}
+              onClick={onToggleSave}
+            >
+              <Bookmark size={14} />
+              <span>{card.save_count}</span>
+            </button>
+          </>
+        ) : (
+          <div className={styles.metricsChip}>
+            <Heart size={14} />
+            <span>{card.like_count} likes</span>
+          </div>
+        )}
         <Link href={remixHref} className={styles.remixChip}>
           <Repeat2 size={14} />
           <span>Remix</span>
         </Link>
-        <button
-          type="button"
-          className={`${styles.actionChip} ${reported ? styles.reportedChip : ''}`}
-          onClick={onReport}
-          disabled={reported}
-        >
-          <Flag size={14} />
-          <span>{reported ? 'Reported' : 'Report'}</span>
-        </button>
+        {showInteractiveActions ? (
+          <button
+            type="button"
+            className={`${styles.actionChip} ${reported ? styles.reportedChip : ''}`}
+            onClick={onReport}
+            disabled={reported}
+          >
+            <Flag size={14} />
+            <span>{reported ? 'Reported' : 'Report'}</span>
+          </button>
+        ) : null}
       </div>
     </article>
   )

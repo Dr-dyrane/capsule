@@ -60,6 +60,11 @@ export async function uploadNote(formData: FormData) {
   const fileExt = getSafeFileExtension(file)
   const sessionId = uuidv4()
   const filePath = `${user.id}/${sessionId}/source.${fileExt}`
+  const remixCardId = formData.get('remix_card_id')
+  const normalizedRemixCardId =
+    typeof remixCardId === 'string' && remixCardId.trim().length > 0
+      ? remixCardId.trim()
+      : null
 
   try {
     // 1. Upload to Storage
@@ -76,6 +81,7 @@ export async function uploadNote(formData: FormData) {
       user_id: user.id,
       source_url: filePath,
       status: 'processing',
+      remix_source_card_id: normalizedRemixCardId,
     }
 
     let session:
@@ -100,7 +106,12 @@ export async function uploadNote(formData: FormData) {
 
       const fallbackInsert = await supabase
         .from('sessions')
-        .insert(baseSession)
+        .insert({
+          id: sessionId,
+          user_id: user.id,
+          source_url: filePath,
+          status: 'processing',
+        })
         .select()
         .single()
 

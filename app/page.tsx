@@ -4,6 +4,7 @@ import ShowcaseCarousel from '@/components/marketing/ShowcaseCarousel'
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import Logo from '@/components/ui/Logo'
 import { fetchCommunityCardsWithUrls } from '@/app/actions/community'
+import { curateShowcaseCards } from '@/lib/community/curation'
 import styles from './MarketingPage.module.css'
 
 const showcaseCards = [
@@ -24,35 +25,23 @@ const showcaseCards = [
 export default async function MarketingPage() {
   let displayCards = showcaseCards
   try {
-    const { cards, signedUrls } = await fetchCommunityCardsWithUrls(0, 10)
-    const uniqueTemplates = new Set<string>()
-    const dynamicCards = cards
-      .reduce<Array<{ src: string; alt: string }>>((acc, card) => {
+    const { cards, signedUrls } = await fetchCommunityCardsWithUrls(0, 18, { sort: 'trending' })
+    const dynamicCards = curateShowcaseCards(
+      cards.flatMap((card) => {
         const src = card.image_url ? signedUrls[card.image_url] : ''
-        const templateKey = card.community_template || 'mechanism-board'
+        if (!src) return []
 
-        if (!src) {
-          return acc
-        }
-
-        if (!uniqueTemplates.has(templateKey)) {
-          uniqueTemplates.add(templateKey)
-          acc.push({
+        return [
+          {
             src,
             alt: card.title || 'Community learning card',
-          })
-          return acc
-        }
-
-        if (acc.length < 6) {
-          acc.push({
-            src,
-            alt: card.title || 'Community learning card',
-          })
-        }
-
-        return acc
-      }, [])
+            template: card.community_template,
+            authorId: card.published_by,
+          },
+        ]
+      }),
+      6,
+    ).map(({ src, alt }) => ({ src, alt }))
 
     if (dynamicCards.length >= 3) {
       displayCards = dynamicCards

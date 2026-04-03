@@ -7,6 +7,7 @@ import { createPublicClient } from '@/lib/supabase/public'
 import { createClient } from '@/lib/supabase/server'
 import type {
   CardRecord,
+  CommunityFilterMeta,
   CommunityIndexRecord,
   CommunityReactionKind,
   CommunitySort,
@@ -20,8 +21,11 @@ export type CommunityCardRecord = CommunityIndexRecord
 export type CommunityQueryOptions = {
   search?: string
   template?: string | null
+  category?: string | null
+  topic?: string | null
   sort?: CommunitySort
   savedOnly?: boolean
+  authorId?: string | null
 }
 
 function toCommunityUnsupportedError() {
@@ -38,6 +42,14 @@ function normalizeTemplate(template?: string | null) {
   }
 
   return template
+}
+
+function normalizeValue(value?: string | null) {
+  if (!value || value === 'all') {
+    return null
+  }
+
+  return value
 }
 
 function normalizeSort(sort?: CommunitySort) {
@@ -144,7 +156,7 @@ async function getCommunityCardsFallback(page: number, limit: number) {
   const { data, error } = await supabase
     .from('cards')
     .select(
-      'id, point_id, session_id, image_url, title, status, card_order, created_at, visibility, published_at, published_by, community_template, community_hash',
+      'id, point_id, session_id, image_url, title, status, card_order, created_at, visibility, published_at, published_by, community_template, community_hash, points(category, concept)',
     )
     .eq('visibility', 'published')
     .eq('status', 'complete')
@@ -163,20 +175,27 @@ async function getCommunityCardsFallback(page: number, limit: number) {
   const authorIds = [...new Set(cards.map((card) => card.published_by).filter(Boolean) as string[])]
   const profilesById = await fetchProfilesById(authorIds)
 
-  return cards.map((card) => ({
-    card_id: card.id,
-    session_id: card.session_id,
-    image_url: card.image_url,
-    title: card.title,
-    published_at: card.published_at ?? null,
-    published_by: card.published_by ?? null,
-    community_template: card.community_template ?? 'mechanism-board',
-    author_name: card.published_by ? profilesById.get(card.published_by)?.username ?? null : null,
-    author_avatar_url: card.published_by ? profilesById.get(card.published_by)?.avatar_url ?? null : null,
-    like_count: 0,
-    save_count: 0,
-    trend_score: 0,
-  }))
+  return cards.map((card) => {
+    const point = Array.isArray(card.points) ? card.points[0] : card.points
+
+    return {
+      card_id: card.id,
+      session_id: card.session_id,
+      image_url: card.image_url,
+      title: card.title,
+      published_at: card.published_at ?? null,
+      published_by: card.published_by ?? null,
+      community_template: card.community_template ?? 'mechanism-board',
+      category: point?.category ?? null,
+      concept: point?.concept ?? null,
+      author_name: card.published_by ? profilesById.get(card.published_by)?.username ?? null : null,
+      author_avatar_url: card.published_by ? profilesById.get(card.published_by)?.avatar_url ?? null : null,
+      like_count: 0,
+      save_count: 0,
+      report_count: 0,
+      trend_score: 0,
+    }
+  })
 }
 
 export async function publishCard(cardId: string) {
@@ -354,8 +373,11 @@ export async function getCommunityCards(
   const supabase = createPublicClient()
   const search = normalizeSearch(options.search)
   const template = normalizeTemplate(options.template)
+  const category = normalizeValue(options.category)
+  const topic = normalizeValue(options.topic)
   const sort = normalizeSort(options.sort)
   const savedOnly = Boolean(options.savedOnly)
+  const authorId = normalizeValue(options.authorId)
 
   let savedCardIds: string[] | null = null
 
@@ -393,12 +415,24 @@ export async function getCommunityCards(
   let query = supabase
     .from('community_index')
     .select(
-      'card_id, session_id, image_url, title, published_at, published_by, community_template, author_name, author_avatar_url, like_count, save_count, trend_score',
+      'card_id, session_id, image_url, title, published_at, published_by, community_template, category, concept, author_name, author_avatar_url, like_count, save_count, report_count, trend_score',
     )
     .range(page * limit, (page + 1) * limit - 1)
 
   if (template) {
     query = query.eq('community_template', template)
+  }
+
+  if (category) {
+    query = query.eq('category', category)
+  }
+
+  if (topic) {
+    query = query.eq('concept', topic)
+  }
+
+  if (authorId) {
+    query = query.eq('published_by', authorId)
   }
 
   if (savedCardIds) {
@@ -408,7 +442,9 @@ export async function getCommunityCards(
   if (search) {
     const escaped = search.replace(/[%_,]/g, '').trim()
     if (escaped) {
-      query = query.or(`title.ilike.%${escaped}%,author_name.ilike.%${escaped}%`)
+      query = query.or(
+        `title.ilike.%${escaped}%,author_name.ilike.%${escaped}%,category.ilike.%${escaped}%,concept.ilike.%${escaped}%`,
+      )
     }
   }
 
@@ -433,27 +469,157 @@ export async function getCommunityCards(
   return (data ?? []) as CommunityCardRecord[]
 }
 
-export async function getCommunityTemplates() {
+export async function getCommunityFilters(): Promise<CommunityFilterMeta> {
   const supabase = createPublicClient()
   const { data, error } = await supabase
     .from('community_index')
-    .select('community_template')
+    .select('community_template, category, concept')
     .order('community_template', { ascending: true })
 
   if (error) {
     if (isCommunitySchemaError(error)) {
-      return ['mechanism-board']
+      return {
+        templates: ['mechanism-board'],
+        categories: [],
+        topics: [],
+      }
     }
 
     throw error
   }
 
-  const templateRows = (data ?? []) as Array<{ community_template: string | null }>
-  const templates = templateRows
+  const rows = (data ?? []) as Array<{
+    community_template: string | null
+    category: string | null
+    concept: string | null
+  }>
+
+  const templates = rows
     .map((row) => row.community_template)
     .filter((value): value is string => typeof value === 'string' && value.length > 0)
 
-  return [...new Set(templates)]
+  const categories = rows
+    .map((row) => row.category)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+
+  const topics = rows
+    .map((row) => row.concept)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+
+  return {
+    templates: [...new Set(templates)],
+    categories: [...new Set(categories)],
+    topics: [...new Set(topics)],
+  }
+}
+
+export async function getSavedCommunityCardsWithUrls(limit: number = 12) {
+  return fetchCommunityCardsWithUrls(0, limit, {
+    savedOnly: true,
+    sort: 'recent',
+  })
+}
+
+export async function getCommunityAuthorSummary(authorId: string) {
+  const publicClient = createPublicClient()
+  const [{ data: author }, { data: cards, error: cardsError }] = await Promise.all([
+    publicClient.from('profiles').select('id, username, avatar_url').eq('id', authorId).maybeSingle(),
+    publicClient
+      .from('community_index')
+      .select('card_id, like_count, save_count, report_count')
+      .eq('published_by', authorId),
+  ])
+
+  if (cardsError) {
+    if (isCommunitySchemaError(cardsError)) {
+      return null
+    }
+
+    throw cardsError
+  }
+
+  const communityCards = (cards ?? []) as Array<{
+    card_id: string
+    like_count: number | null
+    save_count: number | null
+    report_count: number | null
+  }>
+  const totals = communityCards.reduce(
+    (acc, card) => {
+      acc.cardCount += 1
+      acc.likeCount += card.like_count ?? 0
+      acc.saveCount += card.save_count ?? 0
+      acc.reportCount += card.report_count ?? 0
+      return acc
+    },
+    { cardCount: 0, likeCount: 0, saveCount: 0, reportCount: 0 },
+  )
+
+  const typedAuthor = author as Pick<ProfileRecord, 'username' | 'avatar_url'> | null
+
+  if (!typedAuthor && communityCards.length === 0) {
+    return null
+  }
+
+  return {
+    id: authorId,
+    username: typedAuthor?.username ?? 'Community author',
+    avatar_url: typedAuthor?.avatar_url ?? null,
+    ...totals,
+  }
+}
+
+export async function getCreatorModerationCardsWithUrls(limit: number = 20) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { cards: [] as CommunityCardRecord[], signedUrls: {} as Record<string, string> }
+  }
+
+  const publicClient = createPublicClient()
+  const { data, error } = await publicClient
+    .from('community_index')
+    .select(
+      'card_id, session_id, image_url, title, published_at, published_by, community_template, category, concept, author_name, author_avatar_url, like_count, save_count, report_count, trend_score',
+    )
+    .eq('published_by', user.id)
+    .gt('report_count', 0)
+    .order('report_count', { ascending: false })
+    .order('published_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      return { cards: [] as CommunityCardRecord[], signedUrls: {} as Record<string, string> }
+    }
+
+    throw error
+  }
+
+  const cards = (data ?? []) as CommunityCardRecord[]
+  const uniquePaths = [...new Set(cards.map((card) => card.image_url).filter(Boolean))]
+  let signedUrls: Record<string, string> = {}
+
+  if (uniquePaths.length > 0) {
+    const { data: signed, error: signedError } = await publicClient.storage
+      .from('cards')
+      .createSignedUrls(uniquePaths, 60 * 60)
+
+    if (!signedError) {
+      signedUrls = uniquePaths.reduce<Record<string, string>>((acc, path, index) => {
+        const signedUrl = signed?.[index]?.signedUrl
+        if (signedUrl) {
+          acc[path] = signedUrl
+        }
+        return acc
+      }, {})
+    }
+  }
+
+  return { cards, signedUrls }
 }
 
 export async function getViewerCommunityReactions(cardIds: string[]) {
@@ -538,7 +704,7 @@ export async function getCommunityCardByIdWithUrl(cardId: string) {
   const { data, error } = await supabase
     .from('community_index')
     .select(
-      'card_id, session_id, image_url, title, published_at, published_by, community_template, author_name, author_avatar_url, like_count, save_count, trend_score',
+      'card_id, session_id, image_url, title, published_at, published_by, community_template, category, concept, author_name, author_avatar_url, like_count, save_count, report_count, trend_score',
     )
     .eq('card_id', cardId)
     .maybeSingle()

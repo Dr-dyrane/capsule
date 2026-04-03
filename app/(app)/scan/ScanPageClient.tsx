@@ -90,6 +90,9 @@ export default function ScanPageClient({
     const formData = new FormData()
     formData.append('file', selectedFile)
     formData.append('publish', publish ? 'true' : 'false')
+    if (remixSource?.card_id) {
+      formData.append('remix_card_id', remixSource.card_id)
+    }
 
     try {
       const session = await uploadNote(formData)
@@ -128,7 +131,7 @@ export default function ScanPageClient({
               <span>Remix</span>
             </div>
             <p className={styles.remixTitle}>{remixSource.title || 'Community card reference'}</p>
-            <p className={styles.remixText}>Use this as a visual reference while you scan your own note.</p>
+            <p className={styles.remixText}>Pinned to this session as the reference card for the flow you are about to build.</p>
           </div>
           {remixSource.signedUrl ? (
             <div className={styles.remixThumb}>

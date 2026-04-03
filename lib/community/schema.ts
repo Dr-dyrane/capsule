@@ -19,9 +19,13 @@ const COMMUNITY_SCHEMA_PATTERNS = [
   'community_reactions',
   'like_count',
   'save_count',
+  'report_count',
   'author_name',
+  'category',
+  'concept',
   'trend_score',
   'community_reports',
+  'remix_source_card_id',
 ]
 
 function toSupabaseLikeError(error: unknown): SupabaseLikeError | null {

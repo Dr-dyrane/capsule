@@ -9,6 +9,12 @@ export type CommunityVisibility = 'private' | 'published'
 export type CommunityReactionKind = 'like' | 'save'
 export type CommunitySort = 'recent' | 'trending'
 
+export interface CommunityFilterMeta {
+  templates: string[]
+  categories: string[]
+  topics: string[]
+}
+
 export interface SessionRecord {
   id: string
   user_id: string
@@ -17,6 +23,7 @@ export interface SessionRecord {
   point_count: number | null
   card_count: number | null
   session_context: string | null
+  remix_source_card_id?: string | null
   visibility?: CommunityVisibility
   created_at?: string
   updated_at?: string
@@ -66,10 +73,13 @@ export interface CommunityIndexRecord {
   published_at: string | null
   published_by: string | null
   community_template: string | null
+  category: string | null
+  concept: string | null
   author_name: string | null
   author_avatar_url: string | null
   like_count: number
   save_count: number
+  report_count: number
   trend_score: number
 }
 
