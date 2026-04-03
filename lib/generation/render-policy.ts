@@ -37,17 +37,15 @@ export function chooseRenderProfile(input: RenderProfileInput): RenderProfile {
   const hardBoard = isHardBoard(input.strategy)
   const shouldUsePremium =
     Boolean(input.allowHighQuality) &&
-    (input.forcePremium ||
-      input.generationGate === 'premium' ||
-      input.sessionVisibility === 'published')
+    (input.forcePremium || input.generationGate === 'premium')
 
-  if (shouldUsePremium || (input.noteRole === 'hero' && hardBoard)) {
+  if (shouldUsePremium) {
     return {
       imageModel: 'gpt-image-1.5',
       plannerModel: hardBoard ? 'gpt-4.1' : 'gpt-4.1-mini',
       imageQuality: 'high',
       imageSize: '1536x1024',
-      reason: 'Premium or hard-board render',
+      reason: 'Intentional premium render',
     }
   }
 
@@ -57,7 +55,7 @@ export function chooseRenderProfile(input: RenderProfileInput): RenderProfile {
       plannerModel: hardBoard ? 'gpt-4.1' : 'gpt-4.1-mini',
       imageQuality: 'medium',
       imageSize: '1536x1024',
-      reason: 'Hero-first automatic render',
+      reason: hardBoard ? 'Hard-board automatic hero kept at medium' : 'Hero-first automatic render',
     }
   }
 

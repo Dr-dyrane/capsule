@@ -3,7 +3,9 @@ import ThemeToggle from '@/components/marketing/ThemeToggle'
 import Logo from '@/components/ui/Logo'
 import PendingLink from '@/components/ui/PendingLink'
 import { fetchCommunityCardsWithUrls } from '@/app/actions/community'
+import { signOut } from '@/app/actions/user'
 import { curateShowcaseCards } from '@/lib/community/curation'
+import { createClient } from '@/lib/supabase/server'
 import styles from './MarketingPage.module.css'
 
 const showcaseCards = [
@@ -22,6 +24,42 @@ const showcaseCards = [
 ]
 
 export default async function MarketingPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  let continueHref = '/scan'
+  let continueLabel = 'Continue'
+
+  if (user) {
+    const { data: activeSession } = await supabase
+      .from('sessions')
+      .select('id')
+      .eq('user_id', user.id)
+      .in('status', ['uploading', 'processing', 'generating'])
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (activeSession?.id) {
+      continueHref = `/scan/${activeSession.id}`
+      continueLabel = 'Continue session'
+    } else {
+      const { data: latestSession } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (latestSession?.id) {
+        continueHref = '/library'
+      }
+    }
+  }
+
   let displayCards = showcaseCards.map((card) => ({
     ...card,
     fallbackSrc: card.src,
@@ -68,9 +106,17 @@ export default async function MarketingPage() {
             <PendingLink href="/donate" className={`${styles.quietNavLink} ${styles.examplesLink}`}>
               Donate
             </PendingLink>
-            <PendingLink href="/login" className={styles.navButton}>
-              Log in
-            </PendingLink>
+            {user ? (
+              <form action={signOut}>
+                <button type="submit" className={styles.navGhostButton}>
+                  Log out
+                </button>
+              </form>
+            ) : (
+              <PendingLink href="/login" className={styles.navButton}>
+                Log in
+              </PendingLink>
+            )}
           </div>
         </nav>
 
@@ -80,8 +126,8 @@ export default async function MarketingPage() {
               Scan notes into cards.
             </h1>
 
-            <PendingLink href="/login" className={styles.primaryButton}>
-              Get Started
+            <PendingLink href={user ? continueHref : '/login'} className={styles.primaryButton}>
+              {user ? continueLabel : 'Get Started'}
             </PendingLink>
           </div>
 

@@ -80,6 +80,24 @@
   transform: scale(0.98);
 }
 
+.navGhostButton {
+  composes: buttonBase;
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 15px;
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.navGhostButton:hover,
+.navGhostButton:focus-visible {
+  color: var(--text-primary);
+}
+
+.navGhostButton:active {
+  transform: scale(0.98);
+}
+
 .quietNavLink {
   composes: buttonBase;
   min-height: 44px;
