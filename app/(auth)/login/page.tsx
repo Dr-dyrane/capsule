@@ -1,8 +1,9 @@
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { CircleAlert, MailCheck } from 'lucide-react'
 
 import AuthEntry from './AuthEntry'
+import { getRetryAtOffset } from '@/lib/auth/retry-times'
 import { sanitizeNextPath } from '@/lib/supabase/auth-callback'
 import { createClient } from '@/lib/supabase/server'
 
@@ -41,12 +42,21 @@ function getPendingKind(value?: string): PendingKind {
   return value === 'confirm_email' ? 'confirm_email' : 'magic_link'
 }
 
-function getAppUrl() {
+function getRequestOrigin(headerStore: Headers) {
+  const forwardedHost = headerStore.get('x-forwarded-host')
+  const host = forwardedHost ?? headerStore.get('host')
+  const forwardedProto = headerStore.get('x-forwarded-proto')
+
+  if (host) {
+    const protocol = forwardedProto ?? (host.includes('localhost') ? 'http' : 'https')
+    return `${protocol}://${host}`
+  }
+
   return process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 }
 
-function buildCallbackUrl(next: string) {
-  const url = new URL('/callback', getAppUrl())
+function buildCallbackUrl(next: string, origin: string) {
+  const url = new URL('/callback', origin)
 
   if (next !== '/scan') {
     url.searchParams.set('next', next)
@@ -234,6 +244,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const mode = modeParam ? getAuthMode(modeParam) : undefined
   const sentKind = getPendingKind(getStringValue(params.sent_kind))
   const emailParam = getStringValue(params.email)
+  const headerStore = await headers()
+  const callbackOrigin = getRequestOrigin(headerStore)
+  const callbackUrl = buildCallbackUrl(next, callbackOrigin)
 
   const supabase = await createClient()
   const {
@@ -268,7 +281,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     const { error: signInError } = await serverSupabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: buildCallbackUrl(requestedNext),
+        emailRedirectTo: buildCallbackUrl(requestedNext, callbackOrigin),
       },
     })
 
@@ -282,7 +295,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             next: requestedNext,
             error: 'Magic links are temporarily cooling down for this project.',
             errorCode: 'email_rate_limit',
-            retryAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            retryAt: getRetryAtOffset(60),
             method: 'magic',
             sent: source === 'resend',
             email,
@@ -296,7 +309,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             next: requestedNext,
             error: 'A magic link was already requested for this email.',
             errorCode: 'otp_cooldown',
-            retryAt: new Date(Date.now() + 60 * 1000).toISOString(),
+            retryAt: getRetryAtOffset(1),
             method: 'magic',
             sent: source === 'resend',
             email,
@@ -423,7 +436,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       email,
       password,
       options: {
-        emailRedirectTo: buildCallbackUrl(requestedNext),
+        emailRedirectTo: buildCallbackUrl(requestedNext, callbackOrigin),
       },
     })
 
@@ -437,7 +450,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             next: requestedNext,
             error: 'Confirmation emails are temporarily cooling down for this project.',
             errorCode: 'email_rate_limit',
-            retryAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            retryAt: getRetryAtOffset(60),
             method: 'password',
             mode: 'signup',
             email,
@@ -510,7 +523,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: buildCallbackUrl(requestedNext),
+        emailRedirectTo: buildCallbackUrl(requestedNext, callbackOrigin),
       },
     })
 
@@ -524,7 +537,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             next: requestedNext,
             error: 'Confirmation emails are temporarily cooling down for this project.',
             errorCode: 'email_rate_limit',
-            retryAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            retryAt: getRetryAtOffset(60),
             method: 'password',
             mode: 'signup',
             sent: true,
@@ -667,7 +680,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         ) : (
           <AuthEntry
             next={next}
-            callbackUrl={buildCallbackUrl(next)}
+            callbackUrl={callbackUrl}
             initialMethod={method}
             initialMode={mode}
             initialEmail={emailParam}

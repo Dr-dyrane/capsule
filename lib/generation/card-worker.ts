@@ -7,6 +7,11 @@ import { generateCardImage, resolveGenerationStrategy } from '@/lib/ai/generate'
 import { upsertRenderCache, findRenderCache } from '@/lib/ai/render-cache'
 import type { CardJobRecord, GenerationRunStatus } from '@/lib/types'
 
+type ProcessCardJobOptions = {
+  skipClaim?: boolean
+  rethrowOnHandledError?: boolean
+}
+
 function getCardTitle(text: string) {
   const title = text.split(':')[0]?.trim()
   return title || 'Learning card'
@@ -96,7 +101,21 @@ export async function syncGenerationRunState(supabase: SupabaseClient, sessionId
   }
 }
 
-export async function processCardJob(supabase: SupabaseClient, jobId: string) {
+export async function claimNextCardJob(supabase: SupabaseClient, sessionId: string) {
+  const { data, error } = await supabase.rpc('claim_next_card_job', {
+    p_session_id: sessionId,
+  })
+
+  if (error) throw error
+
+  return (data as string | null) ?? null
+}
+
+export async function processCardJob(
+  supabase: SupabaseClient,
+  jobId: string,
+  { skipClaim = false, rethrowOnHandledError = true }: ProcessCardJobOptions = {},
+) {
   const { data: job, error: jobError } = await supabase
     .from('card_jobs')
     .select('*')
@@ -148,17 +167,30 @@ export async function processCardJob(supabase: SupabaseClient, jobId: string) {
     specialty: preferences.specialty,
   })
 
-  const { error: claimError } = await supabase
+  const claimUpdate = skipClaim
+    ? {
+        planner_mode: strategy.plannerMode,
+        cache_key: cacheKey,
+      }
+    : {
+        status: 'running',
+        planner_mode: strategy.plannerMode,
+        cache_key: cacheKey,
+        attempt_count: typedJob.attempt_count + 1,
+        claimed_at: new Date().toISOString(),
+        last_error: null,
+      }
+
+  const claimQuery = supabase
     .from('card_jobs')
-    .update({
-      status: 'running',
-      planner_mode: strategy.plannerMode,
-      cache_key: cacheKey,
-      attempt_count: typedJob.attempt_count + 1,
-      claimed_at: new Date().toISOString(),
-      last_error: null,
-    })
+    .update(claimUpdate)
     .eq('id', jobId)
+
+  if (!skipClaim) {
+    claimQuery.eq('status', 'queued')
+  }
+
+  const { error: claimError } = await claimQuery
 
   if (claimError) throw claimError
 
@@ -288,7 +320,12 @@ export async function processCardJob(supabase: SupabaseClient, jobId: string) {
     ])
 
     await syncGenerationRunState(supabase, typedJob.session_id)
-    throw error
+
+    if (rethrowOnHandledError) {
+      throw error
+    }
+
+    return { fromCache: false, failed: true, error: message }
   }
 }
 

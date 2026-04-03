@@ -65,6 +65,8 @@ export async function uploadNote(formData: FormData) {
     typeof remixCardId === 'string' && remixCardId.trim().length > 0
       ? remixCardId.trim()
       : null
+  let uploaded = false
+  let sessionCreated = false
 
   try {
     // 1. Upload to Storage
@@ -73,6 +75,7 @@ export async function uploadNote(formData: FormData) {
       .upload(filePath, file)
 
     if (uploadError) throw uploadError
+    uploaded = true
 
     // 2. Create Session Record
     const wantsPublish = formData.get('publish') === 'true'
@@ -125,8 +128,21 @@ export async function uploadNote(formData: FormData) {
       throw new Error('We could not create the session. Please try again.')
     }
 
+    sessionCreated = true
+
     return session
   } catch (error) {
+    try {
+      const cleanupSupabase = await createClient()
+      const { data: { user: cleanupUser } } = await cleanupSupabase.auth.getUser()
+
+      if (uploaded && !sessionCreated && cleanupUser && cleanupUser.id === user.id) {
+        await cleanupSupabase.storage.from('notes').remove([filePath])
+      }
+    } catch (cleanupError) {
+      console.error('Failed to cleanup orphaned upload:', cleanupError)
+    }
+
     throw new Error(toUploadErrorMessage(error))
   }
 }

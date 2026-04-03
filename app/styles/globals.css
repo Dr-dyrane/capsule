@@ -73,6 +73,10 @@ a {
   background-color: var(--surface-3);
 }
 
+.surface-4 {
+  background-color: var(--surface-4);
+}
+
 .page-container {
   width: 100%;
   margin: 0 auto;

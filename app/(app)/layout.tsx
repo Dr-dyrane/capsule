@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
-import { registerGeneratingSessionsForCurrentUser } from '@/lib/generation/run-manager'
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import TabBar from '@/components/navigation/TabBar'
 import Sidebar from '@/components/navigation/Sidebar'
@@ -14,8 +13,6 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode
 }) {
-  await registerGeneratingSessionsForCurrentUser()
-  
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

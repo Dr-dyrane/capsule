@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Bookmark, Flag, Globe, Layers, Loader2, LogOut, Monitor, Sparkles, Stethoscope } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -14,6 +15,8 @@ interface ProfileClientProps {
     email?: string
     id: string
     user_metadata: {
+      avatar_url?: string
+      full_name?: string
       preferences?: {
         density?: 'focused' | 'detailed'
         theme?: 'dark' | 'light'
@@ -42,6 +45,8 @@ export default function ProfileClient({ user, cardCount, publishedCount, savedCo
   const [isPending, startTransition] = useTransition()
   
   const initialPrefs = user.user_metadata.preferences || {}
+  const displayName = user.user_metadata.full_name || user.email?.split('@')[0] || 'User'
+  const avatarUrl = user.user_metadata.avatar_url
   const [density, setDensity] = useState<'focused' | 'detailed'>(initialPrefs.density || 'focused')
   const [theme, setTheme] = useState<'dark' | 'light'>(initialPrefs.theme || 'dark')
   const [specialty, setSpecialty] = useState(initialPrefs.specialty || SPECIALTIES[0])
@@ -73,10 +78,14 @@ export default function ProfileClient({ user, cardCount, publishedCount, savedCo
     >
       <header className={styles.header}>
         <div className={styles.avatar}>
-          {user.email?.[0].toUpperCase() || 'U'}
+          {avatarUrl ? (
+            <Image src={avatarUrl} alt={displayName} fill unoptimized sizes="88px" />
+          ) : (
+            user.email?.[0].toUpperCase() || 'U'
+          )}
         </div>
         <div className={styles.userInfo}>
-          <p className={styles.name}>{user.email?.split('@')[0]}</p>
+          <p className={styles.name}>{displayName}</p>
           <p className={styles.email}>{user.email}</p>
           {isPending && <Loader2 size={12} className={styles.spinner} />}
         </div>
