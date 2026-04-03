@@ -71,6 +71,27 @@
   object-position: top center;
 }
 
+.fallbackImage,
+.primaryImage {
+  transition: opacity 220ms var(--ease-apple);
+}
+
+.fallbackImage {
+  opacity: 1;
+}
+
+.fallbackHidden {
+  opacity: 0;
+}
+
+.primaryImage {
+  opacity: 0;
+}
+
+.primaryReady {
+  opacity: 1;
+}
+
 .center {
   top: 47%;
   left: 50%;

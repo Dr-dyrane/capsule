@@ -12,10 +12,9 @@ type CardType = 'donate' | 'sponsor' | 'premium'
 type DonateCard = {
   type: CardType
   label: string
-  displayWord: string
+  word: string
   title: string
   detail: string
-  serial: string
   subject: string
 }
 
@@ -23,56 +22,52 @@ const CARDS: DonateCard[] = [
   {
     type: 'donate',
     label: 'Give',
-    displayWord: 'Open',
+    word: 'Open',
     title: 'Sponsor students',
-    detail: 'Free student access.',
-    serial: '1001',
+    detail: 'Fund the free path students feel first.',
     subject: 'Capsule donation',
   },
   {
     type: 'sponsor',
     label: 'Fund',
-    displayWord: 'Access',
+    word: 'Access',
     title: 'Sponsor access',
-    detail: 'For schools and cohorts.',
-    serial: '2401',
+    detail: 'Underwrite cohorts, schools, and shared learning.',
     subject: 'Capsule sponsorship',
   },
   {
     type: 'premium',
     label: 'Upgrade',
-    displayWord: 'Premium',
+    word: 'Premium',
     title: 'Request premium',
-    detail: 'For heavy workflows.',
-    serial: '9001',
+    detail: 'For tutors, heavy users, and advanced workflows.',
     subject: 'Capsule premium request',
   },
 ]
 
+function getThemeClass(type: CardType) {
+  if (type === 'donate') return styles.themeDonate
+  if (type === 'sponsor') return styles.themeSponsor
+  return styles.themePremium
+}
+
 export default function DonatePage() {
-  const [activeIndex, setActiveIndex] = useState(0)
+  const [activeIndex, setActiveIndex] = useState(1)
 
   const activeCard = CARDS[activeIndex]
 
-  const cardPositions = useMemo(() => {
-    return CARDS.map((_, index) => {
-      const offset = (index - activeIndex + CARDS.length) % CARDS.length
+  const cardPositions = useMemo(
+    () =>
+      CARDS.map((_, index) => {
+        const offset = (index - activeIndex + CARDS.length) % CARDS.length
 
-      if (offset === 0) {
-        return styles.cardActive
-      }
-
-      if (offset === 1) {
-        return styles.cardRight
-      }
-
-      if (offset === CARDS.length - 1) {
-        return styles.cardLeft
-      }
-
-      return styles.cardHidden
-    })
-  }, [activeIndex])
+        if (offset === 0) return styles.cardActive
+        if (offset === 1) return styles.cardRight
+        if (offset === CARDS.length - 1) return styles.cardLeft
+        return styles.cardHidden
+      }),
+    [activeIndex],
+  )
 
   function openEmail(subject: string) {
     window.location.assign(`mailto:hello@dyrane.tech?subject=${encodeURIComponent(subject)}`)
@@ -98,6 +93,7 @@ export default function DonatePage() {
 
         <section aria-labelledby="donate-title" className={styles.stage}>
           <div className={styles.hero}>
+            <div className={styles.eyebrow}>Support students</div>
             <h1 id="donate-title" className={styles.title}>
               Keep learning open.
             </h1>
@@ -114,31 +110,29 @@ export default function DonatePage() {
                   <button
                     key={card.type}
                     type="button"
-                    className={`${styles.previewCard} ${cardPositions[index]}`}
+                    className={`${styles.previewCard} ${cardPositions[index]} ${getThemeClass(card.type)}`}
                     onClick={() => setActiveIndex(index)}
                     aria-pressed={isActive}
                     aria-label={card.title}
                   >
-                    <span className={styles.cardStage}>
-                      <span className={`${styles.cardFrame} ${styles[`cardFrame${card.type[0].toUpperCase()}${card.type.slice(1)}`]}`}>
-                        <span className={styles.cardMeta}>
-                          <span className={styles.cardTopRow}>
+                    <span className={styles.cardFrame}>
+                      <span className={styles.cardMeta}>
+                        <span className={styles.cardTopRow}>
+                          <span className={styles.logoPill}>
                             <Logo size={28} className={styles.cardLogo} />
-                            <span className={styles.cardLabel}>{card.label}</span>
                           </span>
-                          <span aria-hidden="true" className={styles.cardChip}>
-                            <span className={styles.cardChipCore} />
-                            <span className={styles.cardChipLine} />
-                          </span>
-                          <span className={styles.cardCenter}>
-                            <span className={styles.cardWord}>{card.displayWord}</span>
-                          </span>
-                          <span className={styles.cardBottomRow}>
-                            <span className={styles.cardTitleBlock}>
-                              <span className={styles.cardTitle}>{card.title}</span>
-                              <span className={styles.cardCaption}>Capsule support</span>
-                            </span>
-                            <span className={styles.cardNumber}>•••• {card.serial}</span>
+                          <span className={styles.cardLabel}>{card.label}</span>
+                        </span>
+
+                        <span className={styles.cardCenter}>
+                          <span className={styles.cardWord}>{card.word}</span>
+                          <span className={styles.cardDetail}>{card.detail}</span>
+                        </span>
+
+                        <span className={styles.cardDock}>
+                          <span className={styles.cardTitleBlock}>
+                            <span className={styles.cardCaption}>{card.label}</span>
+                            <span className={styles.cardTitle}>{card.title}</span>
                           </span>
                         </span>
                       </span>
@@ -156,7 +150,7 @@ export default function DonatePage() {
                   <button
                     key={`${card.type}-option`}
                     type="button"
-                    className={`${styles.optionButton} ${isActive ? styles.optionButtonActive : ''}`}
+                    className={`${styles.optionButton} ${getThemeClass(card.type)} ${isActive ? styles.optionButtonActive : ''}`}
                     onClick={() => setActiveIndex(index)}
                     aria-pressed={isActive}
                   >
@@ -167,7 +161,7 @@ export default function DonatePage() {
               })}
             </div>
 
-            <div className={styles.actionRow}>
+            <div className={`${styles.actionSurface} ${getThemeClass(activeCard.type)}`}>
               <p className={styles.selectionText}>{activeCard.detail}</p>
               <button type="button" className={styles.primaryButton} onClick={() => openEmail(activeCard.subject)}>
                 Email us

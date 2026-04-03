@@ -23,7 +23,10 @@ const showcaseCards = [
 ]
 
 export default async function MarketingPage() {
-  let displayCards = showcaseCards
+  let displayCards = showcaseCards.map((card) => ({
+    ...card,
+    fallbackSrc: card.src,
+  }))
   try {
     const { cards, signedUrls } = await fetchCommunityCardsWithUrls(0, 18, { sort: 'trending' })
     const dynamicCards = curateShowcaseCards(
@@ -41,7 +44,11 @@ export default async function MarketingPage() {
         ]
       }),
       6,
-    ).map(({ src, alt }) => ({ src, alt }))
+    ).map(({ src, alt }, index) => ({
+      src,
+      alt,
+      fallbackSrc: showcaseCards[index % showcaseCards.length]?.src ?? showcaseCards[0].src,
+    }))
 
     if (dynamicCards.length >= 3) {
       displayCards = dynamicCards

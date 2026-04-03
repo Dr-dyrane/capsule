@@ -8,6 +8,7 @@ import styles from './ShowcaseCarousel.module.css'
 type ShowcaseCard = {
   src: string
   alt: string
+  fallbackSrc?: string
 }
 
 type Props = {
@@ -18,6 +19,8 @@ const SWIPE_THRESHOLD = 36
 
 export default function ShowcaseCarousel({ cards }: Props) {
   const [activeIndex, setActiveIndex] = useState(1)
+  const [loadedCards, setLoadedCards] = useState<Record<string, boolean>>({})
+  const [failedCards, setFailedCards] = useState<Record<string, boolean>>({})
   const pointerStartX = useRef<number | null>(null)
 
   function goToIndex(index: number) {
@@ -117,6 +120,8 @@ export default function ShowcaseCarousel({ cards }: Props) {
           const positionClassName = getPosition(index)
           const isActive = index === activeIndex
           const label = isActive ? `${card.alt}, current card` : `Show ${card.alt}`
+          const fallbackSrc = card.fallbackSrc ?? card.src
+          const showPrimary = card.src === fallbackSrc || (loadedCards[card.src] && !failedCards[card.src])
 
           return (
             <button
@@ -134,17 +139,42 @@ export default function ShowcaseCarousel({ cards }: Props) {
               <span className={styles.cardStage}>
                 <span className={styles.cardFrame}>
                   <Image
-                    src={card.src}
-                    alt={card.alt}
+                    src={fallbackSrc}
+                    alt=""
+                    aria-hidden="true"
                     fill
-                    priority={isActive}
                     unoptimized
                     sizes={
                       isActive
                         ? '(max-width: 1023px) min(100vw - 48px, 36rem), 42vw'
                         : '(max-width: 1023px) 38vw, 24vw'
                     }
-                    className={styles.cardImage}
+                    className={`${styles.cardImage} ${styles.fallbackImage} ${showPrimary ? styles.fallbackHidden : ''}`}
+                  />
+                  <Image
+                    src={card.src}
+                    alt={card.alt}
+                    fill
+                    priority={isActive}
+                    unoptimized
+                    onLoad={() => {
+                      setLoadedCards((current) => {
+                        if (current[card.src]) return current
+                        return { ...current, [card.src]: true }
+                      })
+                    }}
+                    onError={() => {
+                      setFailedCards((current) => {
+                        if (current[card.src]) return current
+                        return { ...current, [card.src]: true }
+                      })
+                    }}
+                    sizes={
+                      isActive
+                        ? '(max-width: 1023px) min(100vw - 48px, 36rem), 42vw'
+                        : '(max-width: 1023px) 38vw, 24vw'
+                    }
+                    className={`${styles.cardImage} ${styles.primaryImage} ${showPrimary ? styles.primaryReady : ''}`}
                   />
                 </span>
               </span>
