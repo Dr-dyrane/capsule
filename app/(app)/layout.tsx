@@ -1,10 +1,10 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import TabBar from '@/components/navigation/TabBar'
 import Sidebar from '@/components/navigation/Sidebar'
 import Logo from '@/components/ui/Logo'
+import PendingLink from '@/components/ui/PendingLink'
 import UserMenu from '@/components/profile/UserMenu'
 import styles from './AppShell.module.css'
 
@@ -28,14 +28,14 @@ export default async function AppLayout({
       <Sidebar user={userData} />
         <div className={styles.content}>
           <header className={styles.mobileBar}>
-            <Link href="/scan" className={styles.mobileBrand} aria-label="Capsule Workspace">
+            <PendingLink href="/scan" className={styles.mobileBrand} aria-label="Capsule Workspace">
               <span className={styles.mobileBrandFull}>
                 <Logo size={32} showText />
               </span>
               <span className={styles.mobileBrandCompact}>
                 <Logo size={32} />
               </span>
-            </Link>
+            </PendingLink>
             <div className={styles.mobileActions}>
               {userData && (
                 <div className={styles.mobileUserMenu}>

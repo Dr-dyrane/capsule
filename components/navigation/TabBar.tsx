@@ -1,8 +1,8 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+import PendingLink from '@/components/ui/PendingLink'
 import { navigationItems } from './nav-items'
 import styles from './TabBar.module.css'
 
@@ -16,7 +16,7 @@ export default function TabBar() {
         const Icon = tab.icon
 
         return (
-          <Link
+          <PendingLink
             key={tab.name}
             href={tab.href}
             className={`${styles.item} ${isActive ? styles.itemActive : ''}`}
@@ -24,7 +24,7 @@ export default function TabBar() {
           >
             <Icon size={22} strokeWidth={isActive ? 2.4 : 2} />
             <span className={styles.label}>{tab.name}</span>
-          </Link>
+          </PendingLink>
         )
       })}
     </nav>

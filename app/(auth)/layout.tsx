@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react'
-import Link from 'next/link'
 
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import Logo from '@/components/ui/Logo'
+import PendingLink from '@/components/ui/PendingLink'
 
 import styles from './AuthLayout.module.css'
 
@@ -15,9 +15,9 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
     <div className={styles.page}>
       <div className={styles.shell}>
         <header className={styles.nav}>
-          <Link href="/" className={styles.brand} aria-label="Go home">
+          <PendingLink href="/" className={styles.brand} aria-label="Go home">
             <Logo size={32} showText />
-          </Link>
+          </PendingLink>
 
           <ThemeToggle />
         </header>

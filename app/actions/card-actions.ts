@@ -27,14 +27,33 @@ export async function updateCard(cardId: string, updates: { title?: string; cate
 export async function deleteCard(cardId: string) {
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
   // 1. Get card to find image path
   const { data: card, error: fetchError } = await supabase
     .from('cards')
-    .select('image_url')
+    .select('image_url, session_id')
     .eq('id', cardId)
     .single()
 
   if (fetchError) throw fetchError
+
+  const { data: session, error: sessionError } = await supabase
+    .from('sessions')
+    .select('id')
+    .eq('id', card.session_id)
+    .eq('user_id', user.id)
+    .single()
+
+  if (sessionError || !session) {
+    throw new Error('Card not found')
+  }
 
   // 2. Delete image from Storage
   if (card.image_url) {
@@ -50,10 +69,13 @@ export async function deleteCard(cardId: string) {
     .from('cards')
     .delete()
     .eq('id', cardId)
+    .eq('session_id', card.session_id)
 
   if (dbError) throw dbError
 
   revalidatePath('/cards')
+  revalidatePath(`/cards/${cardId}`)
+  revalidatePath(`/scan/${card.session_id}`)
 }
 
 /**
@@ -62,14 +84,42 @@ export async function deleteCard(cardId: string) {
 export async function deleteCards(cardIds: string[]) {
   const supabase = await createClient()
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
   const { data: cards, error: fetchError } = await supabase
     .from('cards')
-    .select('image_url')
+    .select('id, image_url, session_id')
     .in('id', cardIds)
 
   if (fetchError) throw fetchError
+  if (!cards || cards.length === 0) {
+    throw new Error('No cards found')
+  }
 
-  const paths = (cards ?? []).map(c => c.image_url).filter(Boolean)
+  const sessionIds = [...new Set(cards.map((card) => card.session_id).filter(Boolean))]
+
+  const { data: sessions, error: sessionsError } = await supabase
+    .from('sessions')
+    .select('id')
+    .eq('user_id', user.id)
+    .in('id', sessionIds)
+
+  if (sessionsError) throw sessionsError
+
+  const authorizedSessionIds = new Set((sessions ?? []).map((session) => session.id))
+  const authorizedCards = cards.filter((card) => authorizedSessionIds.has(card.session_id))
+
+  if (authorizedCards.length === 0) {
+    throw new Error('No cards found')
+  }
+
+  const paths = authorizedCards.map((card) => card.image_url).filter(Boolean)
   
   if (paths.length > 0) {
     await supabase.storage.from('cards').remove(paths)
@@ -78,9 +128,10 @@ export async function deleteCards(cardIds: string[]) {
   const { error: dbError } = await supabase
     .from('cards')
     .delete()
-    .in('id', cardIds)
+    .in('id', authorizedCards.map((card) => card.id))
 
   if (dbError) throw dbError
 
   revalidatePath('/cards')
+  authorizedSessionIds.forEach((sessionId) => revalidatePath(`/scan/${sessionId}`))
 }

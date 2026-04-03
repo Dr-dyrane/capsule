@@ -100,9 +100,9 @@
 
 .item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   padding: 14px;
   border-radius: 22px;
   background:
@@ -115,9 +115,17 @@
 }
 
 .item:hover,
-.item:focus-visible {
+.item:focus-within {
   transform: translateY(-2px);
   box-shadow: var(--shadow-lg);
+}
+
+.itemLink {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
 }
 
 .thumb {
@@ -189,6 +197,10 @@
   color: var(--text-tertiary);
 }
 
+.deleteActionSlot {
+  flex: none;
+}
+
 @media (min-width: 900px) {
   .list {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -200,10 +212,16 @@
   }
 
   .item {
+    align-items: stretch;
+    gap: 16px;
+    padding: 16px;
+    min-height: 100%;
+  }
+
+  .itemLink {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
     gap: 16px;
-    padding: 16px;
     min-height: 100%;
   }
 
@@ -233,6 +251,10 @@
   }
 
   .chevron {
+    align-self: end;
+  }
+
+  .deleteActionSlot {
     align-self: end;
   }
 }

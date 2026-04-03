@@ -1,0 +1,67 @@
+.button {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple),
+    opacity 150ms var(--ease-apple);
+  cursor: pointer;
+}
+
+.button:hover,
+.button:focus-visible {
+  color: var(--text-primary);
+  background: var(--surface-3);
+  transform: translateY(-1px);
+}
+
+.button:disabled {
+  opacity: 0.72;
+}
+
+.confirm {
+  color: var(--text-on-accent);
+  background: color-mix(in srgb, var(--destructive) 88%, black 8%);
+}
+
+.confirm:hover,
+.confirm:focus-visible {
+  color: var(--text-on-accent);
+  background: color-mix(in srgb, var(--destructive) 84%, white);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 767px) {
+  .compactOnMobile {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+    gap: 0;
+  }
+
+  .compactOnMobile .label {
+    display: none;
+  }
+}

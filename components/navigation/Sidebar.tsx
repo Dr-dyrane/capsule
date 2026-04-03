@@ -1,10 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import Logo from '@/components/ui/Logo'
+import PendingLink from '@/components/ui/PendingLink'
 import UserMenu from '@/components/profile/UserMenu'
 
 import { navigationItems } from './nav-items'
@@ -24,14 +24,14 @@ export default function Sidebar({ user }: SidebarProps) {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.surface}>
-        <Link href="/scan" aria-label="Capsule workspace" className={styles.brand}>
+        <PendingLink href="/scan" aria-label="Capsule workspace" className={styles.brand}>
           <span className={styles.brandFull}>
             <Logo size={40} showText />
           </span>
           <span className={styles.brandCompact}>
             <Logo size={40} />
           </span>
-        </Link>
+        </PendingLink>
 
         <nav className={styles.nav} aria-label="Primary">
           {navigationItems.map((item) => {
@@ -39,7 +39,7 @@ export default function Sidebar({ user }: SidebarProps) {
             const Icon = item.icon
 
             return (
-              <Link
+              <PendingLink
                 key={item.name}
                 href={item.href}
                 className={`${styles.item} ${isActive ? styles.itemActive : ''}`}
@@ -47,7 +47,7 @@ export default function Sidebar({ user }: SidebarProps) {
               >
                 <Icon size={20} />
                 <span className={styles.label}>{item.name}</span>
-              </Link>
+              </PendingLink>
             )
           })}
         </nav>

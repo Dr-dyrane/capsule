@@ -28,6 +28,7 @@ import {
 } from '@/app/actions/generate'
 import { processNote, restartSession } from '@/app/actions/process'
 import ImagePreview from '@/components/cards/ImagePreview'
+import DeleteActionButton from '@/components/ui/DeleteActionButton'
 import { createClient } from '@/lib/supabase/client'
 import type { CardRecord, NoteRole, PointRecord, SessionRecommendationRecord, SessionRecord, SessionStatus } from '@/lib/types'
 
@@ -351,6 +352,7 @@ export default function ProcessingView({
               <button type="button" className={styles.secondaryAction} onClick={() => setPublishPrompt(isSessionPublished ? 'unpublish' : 'publish')} disabled={isPublishing}>
                 {isPublishing ? 'Saving...' : isSessionPublished ? <><Lock size={14} /><span>Unpublish all</span></> : <><Globe size={14} /><span>Publish all</span></>}
               </button>
+              <DeleteActionButton targetId={sessionId} targetType="session" redirectTo="/library" compactOnMobile />
             </div>
           </div>
 

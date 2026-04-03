@@ -1,15 +1,126 @@
-import Image from 'next/image'
-import Link from 'next/link'
-import { Archive, ChevronRight } from 'lucide-react'
+import { Archive } from 'lucide-react'
 
 import { getSavedCommunityCardsWithUrls } from '@/app/actions/community'
 import CommunityCard from '@/components/cards/CommunityCard'
+import PendingLink from '@/components/ui/PendingLink'
 import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
 import type { SessionRecord } from '@/lib/types'
+import LibrarySessionList from './LibrarySessionList'
 
 import styles from '../AppScreen.module.css'
 import listStyles from './LibraryPage.module.css'
+
+function trimTitle(value: string, maxLength = 56) {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+
+  const truncated = normalized.slice(0, maxLength).trimEnd()
+  const safeBreak = truncated.lastIndexOf(' ')
+
+  return `${(safeBreak > 20 ? truncated.slice(0, safeBreak) : truncated).trimEnd()}...`
+}
+
+function toDisplayTitle(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => {
+      if (word === word.toUpperCase() && word.length <= 4) {
+        return word
+      }
+
+      return `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`
+    })
+    .join(' ')
+}
+
+function getSessionTags(context: string) {
+  const normalized = context.toLowerCase()
+  const tags: string[] = []
+
+  const addTag = (condition: boolean, tag: string) => {
+    if (condition && !tags.includes(tag)) {
+      tags.push(tag)
+    }
+  }
+
+  addTag(normalized.includes('celiac'), 'Celiac')
+  addTag(normalized.includes('vaccine') || normalized.includes('vaccination') || normalized.includes('immunization'), 'Vaccines')
+  addTag(
+    normalized.includes('immune system') ||
+      normalized.includes('immunology') ||
+      normalized.includes('mhc ') ||
+      normalized.includes('natural killer'),
+    'Immunology',
+  )
+  addTag(normalized.includes('autoimmune'), 'Autoimmune')
+  addTag(normalized.includes('rheumatoid arthritis'), 'Rheumatoid Arthritis')
+  addTag(normalized.includes('psoriasis'), 'Psoriasis')
+  addTag(normalized.includes('multiple sclerosis'), 'Multiple Sclerosis')
+  addTag(
+    normalized.includes('systemic lupus erythematosus') || /\bsle\b/.test(normalized) || normalized.includes(' lupus'),
+    'Lupus',
+  )
+  addTag(
+    normalized.includes('therapy') ||
+      normalized.includes('treatment') ||
+      normalized.includes('treatments') ||
+      normalized.includes('management'),
+    'Therapy',
+  )
+
+  return tags
+}
+
+function getSessionDisplayTitle(session: SessionRecord) {
+  const context = session.session_context?.replace(/\s+/g, ' ').trim() ?? ''
+
+  if (!context || context.toLowerCase() === 'medical learning session') {
+    return session.remix_source_card_id ? 'Remix Draft' : 'Fresh Capture'
+  }
+
+  const tags = getSessionTags(context)
+  const diseaseTags = tags.filter((tag) =>
+    ['Celiac', 'Rheumatoid Arthritis', 'Psoriasis', 'Multiple Sclerosis', 'Lupus'].includes(tag),
+  )
+  const topicTags = tags.filter((tag) =>
+    ['Vaccines', 'Immunology', 'Autoimmune', 'Therapy'].includes(tag),
+  )
+
+  if (tags.includes('Autoimmune') && tags.includes('Therapy')) {
+    return 'Autoimmune Therapy'
+  }
+
+  if (diseaseTags.length > 0 && topicTags.includes('Therapy')) {
+    return trimTitle(`${diseaseTags[0]} Therapy`, 34)
+  }
+
+  if (diseaseTags.length > 0 && topicTags.length > 0) {
+    const secondaryTag = topicTags.find((tag) => tag !== 'Therapy') ?? topicTags[0]
+    return trimTitle(`${diseaseTags[0]} + ${secondaryTag}`, 34)
+  }
+
+  if (diseaseTags.length >= 2) {
+    return trimTitle(`${diseaseTags[0]} + ${diseaseTags[1]}`, 34)
+  }
+
+  if (tags.length > 0) {
+    return trimTitle(tags.slice(0, 2).join(' + '), 34)
+  }
+
+  const firstSentence = context.split(/(?<=[.!?])\s+/)[0]?.replace(/[.!?]+$/, '') ?? context
+  const cleaned = firstSentence
+    .replace(/^(the|this|these)\s+(notes?|document|page|capture)\s+(cover|covers|focus on|focuses on)\s+/i, '')
+    .replace(/^(key aspects of|overview of|summary of|high-yield review of)\s+/i, '')
+    .replace(/^(including|focusing on)\s+/i, '')
+    .replace(/\b(and|their|specific details about|drug regimens|management strategies|administration)\b/gi, ' ')
+
+  return trimTitle(toDisplayTitle(cleaned), 34)
+}
 
 export default async function LibraryPage() {
   const supabase = await createClient()
@@ -29,20 +140,22 @@ export default async function LibraryPage() {
     (sessions ?? []).map((session) => session.source_url),
   )
 
-  const groups: Record<string, SessionRecord[]> = {}
-  sessions?.forEach((session) => {
+  const sessionItems = (sessions ?? []).map((session) => {
     const typedSession = session as SessionRecord
-    const date = new Date(session.created_at).toLocaleDateString(undefined, {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    })
 
-    if (!groups[date]) groups[date] = []
-    groups[date].push(typedSession)
+    return {
+      session: typedSession,
+      title: getSessionDisplayTitle(typedSession),
+      dateLabel: new Date(session.created_at).toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      }),
+      imageUrl: signedNoteUrls[session.source_url],
+    }
   })
 
-  const hasSessions = Object.keys(groups).length > 0
+  const hasSessions = sessionItems.length > 0
   const hasSavedCards = savedCards.length > 0
 
   return (
@@ -62,12 +175,12 @@ export default async function LibraryPage() {
             <p className={styles.emptyTitle}>Your library is empty</p>
             <p className={styles.emptyCopy}>Generate your first card or explore what the community has already shared.</p>
             <div className={listStyles.emptyActions}>
-              <Link href="/community" className={styles.accentLink}>
+              <PendingLink href="/community" className={styles.accentLink}>
                 Explore community
-              </Link>
-              <Link href="/scan" className={listStyles.secondaryLink}>
+              </PendingLink>
+              <PendingLink href="/scan" className={listStyles.secondaryLink}>
                 Scan note
-              </Link>
+              </PendingLink>
             </div>
           </div>
         </div>
@@ -80,9 +193,9 @@ export default async function LibraryPage() {
                   <h2 className={listStyles.savedTitle}>Saved from community</h2>
                   <p className={listStyles.savedCopy}>Cards you kept without regenerating.</p>
                 </div>
-                <Link href="/community?saved=1" className={listStyles.savedLink}>
+                <PendingLink href="/community?saved=1" className={listStyles.savedLink}>
                   View saved feed
-                </Link>
+                </PendingLink>
               </div>
 
               <div className={listStyles.savedGrid}>
@@ -97,45 +210,7 @@ export default async function LibraryPage() {
             </section>
           ) : null}
 
-          {Object.entries(groups).map(([date, items]) => (
-            <section key={date} className={listStyles.group}>
-              <h2 className={listStyles.date}>{date}</h2>
-              <div className={listStyles.list}>
-                {items.map((session) => (
-                  <Link key={session.id} href={`/scan/${session.id}`} className={listStyles.item}>
-                    <div className={listStyles.thumb}>
-                      <div className={listStyles.thumbFrame}>
-                        {signedNoteUrls[session.source_url] ? (
-                          <Image
-                            src={signedNoteUrls[session.source_url]}
-                            alt="Uploaded note"
-                            fill
-                            unoptimized
-                            sizes="56px"
-                          />
-                        ) : (
-                          <div className={listStyles.thumbFallback}>Note</div>
-                        )}
-                      </div>
-                      <div className={listStyles.thumbLabel}>Original note</div>
-                    </div>
-                    <div className={listStyles.info}>
-                      <p className={listStyles.name}>Note session</p>
-                      <p className={listStyles.meta}>
-                        {session.card_count} cards <span aria-hidden="true">&middot;</span> {session.status}
-                        {session.remix_source_card_id ? (
-                          <>
-                            <span aria-hidden="true">&middot;</span> Remix
-                          </>
-                        ) : null}
-                      </p>
-                    </div>
-                    <ChevronRight size={18} className={listStyles.chevron} />
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))}
+          <LibrarySessionList items={sessionItems} />
         </div>
       )}
     </div>

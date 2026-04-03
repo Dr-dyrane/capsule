@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useDeferredValue, useEffect, useRef, useState } from 'react'
 import {
   Bookmark,
@@ -30,6 +29,7 @@ import type {
 } from '@/lib/types'
 import CommunityCard from '@/components/cards/CommunityCard'
 import MobileBottomSheet from '@/components/ui/MobileBottomSheet'
+import PendingLink from '@/components/ui/PendingLink'
 import styles from './CommunityFeed.module.css'
 
 interface CommunityFeedProps {
@@ -319,17 +319,17 @@ export default function CommunityFeed({
               </button>
             ) : null}
             {lockedAuthor ? (
-              <Link href="/community" className={styles.secondaryLink}>
+              <PendingLink href="/community" className={styles.secondaryLink}>
                 Back to community
-              </Link>
+              </PendingLink>
             ) : (
               <>
-                <Link href="/scan" className={styles.primaryLink}>
+                <PendingLink href="/scan" className={styles.primaryLink}>
                   Scan note
-                </Link>
-                <Link href="/cards" className={styles.secondaryLink}>
+                </PendingLink>
+                <PendingLink href="/cards" className={styles.secondaryLink}>
                   Open archive
-                </Link>
+                </PendingLink>
               </>
             )}
           </div>
@@ -347,7 +347,7 @@ export default function CommunityFeed({
             <input
               type="text"
               placeholder={
-                lockedAuthor ? `Search ${lockedAuthor.name}'s cards...` : 'Search by title, author, topic, or category...'
+                lockedAuthor ? `Search ${lockedAuthor.name}'s cards...` : 'Search cards, authors, topics...'
               }
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}

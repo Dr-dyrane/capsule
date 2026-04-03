@@ -1,8 +1,8 @@
-import Link from 'next/link'
 import Image from 'next/image'
 import { Archive, ChevronRight, User } from 'lucide-react'
 
 import type { CommunityLibraryRecord } from '@/app/actions/community'
+import PendingLink from '@/components/ui/PendingLink'
 import styles from './CommunityLibraryCard.module.css'
 
 export default function CommunityLibraryCard({
@@ -16,7 +16,7 @@ export default function CommunityLibraryCard({
   const topic = library.concept || library.category
 
   return (
-    <Link href={`/community/library/${library.session_id}`} className={styles.card}>
+    <PendingLink href={`/community/library/${library.session_id}`} className={styles.card}>
       <div className={styles.cover}>
         <div className={styles.coverFrame}>
           {imageUrl ? (
@@ -57,6 +57,6 @@ export default function CommunityLibraryCard({
       <div className={styles.trailing}>
         <ChevronRight size={18} />
       </div>
-    </Link>
+    </PendingLink>
   )
 }

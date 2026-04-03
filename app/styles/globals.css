@@ -56,6 +56,36 @@ a {
   text-decoration: none;
 }
 
+.pending-link {
+  transition:
+    transform var(--duration-micro) var(--ease-apple),
+    opacity var(--duration-micro) var(--ease-standard),
+    filter var(--duration-micro) var(--ease-standard),
+    box-shadow var(--duration-micro) var(--ease-standard),
+    background-color var(--duration-micro) var(--ease-standard),
+    color var(--duration-micro) var(--ease-standard);
+}
+
+.pending-link:active {
+  transform: scale(0.98);
+}
+
+.pending-link[data-pending='true'] {
+  opacity: 0.72;
+  transform: scale(0.985);
+  filter: saturate(0.94);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pending-link,
+  .pending-link:active,
+  .pending-link[data-pending='true'] {
+    transition: none;
+    transform: none;
+  }
+}
+
 .glass {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);

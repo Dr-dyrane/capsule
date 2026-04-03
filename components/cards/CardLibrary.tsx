@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckSquare, Globe, Lock, Plus, X } from 'lucide-react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { getSignedCardUrls } from '@/app/actions/assets'
 import { publishCards, unpublishCards } from '@/app/actions/community'
 import type { CardRecord } from '@/lib/types'
+import PendingLink from '@/components/ui/PendingLink'
 import CardThumbnail from './CardThumbnail'
 import SearchHeader from './SearchHeader'
 import styles from './CardLibrary.module.css'
@@ -163,12 +163,12 @@ export default function CardLibrary({ initialCards, initialSignedUrls, categorie
       <div className={styles.content}>
         <div className={`${styles.cardGrid} ${styles[layout]}`}>
           {/* Manual Create Trigger (Rule 14: Clear completion) */}
-          <Link href="/scan" className={styles.createTrigger}>
+          <PendingLink href="/scan" className={styles.createTrigger}>
             <div className={styles.plusIcon}>
               <Plus size={24} />
             </div>
             <p className={styles.createLabel}>Scan new note</p>
-          </Link>
+          </PendingLink>
 
           <AnimatePresence mode="popLayout">
             {visibleCards.map((card) => (

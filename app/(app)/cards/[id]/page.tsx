@@ -12,6 +12,7 @@ import shellStyles from '../../AppScreen.module.css'
 import styles from './CardDetailPage.module.css'
 import ImagePreview from '@/components/cards/ImagePreview'
 import PublishToggle from '@/components/cards/PublishToggle'
+import DeleteActionButton from '@/components/ui/DeleteActionButton'
 
 
 type CardDetailPageProps = {
@@ -140,6 +141,10 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
               </div>
               <div className={styles.chip}>{statusLabel}</div>
               {createdAt ? <div className={styles.chip}>{createdAt}</div> : null}
+            </div>
+
+            <div className={styles.actionRow}>
+              <DeleteActionButton targetId={card.id} targetType="card" redirectTo="/cards" compactOnMobile />
             </div>
 
             <div className={styles.section}>

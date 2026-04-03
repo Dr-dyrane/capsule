@@ -1,10 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import Logo from '@/components/ui/Logo'
+import PendingLink from '@/components/ui/PendingLink'
 import styles from './DonatePage.module.css'
 
 type CardType = 'donate' | 'sponsor' | 'premium'
@@ -77,17 +77,17 @@ export default function DonatePage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <nav aria-label="Primary" className={styles.nav}>
-          <Link href="/" aria-label="Capsule home" className={styles.brand}>
+          <PendingLink href="/" aria-label="Capsule home" className={styles.brand}>
             <Logo size={40} showText />
-          </Link>
+          </PendingLink>
 
           <div className={styles.navActions}>
-            <Link href="/community" className={styles.quietLink}>
+            <PendingLink href="/community" className={styles.quietLink}>
               Community
-            </Link>
-            <Link href="/login" className={styles.navButton}>
+            </PendingLink>
+            <PendingLink href="/login" className={styles.navButton}>
               Open Capsule
-            </Link>
+            </PendingLink>
           </div>
         </nav>
 
@@ -172,9 +172,9 @@ export default function DonatePage() {
 
         <footer aria-label="Appearance" className={styles.footer}>
           <div className={styles.footerLinks}>
-            <Link href="/" className={styles.footerLink}>
+            <PendingLink href="/" className={styles.footerLink}>
               Back home
-            </Link>
+            </PendingLink>
             <a href="mailto:hello@dyrane.tech?subject=Capsule%20sponsorship" className={styles.footerLink}>
               Sponsor access
             </a>

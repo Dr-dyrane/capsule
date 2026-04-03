@@ -34,7 +34,7 @@ export default function SearchHeader({
           <Search size={18} className={styles.searchIcon} />
           <input
             type="text"
-            placeholder="Search by title or concept..."
+            placeholder="Search titles or concepts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className={styles.searchInput}

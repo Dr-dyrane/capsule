@@ -1,8 +1,8 @@
-import Link from 'next/link'
 import Image from 'next/image'
 import { Bookmark, Flag, Globe, Heart, Repeat2, User } from 'lucide-react'
 
 import type { CommunityCardRecord } from '@/app/actions/community'
+import PendingLink from '@/components/ui/PendingLink'
 import styles from './CommunityCard.module.css'
 
 export default function CommunityCard({
@@ -37,7 +37,7 @@ export default function CommunityCard({
 
   return (
     <article className={`${styles.root} ${layout === 'list' ? styles.list : ''}`}>
-      <Link href={cardHref} className={styles.cardLink}>
+      <PendingLink href={cardHref} className={styles.cardLink}>
         <div className={styles.imageWrap}>
           <div className={styles.imageFrame}>
             {showImageMeta ? (
@@ -81,12 +81,12 @@ export default function CommunityCard({
             )}
           </div>
         </div>
-      </Link>
+      </PendingLink>
 
       <div className={styles.meta}>
-        <Link href={cardHref} className={styles.titleLink}>
+        <PendingLink href={cardHref} className={styles.titleLink}>
           <p className={styles.title}>{card.title || 'Untitled'}</p>
-        </Link>
+        </PendingLink>
         <div className={styles.metaRow}>
           <span className={styles.hint}>{(card.community_template || 'mechanism-board').replace(/-/g, ' ')}</span>
           {topic ? (
@@ -97,9 +97,9 @@ export default function CommunityCard({
           ) : null}
           <span className={styles.dot}>&middot;</span>
           {authorHref ? (
-            <Link href={authorHref} className={styles.authorLink}>
+            <PendingLink href={authorHref} className={styles.authorLink}>
               by {authorName}
-            </Link>
+            </PendingLink>
           ) : (
             <span className={styles.hint}>by {authorName}</span>
           )}
@@ -132,10 +132,10 @@ export default function CommunityCard({
             <span>{card.like_count} likes</span>
           </div>
         )}
-        <Link href={remixHref} className={styles.remixChip}>
+        <PendingLink href={remixHref} className={styles.remixChip}>
           <Repeat2 size={14} />
           <span>Remix</span>
-        </Link>
+        </PendingLink>
         {showInteractiveActions ? (
           <button
             type="button"

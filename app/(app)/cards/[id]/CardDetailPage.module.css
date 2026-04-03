@@ -88,6 +88,11 @@
   gap: 12px;
 }
 
+.actionRow {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .chip {
   min-height: 36px;
   display: inline-flex;

@@ -1,8 +1,7 @@
-import Link from 'next/link'
-
 import ShowcaseCarousel from '@/components/marketing/ShowcaseCarousel'
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import Logo from '@/components/ui/Logo'
+import PendingLink from '@/components/ui/PendingLink'
 import { fetchCommunityCardsWithUrls } from '@/app/actions/community'
 import { curateShowcaseCards } from '@/lib/community/curation'
 import styles from './MarketingPage.module.css'
@@ -61,17 +60,17 @@ export default async function MarketingPage() {
     <main className={styles.page}>
       <div className={styles.shell}>
         <nav aria-label="Primary" className={styles.nav}>
-          <Link href="/" aria-label="Capsule home" className={styles.brand}>
+          <PendingLink href="/" aria-label="Capsule home" className={styles.brand}>
             <Logo size={40} showText />
-          </Link>
+          </PendingLink>
 
           <div className={styles.navActions}>
-            <Link href="/donate" className={`${styles.quietNavLink} ${styles.examplesLink}`}>
+            <PendingLink href="/donate" className={`${styles.quietNavLink} ${styles.examplesLink}`}>
               Donate
-            </Link>
-            <Link href="/login" className={styles.navButton}>
+            </PendingLink>
+            <PendingLink href="/login" className={styles.navButton}>
               Log in
-            </Link>
+            </PendingLink>
           </div>
         </nav>
 
@@ -81,9 +80,9 @@ export default async function MarketingPage() {
               Scan notes into cards.
             </h1>
 
-            <Link href="/login" className={styles.primaryButton}>
+            <PendingLink href="/login" className={styles.primaryButton}>
               Get Started
-            </Link>
+            </PendingLink>
           </div>
 
           <div id="showcase" className={styles.showcase}>
@@ -93,9 +92,9 @@ export default async function MarketingPage() {
 
         <footer aria-label="Appearance" className={styles.footer}>
           <div className={styles.footerLinks}>
-            <Link href="/donate" className={styles.footerLink}>
+            <PendingLink href="/donate" className={styles.footerLink}>
               Support students
-            </Link>
+            </PendingLink>
             <a href="mailto:hello@dyrane.tech?subject=Capsule%20sponsorship" className={styles.footerLink}>
               Sponsor access
             </a>

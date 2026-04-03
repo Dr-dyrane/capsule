@@ -1,10 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { Bookmark, Flag, Heart, Loader2, Repeat2 } from 'lucide-react'
 
 import { reportCommunityCard, toggleCommunityReaction } from '@/app/actions/community'
+import PendingLink from '@/components/ui/PendingLink'
 import styles from './CommunityDetailActions.module.css'
 
 type CommunityDetailActionsProps = {
@@ -97,10 +97,10 @@ export default function CommunityDetailActions({
         <span>{saveCount}</span>
       </button>
 
-      <Link href={remixHref} className={styles.remixChip}>
+      <PendingLink href={remixHref} className={styles.remixChip}>
         <Repeat2 size={14} />
         <span>Remix</span>
-      </Link>
+      </PendingLink>
 
       <button
         type="button"

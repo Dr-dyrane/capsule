@@ -1,6 +1,7 @@
 'use server'
 
 import { cookies } from 'next/headers'
+import { revalidatePath } from 'next/cache'
 
 import { registerGenerationSession } from '@/lib/generation/run-manager'
 import { createClient } from '@/lib/supabase/server'
@@ -221,6 +222,84 @@ export async function restartSession(sessionId: string) {
   if (updateError) {
     throw updateError
   }
+
+  return { success: true }
+}
+
+export async function deleteSession(sessionId: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const [{ data: session, error: sessionError }, { data: cards, error: cardsError }] = await Promise.all([
+    supabase
+      .from('sessions')
+      .select('id, source_url')
+      .eq('id', sessionId)
+      .eq('user_id', user.id)
+      .single(),
+    supabase.from('cards').select('id, image_url').eq('session_id', sessionId),
+  ])
+
+  if (sessionError || !session) {
+    throw new Error('Session not found')
+  }
+
+  if (cardsError) {
+    throw cardsError
+  }
+
+  const cardImagePaths = (cards ?? []).map((card) => card.image_url).filter(Boolean)
+
+  if (cardImagePaths.length > 0) {
+    const { error: cardsStorageError } = await supabase.storage.from('cards').remove(cardImagePaths)
+    if (cardsStorageError) {
+      console.error('Card image deletion error:', cardsStorageError)
+    }
+  }
+
+  if (session.source_url) {
+    const { error: noteStorageError } = await supabase.storage.from('notes').remove([session.source_url])
+    if (noteStorageError) {
+      console.error('Note deletion error:', noteStorageError)
+    }
+  }
+
+  const [
+    { error: jobsDeleteError },
+    { error: cardsDeleteError },
+    { error: pointsDeleteError },
+    { error: runsDeleteError },
+  ] = await Promise.all([
+    supabase.from('card_jobs').delete().eq('session_id', sessionId),
+    supabase.from('cards').delete().eq('session_id', sessionId),
+    supabase.from('points').delete().eq('session_id', sessionId),
+    supabase.from('generation_runs').delete().eq('session_id', sessionId),
+  ])
+
+  if (jobsDeleteError) throw jobsDeleteError
+  if (cardsDeleteError) throw cardsDeleteError
+  if (pointsDeleteError) throw pointsDeleteError
+  if (runsDeleteError) throw runsDeleteError
+
+  const { error: deleteError } = await supabase.from('sessions').delete().eq('id', sessionId).eq('user_id', user.id)
+
+  if (deleteError) {
+    throw deleteError
+  }
+
+  revalidatePath('/library')
+  revalidatePath('/cards')
+  revalidatePath(`/scan/${sessionId}`)
+  revalidatePath('/community')
+  revalidatePath('/community/library')
+  revalidatePath(`/community/library/${sessionId}`)
 
   return { success: true }
 }
