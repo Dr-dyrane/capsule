@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { ChevronLeft, TriangleAlert } from 'lucide-react'
+import { ChevronLeft, Loader2, TriangleAlert } from 'lucide-react'
+import { useFormStatus } from 'react-dom'
 
 import { createClient } from '@/lib/supabase/client'
 
@@ -59,6 +60,23 @@ function getInitialStep(initialMethod?: AuthMethod, initialMode?: AuthMode): Aut
   }
 
   return 'entry'
+}
+
+function PendingSubmitButton({
+  idleLabel,
+  pendingLabel,
+}: {
+  idleLabel: string
+  pendingLabel: string
+}) {
+  const { pending } = useFormStatus()
+
+  return (
+    <button type="submit" className={styles.primaryAction} disabled={pending}>
+      {pending ? <Loader2 size={16} className={styles.spinner} aria-hidden="true" /> : null}
+      <span>{pending ? pendingLabel : idleLabel}</span>
+    </button>
+  )
 }
 
 export default function AuthEntry({
@@ -235,9 +253,7 @@ export default function AuthEntry({
               className={styles.input}
             />
 
-            <button type="submit" className={styles.primaryAction}>
-              Sign in
-            </button>
+            <PendingSubmitButton idleLabel="Sign in" pendingLabel="Signing in..." />
           </form>
 
           <div className={styles.inlineLinks}>
@@ -272,9 +288,7 @@ export default function AuthEntry({
               className={styles.input}
             />
 
-            <button type="submit" className={styles.primaryAction}>
-              Create account
-            </button>
+            <PendingSubmitButton idleLabel="Create account" pendingLabel="Creating account..." />
           </form>
 
           <div className={styles.inlineLinks}>
@@ -297,9 +311,7 @@ export default function AuthEntry({
             <input type="hidden" name="next" value={next} />
             <input type="hidden" name="source" value="request" />
 
-            <button type="submit" className={styles.primaryAction}>
-              Send link
-            </button>
+            <PendingSubmitButton idleLabel="Send link" pendingLabel="Sending link..." />
           </form>
 
           <div className={styles.inlineLinks}>

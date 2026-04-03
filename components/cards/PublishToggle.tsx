@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Globe, Lock, Loader2 } from 'lucide-react'
 import { publishCard, unpublishCard } from '@/app/actions/community'
+import { useFeedback } from '@/components/providers/FeedbackProvider'
 import styles from './PublishToggle.module.css'
 
 export default function PublishToggle({ 
@@ -14,6 +15,7 @@ export default function PublishToggle({
 }) {
   const [isPending, startTransition] = useTransition()
   const [isPublished, setIsPublished] = useState(initialVisibility === 'published')
+  const { showFeedback } = useFeedback()
 
   function togglePublish() {
     // Optimistic update
@@ -27,10 +29,21 @@ export default function PublishToggle({
         } else {
           await unpublishCard(cardId)
         }
+
+        showFeedback({
+          tone: 'success',
+          title: nextState ? 'Card published' : 'Card is private',
+          message: nextState ? 'It is now visible in community.' : 'Only you can see it now.',
+        })
       } catch (error) {
         console.error('Failed to update visibility', error)
         // Revert on error
         setIsPublished(!nextState)
+        showFeedback({
+          tone: 'error',
+          title: 'Could not update this card',
+          message: 'Try again in a moment.',
+        })
       }
     })
   }

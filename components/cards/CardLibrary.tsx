@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation'
 import { getSignedCardUrls } from '@/app/actions/assets'
 import { publishCards, unpublishCards } from '@/app/actions/community'
 import type { CardRecord } from '@/lib/types'
+import { useFeedback } from '@/components/providers/FeedbackProvider'
+import AdaptiveSheet from '@/components/ui/AdaptiveSheet'
 import PendingLink from '@/components/ui/PendingLink'
 import CardThumbnail from './CardThumbnail'
 import SearchHeader from './SearchHeader'
@@ -27,7 +29,9 @@ export default function CardLibrary({ initialCards, initialSignedUrls, categorie
   const [signedUrlMap, setSignedUrlMap] = useState<Record<string, string>>(initialSignedUrls)
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([])
+  const [bulkSheetAction, setBulkSheetAction] = useState<'published' | 'private' | null>(null)
   const [isBulkPending, startBulkTransition] = useTransition()
+  const { showFeedback } = useFeedback()
   const router = useRouter()
 
   const filteredCards = useMemo(() => {
@@ -99,15 +103,30 @@ export default function CardLibrary({ initialCards, initialSignedUrls, categorie
     }
 
     startBulkTransition(async () => {
-      if (nextVisibility === 'published') {
-        await publishCards(selectedCardIds)
-      } else {
-        await unpublishCards(selectedCardIds)
-      }
+      try {
+        if (nextVisibility === 'published') {
+          await publishCards(selectedCardIds)
+        } else {
+          await unpublishCards(selectedCardIds)
+        }
 
-      router.refresh()
-      setSelectedCardIds([])
-      setSelectionMode(false)
+        router.refresh()
+        setSelectedCardIds([])
+        setSelectionMode(false)
+        setBulkSheetAction(null)
+        showFeedback({
+          tone: 'success',
+          title: nextVisibility === 'published' ? 'Cards published' : 'Cards set to private',
+          message: `${selectedCardIds.length} ${selectedCardIds.length === 1 ? 'card is' : 'cards are'} updated.`,
+        })
+      } catch (error) {
+        console.error('Bulk visibility update failed:', error)
+        showFeedback({
+          tone: 'error',
+          title: 'Could not update cards',
+          message: 'Try again in a moment.',
+        })
+      }
     })
   }
 
@@ -142,7 +161,7 @@ export default function CardLibrary({ initialCards, initialSignedUrls, categorie
             </button>
             <button
               className={styles.bulkAction}
-              onClick={() => handleBulkVisibility('published')}
+              onClick={() => setBulkSheetAction('published')}
               disabled={selectedCardIds.length === 0 || isBulkPending}
             >
               <Globe size={14} />
@@ -150,7 +169,7 @@ export default function CardLibrary({ initialCards, initialSignedUrls, categorie
             </button>
             <button
               className={styles.bulkActionMuted}
-              onClick={() => handleBulkVisibility('private')}
+              onClick={() => setBulkSheetAction('private')}
               disabled={selectedCardIds.length === 0 || isBulkPending}
             >
               <Lock size={14} />
@@ -159,6 +178,76 @@ export default function CardLibrary({ initialCards, initialSignedUrls, categorie
           </div>
         ) : null}
       </div>
+
+      <AdaptiveSheet
+        open={Boolean(bulkSheetAction)}
+        onClose={() => {
+          if (!isBulkPending) {
+            setBulkSheetAction(null)
+          }
+        }}
+        title={bulkSheetAction === 'published' ? 'Publish selected cards?' : 'Move selected cards to private?'}
+        description={
+          bulkSheetAction === 'published'
+            ? 'The selected cards will show up in community.'
+            : 'The selected cards will stay visible only to you.'
+        }
+        eyebrow={
+          bulkSheetAction ? (
+            <>
+              {bulkSheetAction === 'published' ? <Globe size={14} /> : <Lock size={14} />}
+              <span>{bulkSheetAction === 'published' ? 'Community' : 'Private archive'}</span>
+            </>
+          ) : null
+        }
+        size="compact"
+        closeLabel="Close bulk visibility dialog"
+        footer={
+          <>
+            <button
+              type="button"
+              className={styles.sheetSecondaryAction}
+              onClick={() => setBulkSheetAction(null)}
+              disabled={isBulkPending}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={bulkSheetAction === 'published' ? styles.sheetPrimaryAction : styles.sheetMutedAction}
+              onClick={() => {
+                if (bulkSheetAction) {
+                  handleBulkVisibility(bulkSheetAction)
+                }
+              }}
+              disabled={isBulkPending}
+            >
+              {isBulkPending
+                ? 'Saving...'
+                : bulkSheetAction === 'published'
+                  ? 'Publish cards'
+                  : 'Keep private'}
+            </button>
+          </>
+        }
+      >
+        <div className={styles.bulkSheetMeta}>
+          <p className={styles.bulkSheetLead}>
+            {selectedCardIds.length} {selectedCardIds.length === 1 ? 'card' : 'cards'} selected
+          </p>
+          <p className={styles.bulkSheetCopy}>
+            {bulkSheetAction === 'published'
+              ? 'Only these cards will go live.'
+              : 'You can publish them again any time.'}
+          </p>
+        </div>
+        <div className={styles.bulkSheetLedger}>
+          <div className={styles.bulkSheetChip}>Selected {selectedCardIds.length}</div>
+          <div className={styles.bulkSheetChip}>
+            {bulkSheetAction === 'published' ? 'Next state Live' : 'Next state Private'}
+          </div>
+        </div>
+      </AdaptiveSheet>
 
       <div className={styles.content}>
         <div className={`${styles.cardGrid} ${styles[layout]}`}>

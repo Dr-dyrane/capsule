@@ -1,34 +1,27 @@
 'use client'
 
-import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Trash2, Edit3, Loader2, Check } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Check } from 'lucide-react'
 
-import { deleteCard } from '@/app/actions/card-actions'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import type { CardRecord } from '@/lib/types'
+import DeleteActionButton from '@/components/ui/DeleteActionButton'
 import styles from './CardThumbnail.module.css'
 
 export default function CardThumbnail({ 
   card, 
   imageUrl,
-  onEdit,
   selectionMode = false,
   selected = false,
   onToggleSelect,
 }: { 
   card: CardRecord; 
   imageUrl?: string;
-  onEdit?: (card: CardRecord) => void;
   selectionMode?: boolean
   selected?: boolean
   onToggleSelect?: (cardId: string) => void
 }) {
-  const [isDeleting, startDeleteTransition] = useTransition()
-  const [showConfirm, setShowConfirm] = useState(false)
-
   const statusLabel =
     card.status === 'complete'
       ? 'Ready'
@@ -38,31 +31,6 @@ export default function CardThumbnail({
           ? 'Error'
           : 'Queued'
 
-  async function handleDelete(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    if (!showConfirm) {
-      setShowConfirm(true)
-      return
-    }
-
-    startDeleteTransition(async () => {
-      try {
-        await deleteCard(card.id)
-      } catch (err) {
-        console.error('Delete failed:', err)
-        setShowConfirm(false)
-      }
-    })
-  }
-
-  function handleEdit(e: React.MouseEvent) {
-    e.preventDefault()
-    e.stopPropagation()
-    onEdit?.(card)
-  }
-
   function handleToggleSelect(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
@@ -71,6 +39,12 @@ export default function CardThumbnail({
 
   return (
     <div className={`${styles.root} ${selectionMode ? styles.selectionMode : ''} ${selected ? styles.selected : ''}`}>
+      {!selectionMode ? (
+        <div className={styles.actionSlot}>
+          <DeleteActionButton targetId={card.id} targetType="card" iconOnly className={styles.actionButton} />
+        </div>
+      ) : null}
+
       <Link
         href={`/cards/${card.id}`}
         className={styles.cardLink}
@@ -90,46 +64,7 @@ export default function CardThumbnail({
               {selected ? <Check size={14} /> : null}
               <span>{selected ? 'Selected' : 'Select'}</span>
             </button>
-          ) : (
-            <AnimatePresence>
-              <motion.div 
-                initial={{ opacity: 0 }}
-                whileHover={{ opacity: 1 }}
-                className={styles.actionsOverlay}
-              >
-                <div className={styles.actionGroup}>
-                  <button 
-                    className={styles.actionBtn} 
-                    onClick={handleEdit}
-                    title="Edit title"
-                  >
-                    <Edit3 size={14} />
-                  </button>
-                  <button 
-                    className={`${styles.actionBtn} ${showConfirm ? styles.confirmDelete : ''}`} 
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    title={showConfirm ? "Confirm Delete" : "Delete card"}
-                  >
-                    {isDeleting ? (
-                      <Loader2 size={14} className={styles.spinner} />
-                    ) : (
-                      <Trash2 size={14} />
-                    )}
-                  </button>
-                </div>
-                {showConfirm && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={styles.confirmTip}
-                  >
-                    Click again to confirm
-                  </motion.div>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          )}
+          ) : null}
 
           {imageUrl ? (
             <div className={styles.imageFrame}>

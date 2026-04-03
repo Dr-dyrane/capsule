@@ -21,6 +21,16 @@
   cursor: pointer;
 }
 
+.iconOnly {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+}
+
+.iconOnly .label {
+  display: none;
+}
+
 .button:hover,
 .button:focus-visible {
   color: var(--text-primary);

@@ -72,6 +72,68 @@
   gap: 16px;
 }
 
+.stateTray {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 24px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-3) 94%, transparent),
+      color-mix(in srgb, var(--surface-1) 96%, transparent)
+    );
+  box-shadow: var(--shadow-sm);
+}
+
+.stateCopy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.stateTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.stateBody {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.stateAction {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-standard),
+    color 150ms var(--ease-standard);
+}
+
+.stateAction:hover,
+.stateAction:focus-visible {
+  transform: translateY(-1px);
+  background: var(--surface-3);
+}
+
 .mobileActions {
   display: none;
 }
@@ -374,6 +436,14 @@
 
   .controls {
     display: none;
+  }
+
+  .stateTray {
+    align-items: stretch;
+  }
+
+  .stateAction {
+    width: 100%;
   }
 
   .filterSelect {

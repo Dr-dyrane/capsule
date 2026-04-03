@@ -2,6 +2,8 @@ import './styles/globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 
+import FeedbackProvider from '@/components/providers/FeedbackProvider';
+
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-sans',
@@ -58,7 +60,9 @@ export default function RootLayout({
         <meta name="theme-color" content="#f5f4ef" media="(prefers-color-scheme: light)" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <FeedbackProvider>{children}</FeedbackProvider>
+      </body>
     </html>
   );
 }

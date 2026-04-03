@@ -14,7 +14,7 @@
 .selectionToggle,
 .bulkAction,
 .bulkActionMuted {
-  min-height: 40px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -41,6 +41,108 @@
   color: var(--text-secondary);
   background: var(--surface-2);
   box-shadow: var(--shadow-sm);
+}
+
+.sheetPrimaryAction,
+.sheetSecondaryAction,
+.sheetMutedAction {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  font-weight: 600;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-standard),
+    box-shadow 150ms var(--ease-standard),
+    color 150ms var(--ease-standard),
+    opacity 150ms var(--ease-standard);
+}
+
+.sheetPrimaryAction {
+  color: var(--text-on-accent);
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: var(--shadow-md);
+}
+
+.sheetSecondaryAction,
+.sheetMutedAction {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.sheetMutedAction {
+  color: var(--text-secondary);
+}
+
+.sheetPrimaryAction:hover,
+.sheetPrimaryAction:focus-visible,
+.sheetSecondaryAction:hover,
+.sheetSecondaryAction:focus-visible,
+.sheetMutedAction:hover,
+.sheetMutedAction:focus-visible {
+  transform: translateY(-1px);
+}
+
+.sheetSecondaryAction:hover,
+.sheetSecondaryAction:focus-visible,
+.sheetMutedAction:hover,
+.sheetMutedAction:focus-visible {
+  background: var(--surface-3);
+}
+
+.sheetPrimaryAction:disabled,
+.sheetSecondaryAction:disabled,
+.sheetMutedAction:disabled {
+  opacity: 0.72;
+}
+
+.bulkSheetMeta {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 94%, transparent), var(--surface-1));
+  box-shadow: var(--shadow-sm);
+}
+
+.bulkSheetLead {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.bulkSheetCopy {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.bulkSheetLedger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bulkSheetChip {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .selectionActions {
@@ -280,16 +382,25 @@
   gap: 16px;
   min-height: 200px;
   border-radius: 24px;
-  background: var(--surface-1);
-  border: 1px dashed var(--surface-3);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-2) 92%, transparent),
+      color-mix(in srgb, var(--surface-1) 96%, transparent)
+    );
+  box-shadow: var(--shadow-sm);
   color: var(--text-secondary);
   transition: all 200ms var(--ease-apple);
 }
 
 .createTrigger:hover {
-  background: var(--surface-1);
-  border-color: var(--surface-3);
-  color: var(--text-secondary);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-3) 94%, transparent),
+      color-mix(in srgb, var(--surface-2) 96%, transparent)
+    );
+  color: var(--text-primary);
   transform: translateY(-2px);
 }
 

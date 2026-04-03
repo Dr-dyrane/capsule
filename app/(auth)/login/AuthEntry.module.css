@@ -141,6 +141,14 @@
   transform: scale(0.98);
 }
 
+.primaryAction:disabled {
+  opacity: 0.72;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
 .inlineLinks {
   display: flex;
   flex-wrap: wrap;
@@ -223,6 +231,12 @@
   box-shadow: var(--shadow-sm);
   font-size: 13px;
   font-weight: 600;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 639px) {

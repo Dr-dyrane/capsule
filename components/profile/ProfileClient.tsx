@@ -10,6 +10,7 @@ import SettingRow from './SettingRow'
 import { updateUserPreferences, signOut, type UserPreferences } from '@/app/actions/user'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import type { UserEntitlementRecord } from '@/lib/types'
+import { useFeedback } from '@/components/providers/FeedbackProvider'
 import styles from '@/app/(app)/profile/ProfilePage.module.css'
 
 interface ProfileClientProps {
@@ -63,6 +64,7 @@ export default function ProfileClient({
   const [theme, setTheme] = useState<'dark' | 'light'>(initialPrefs.theme || 'dark')
   const [specialty, setSpecialty] = useState(initialPrefs.specialty || SPECIALTIES[0])
   const [autoPublish, setAutoPublish] = useState(Boolean(initialPrefs.auto_publish))
+  const { showFeedback } = useFeedback()
 
   // Theme Sync (Capsule Design Standards)
   useEffect(() => {
@@ -76,8 +78,26 @@ export default function ProfileClient({
     startTransition(async () => {
       try {
         await updateUserPreferences(updates)
+        showFeedback({
+          tone: 'success',
+          title:
+            'theme' in updates
+              ? 'Appearance updated'
+              : 'auto_publish' in updates
+                ? 'Publish default updated'
+                : 'density' in updates
+                  ? 'Density updated'
+                  : 'specialty' in updates
+                    ? 'Specialty updated'
+                    : 'Saved',
+        })
       } catch (err) {
         console.error('Failed to update preferences:', err)
+        showFeedback({
+          tone: 'error',
+          title: 'Could not save that change',
+          message: 'Try again in a moment.',
+        })
       }
     })
   }

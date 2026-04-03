@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Bookmark, Flag, Heart, Loader2, Repeat2 } from 'lucide-react'
 
 import { reportCommunityCard, toggleCommunityReaction } from '@/app/actions/community'
+import { useFeedback } from '@/components/providers/FeedbackProvider'
 import PendingLink from '@/components/ui/PendingLink'
 import styles from './CommunityDetailActions.module.css'
 
@@ -32,6 +33,7 @@ export default function CommunityDetailActions({
   const [likeCount, setLikeCount] = useState(initialLikeCount)
   const [saveCount, setSaveCount] = useState(initialSaveCount)
   const [isPending, startTransition] = useTransition()
+  const { showFeedback } = useFeedback()
 
   function handleToggle(kind: 'like' | 'save') {
     const isLike = kind === 'like'
@@ -57,6 +59,12 @@ export default function CommunityDetailActions({
           setSaved(previous)
           setSaveCount((current) => Math.max(0, current + (next ? -1 : 1)))
         }
+
+        showFeedback({
+          tone: 'error',
+          title: isLike ? 'Could not update like' : 'Could not update saved cards',
+          message: 'Try again in a moment.',
+        })
       }
     })
   }
@@ -69,8 +77,18 @@ export default function CommunityDetailActions({
     startTransition(async () => {
       try {
         await reportCommunityCard(cardId)
+        showFeedback({
+          tone: 'success',
+          title: 'Report sent',
+          message: 'Thanks for flagging this card.',
+        })
       } catch {
         setReported(false)
+        showFeedback({
+          tone: 'error',
+          title: 'Could not send report',
+          message: 'Try again in a moment.',
+        })
       }
     })
   }

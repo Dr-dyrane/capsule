@@ -6,6 +6,7 @@ import { useState, useTransition } from 'react'
 
 import { deleteCard } from '@/app/actions/card-actions'
 import { deleteSession } from '@/app/actions/process'
+import { useFeedback } from '@/components/providers/FeedbackProvider'
 
 import AdaptiveSheet from './AdaptiveSheet'
 import styles from './DeleteActionButton.module.css'
@@ -22,6 +23,7 @@ export default function DeleteActionButton({
   targetType,
   redirectTo,
   compactOnMobile = false,
+  iconOnly = false,
   className,
   onDeleted,
 }: {
@@ -29,10 +31,12 @@ export default function DeleteActionButton({
   targetType: DeleteTargetType
   redirectTo?: string
   compactOnMobile?: boolean
+  iconOnly?: boolean
   className?: string
   onDeleted?: () => void
 }) {
   const router = useRouter()
+  const { showFeedback } = useFeedback()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -53,6 +57,14 @@ export default function DeleteActionButton({
         await DELETE_ACTIONS[targetType](targetId)
         onDeleted?.()
         setIsDialogOpen(false)
+        showFeedback({
+          tone: 'success',
+          title: targetType === 'session' ? 'Capture removed' : 'Card removed',
+          message:
+            targetType === 'session'
+              ? 'The note and linked cards are gone.'
+              : 'The card was removed from your archive.',
+        })
 
         if (redirectTo) {
           router.replace(redirectTo)
@@ -63,6 +75,11 @@ export default function DeleteActionButton({
       } catch (error) {
         console.error(`Delete ${targetType} failed:`, error)
         setErrorMessage(`Could not delete this ${noun}. Try again.`)
+        showFeedback({
+          tone: 'error',
+          title: `Could not delete ${noun}`,
+          message: 'Try again in a moment.',
+        })
       }
     })
   }
@@ -71,7 +88,7 @@ export default function DeleteActionButton({
     <>
       <button
         type="button"
-        className={`${styles.button} ${compactOnMobile ? styles.compactOnMobile : ''} ${className ?? ''}`}
+        className={`${styles.button} ${compactOnMobile ? styles.compactOnMobile : ''} ${iconOnly ? styles.iconOnly : ''} ${className ?? ''}`.trim()}
         onClick={() => {
           setErrorMessage(null)
           setIsDialogOpen(true)

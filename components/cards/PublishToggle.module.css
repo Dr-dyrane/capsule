@@ -1,32 +1,46 @@
 .toggle {
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 0 12px;
   border-radius: var(--radius-full);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform var(--duration-micro) var(--ease-apple),
+    background-color var(--duration-micro) var(--ease-standard),
+    color var(--duration-micro) var(--ease-standard),
+    box-shadow var(--duration-micro) var(--ease-standard),
+    opacity var(--duration-micro) var(--ease-standard);
+  box-shadow: var(--shadow-sm);
 }
 
 .private {
   color: var(--text-secondary);
-  background: var(--surface-3);
-  border-color: var(--border-color, var(--surface-1));
+  background: var(--surface-2);
 }
 
 .published {
-  color: var(--accent-color, #0A84FF);
-  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
-  border-color: color-mix(in srgb, var(--accent-color) 20%, transparent);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.16);
 }
 
 .toggle:hover {
   transform: translateY(-1px);
-  filter: brightness(1.1);
+  color: var(--text-primary);
+  background: var(--surface-3);
+}
+
+.published:hover {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.22);
+}
+
+.toggle:disabled {
+  opacity: 0.72;
 }
 
 .spinner {

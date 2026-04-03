@@ -28,6 +28,7 @@ import type {
   CommunityViewerState,
 } from '@/lib/types'
 import CommunityCard from '@/components/cards/CommunityCard'
+import { useFeedback } from '@/components/providers/FeedbackProvider'
 import MobileBottomSheet from '@/components/ui/MobileBottomSheet'
 import PendingLink from '@/components/ui/PendingLink'
 import styles from './CommunityFeed.module.css'
@@ -65,6 +66,8 @@ export default function CommunityFeed({
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(initialCards.length === 20)
   const [isLoading, setIsLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [lastFailedRequest, setLastFailedRequest] = useState<{ page: number; mode: 'replace' | 'append' } | null>(null)
   const [searchQuery, setSearchQuery] = useState(initialFilters?.search ?? '')
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(initialFilters?.template ?? null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialFilters?.category ?? null)
@@ -76,6 +79,7 @@ export default function CommunityFeed({
   const observerRef = useRef<IntersectionObserver | null>(null)
   const hydratedRef = useRef(false)
   const deferredSearch = useDeferredValue(searchQuery)
+  const { showFeedback } = useFeedback()
 
   const mergeViewerState = useCallback(async (cardIds: string[]) => {
     const ids = [...new Set(cardIds.filter(Boolean))]
@@ -108,6 +112,7 @@ export default function CommunityFeed({
   const loadPage = useCallback(
     async (nextPage: number, mode: 'replace' | 'append') => {
       setIsLoading(true)
+      setLoadError(null)
 
       try {
         const normalizedSearch = deferredSearch.trim()
@@ -127,6 +132,7 @@ export default function CommunityFeed({
         setSignedUrls((current) => (mode === 'append' ? { ...current, ...nextUrls } : nextUrls))
         setHasMore(nextCards.length === 20)
         setPage(nextPage)
+        setLastFailedRequest(null)
 
         if (mode === 'append') {
           setCards((current) => {
@@ -138,6 +144,8 @@ export default function CommunityFeed({
         }
       } catch (error) {
         console.error('Failed to fetch community cards', error)
+        setLoadError(mode === 'append' ? 'More cards could not load.' : 'The feed could not refresh.')
+        setLastFailedRequest({ page: nextPage, mode })
       } finally {
         setIsLoading(false)
       }
@@ -226,6 +234,11 @@ export default function CommunityFeed({
             : card,
         ),
       )
+      showFeedback({
+        tone: 'error',
+        title: kind === 'like' ? 'Could not update like' : 'Could not update saved cards',
+        message: 'Try again in a moment.',
+      })
     }
   }
 
@@ -243,13 +256,31 @@ export default function CommunityFeed({
 
     try {
       await reportCommunityCard(cardId)
+      showFeedback({
+        tone: 'success',
+        title: 'Report sent',
+        message: 'Thanks for flagging this card.',
+      })
     } catch (error) {
       console.error('Failed to report card', error)
       setViewerReactions((current) => ({
         ...current,
         [cardId]: currentState,
       }))
+      showFeedback({
+        tone: 'error',
+        title: 'Could not send report',
+        message: 'Try again in a moment.',
+      })
     }
+  }
+
+  function retryLastLoad() {
+    if (!lastFailedRequest) {
+      return
+    }
+
+    void loadPage(lastFailedRequest.page, lastFailedRequest.mode)
   }
 
   function resetFilters() {
@@ -296,44 +327,56 @@ export default function CommunityFeed({
           </div>
         </div>
 
-        <div className={styles.empty}>
-          <Globe size={48} className={styles.emptyIcon} />
-          <h2>
-            {lockedAuthor
-              ? `${lockedAuthor.name} has no cards in this view`
-              : showingFilters
-                ? 'No cards match this view'
-                : 'Nothing published yet'}
-          </h2>
-          <p>
-            {lockedAuthor
-              ? 'Try a different search or return to the full community feed.'
-              : showingFilters
-                ? 'Clear the filters or try another search.'
-                : 'Be the first to share a clean learning card with the community.'}
-          </p>
-          <div className={styles.emptyActions}>
-            {showingFilters ? (
-              <button type="button" className={styles.resetButton} onClick={resetFilters}>
-                Reset filters
-              </button>
-            ) : null}
-            {lockedAuthor ? (
-              <PendingLink href="/community" className={styles.secondaryLink}>
-                Back to community
-              </PendingLink>
-            ) : (
-              <>
-                <PendingLink href="/scan" className={styles.primaryLink}>
-                  Scan note
-                </PendingLink>
-                <PendingLink href="/cards" className={styles.secondaryLink}>
-                  Open archive
-                </PendingLink>
-              </>
-            )}
+        {loadError ? (
+          <div className={styles.stateTray} role="alert">
+            <div className={styles.stateCopy}>
+              <p className={styles.stateTitle}>The community feed is not responding.</p>
+              <p className={styles.stateBody}>{loadError}</p>
+            </div>
+            <button type="button" className={styles.stateAction} onClick={retryLastLoad}>
+              Try again
+            </button>
           </div>
-        </div>
+        ) : (
+          <div className={styles.empty}>
+            <Globe size={48} className={styles.emptyIcon} />
+            <h2>
+              {lockedAuthor
+                ? `${lockedAuthor.name} has no cards in this view`
+                : showingFilters
+                  ? 'No cards match this view'
+                  : 'Nothing published yet'}
+            </h2>
+            <p>
+              {lockedAuthor
+                ? 'Try a different search or return to the full community feed.'
+                : showingFilters
+                  ? 'Clear the filters or try another search.'
+                  : 'Be the first to share a clean learning card with the community.'}
+            </p>
+            <div className={styles.emptyActions}>
+              {showingFilters ? (
+                <button type="button" className={styles.resetButton} onClick={resetFilters}>
+                  Reset filters
+                </button>
+              ) : null}
+              {lockedAuthor ? (
+                <PendingLink href="/community" className={styles.secondaryLink}>
+                  Back to community
+                </PendingLink>
+              ) : (
+                <>
+                  <PendingLink href="/scan" className={styles.primaryLink}>
+                    Scan note
+                  </PendingLink>
+                  <PendingLink href="/cards" className={styles.secondaryLink}>
+                    Open archive
+                  </PendingLink>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -375,6 +418,18 @@ export default function CommunityFeed({
             </button>
           </div>
         </div>
+
+        {loadError ? (
+          <div className={styles.stateTray} role="status">
+            <div className={styles.stateCopy}>
+              <p className={styles.stateTitle}>The feed paused.</p>
+              <p className={styles.stateBody}>{loadError}</p>
+            </div>
+            <button type="button" className={styles.stateAction} onClick={retryLastLoad}>
+              Try again
+            </button>
+          </div>
+        ) : null}
 
         <div className={styles.controls}>
           <div className={styles.filterStack}>
