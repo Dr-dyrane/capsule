@@ -27,7 +27,7 @@ export default function CommunityCard({
   onReport?: () => void
 }) {
   const authorName = card.author_name || 'Anonymous'
-  const cardHref = `/scan?remix=${card.card_id}`
+  const cardHref = `/community/${card.card_id}`
   const remixHref = `/scan?remix=${card.card_id}`
   const authorHref = card.published_by ? `/community/author/${card.published_by}` : null
   const topic = card.concept || card.category

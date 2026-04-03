@@ -1,0 +1,57 @@
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.actionChip,
+.remixChip {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    transform 180ms var(--ease-apple),
+    color 180ms var(--ease-apple),
+    background-color 180ms var(--ease-apple);
+}
+
+.actionChip:hover,
+.remixChip:hover,
+.actionChip:focus-visible,
+.remixChip:focus-visible {
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.activeChip {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+}
+
+.reportedChip {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 12%, var(--surface-2));
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

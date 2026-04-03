@@ -9,7 +9,8 @@ function isPublicPath(pathname: string) {
     pathname.startsWith('/auth') ||
     pathname.startsWith('/donate') ||
     pathname === '/community' ||
-    pathname.startsWith('/community/author/')
+    pathname.startsWith('/community/author/') ||
+    (pathname.startsWith('/community/') && !pathname.startsWith('/community/reports'))
   )
 }
 

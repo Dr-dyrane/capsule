@@ -69,6 +69,7 @@ function revalidateCommunityPaths(sessionId?: string | null, cardId?: string | n
 
   if (cardId) {
     revalidatePath(`/cards/${cardId}`)
+    revalidatePath(`/community/${cardId}`)
   }
 }
 

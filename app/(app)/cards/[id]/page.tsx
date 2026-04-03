@@ -104,8 +104,8 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
       </header>
 
       <div className={styles.layout}>
-        <section className={shellStyles.panel}>
-          <div className={`${shellStyles.panelInner} ${styles.imagePanel}`}>
+        <section className={`${shellStyles.panel} ${styles.imageShell}`}>
+          <div className={styles.imagePanel}>
             <div className={styles.imageWrap}>
               {signedUrl ? (
                 <ImagePreview

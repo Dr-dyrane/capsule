@@ -60,7 +60,7 @@ export default async function CommunityReportsPage() {
                 </div>
 
                 <div className={reportStyles.actions}>
-                  <Link href={`/cards/${card.card_id}`} className={reportStyles.primaryLink}>
+                  <Link href={`/community/${card.card_id}`} className={reportStyles.primaryLink}>
                     Review card
                   </Link>
                   <Link href="/community" className={reportStyles.secondaryLink}>

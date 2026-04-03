@@ -59,14 +59,15 @@ export default function ImagePreview({ src, alt, variant = 'card' }: ImagePrevie
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.16, ease: 'easeOut' }}
             className={styles.fullscreenOverlay}
             onClick={() => setIsFullscreen(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.985, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              exit={{ scale: 0.985, opacity: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
               className={styles.fullscreenContent}
               onClick={(e) => e.stopPropagation()}
             >
