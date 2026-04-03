@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { registerGenerationSession } from '@/lib/generation/run-manager'
 import { createClient } from '@/lib/supabase/server'
 import { extractPointsFromImage } from '@/lib/ai/ocr'
+import { toExternalAssetUrl } from '@/lib/storage/asset-paths'
 import { createSignedObjectUrl } from '@/lib/storage/signed-urls'
 
 function getCardTitle(text: string) {
@@ -27,7 +28,7 @@ export async function processNote(sessionId: string) {
   if (sessionError) throw sessionError
 
   // 2. Create a short-lived signed URL for OCR instead of exposing the note publicly.
-  const signedUrl = await createSignedObjectUrl('notes', session.source_url, 60 * 10)
+  const signedUrl = toExternalAssetUrl(await createSignedObjectUrl('notes', session.source_url, 60 * 10))
 
   // 3. Extract Points
   try {

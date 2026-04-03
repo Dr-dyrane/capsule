@@ -144,3 +144,32 @@ export interface RenderCacheRecord {
   created_at?: string
   updated_at?: string
 }
+
+export type GenerationCostStage = 'planner' | 'image' | 'cache_hit' | 'seed'
+
+export interface GenerationCostRecord {
+  id: string
+  user_id: string
+  session_id: string | null
+  card_id: string | null
+  point_id: string | null
+  stage: GenerationCostStage
+  model: string | null
+  quality: string | null
+  size: string | null
+  profile_id: string | null
+  template_id: string | null
+  route_level: string | null
+  prompt_version: string | null
+  pricing_version: string | null
+  estimated_cost_usd: number
+  input_tokens: number | null
+  output_tokens: number | null
+  total_tokens: number | null
+  input_text_tokens: number | null
+  input_image_tokens: number | null
+  output_text_tokens: number | null
+  output_image_tokens: number | null
+  metadata: Record<string, unknown> | null
+  created_at?: string
+}

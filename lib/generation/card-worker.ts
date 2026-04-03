@@ -3,6 +3,8 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { buildRenderCacheKey, buildPromptHash } from '@/lib/ai/cache-keys'
+import { recordGenerationCosts } from '@/lib/ai/cost-ledger'
+import { estimateImageCostUsd, estimatePlannerCostUsd, serializeImageUsage, serializePlannerUsage } from '@/lib/ai/costs'
 import { generateCardImage, resolveGenerationStrategy } from '@/lib/ai/generate'
 import { upsertRenderCache, findRenderCache } from '@/lib/ai/render-cache'
 import type { CardJobRecord, GenerationRunStatus } from '@/lib/types'
@@ -236,11 +238,45 @@ export async function processCardJob(
 
       if (jobCompleteError) throw jobCompleteError
 
+      await recordGenerationCosts(supabase, [
+        {
+          userId: session.user_id,
+          sessionId: typedJob.session_id,
+          cardId: typedJob.card_id,
+          pointId: typedJob.point_id,
+          stage: 'cache_hit',
+          model: cached.model,
+          promptVersion: cached.prompt_version,
+          profileId: strategy.profileId,
+          templateId: strategy.templateId,
+          routeLevel: strategy.routeLevel,
+          estimatedCostUsd: 0,
+          metadata: {
+            cache_key: cacheKey,
+            prompt_hash: cached.prompt_hash,
+          },
+        },
+      ])
+
       await syncGenerationRunState(supabase, typedJob.session_id)
       return { fromCache: true }
     }
 
-    const { imageBase64, prompt, plan, plannerMode, templateId, model, promptVersion } = await generateCardImage(
+    const {
+      imageBase64,
+      prompt,
+      plan,
+      plannerMode,
+      profileId,
+      templateId,
+      model,
+      plannerModel,
+      quality,
+      size,
+      promptVersion,
+      plannerUsage,
+      imageUsage,
+    } = await generateCardImage(
       point.text,
       point.concept || point.category || 'Learning card',
       session.session_context || '',
@@ -298,6 +334,57 @@ export async function processCardJob(
 
     if (cardCompleteError) throw cardCompleteError
     if (jobCompleteError) throw jobCompleteError
+
+    await recordGenerationCosts(supabase, [
+      {
+        userId: session.user_id,
+        sessionId: typedJob.session_id,
+        cardId: typedJob.card_id,
+        pointId: typedJob.point_id,
+        stage: 'planner',
+        model: plannerModel,
+        profileId: profileId,
+        templateId,
+        routeLevel: strategy.routeLevel,
+        promptVersion,
+        estimatedCostUsd: estimatePlannerCostUsd(plannerModel, plannerUsage),
+        inputTokens: plannerUsage?.prompt_tokens ?? null,
+        outputTokens: plannerUsage?.completion_tokens ?? null,
+        totalTokens: plannerUsage?.total_tokens ?? null,
+        metadata: {
+          usage: serializePlannerUsage(plannerUsage),
+          point_category: point.category,
+          point_concept: point.concept,
+        },
+      },
+      {
+        userId: session.user_id,
+        sessionId: typedJob.session_id,
+        cardId: typedJob.card_id,
+        pointId: typedJob.point_id,
+        stage: 'image',
+        model,
+        quality,
+        size,
+        profileId,
+        templateId,
+        routeLevel: strategy.routeLevel,
+        promptVersion,
+        estimatedCostUsd: estimateImageCostUsd(model, size, quality),
+        inputTokens: imageUsage?.input_tokens ?? null,
+        outputTokens: imageUsage?.output_tokens ?? null,
+        totalTokens: imageUsage?.total_tokens ?? null,
+        inputTextTokens: imageUsage?.input_tokens_details?.text_tokens ?? null,
+        inputImageTokens: imageUsage?.input_tokens_details?.image_tokens ?? null,
+        outputTextTokens: imageUsage?.output_tokens_details?.text_tokens ?? null,
+        outputImageTokens: imageUsage?.output_tokens_details?.image_tokens ?? null,
+        metadata: {
+          usage: serializeImageUsage(imageUsage),
+          point_category: point.category,
+          point_concept: point.concept,
+        },
+      },
+    ])
 
     await syncGenerationRunState(supabase, typedJob.session_id)
     return { fromCache: false }

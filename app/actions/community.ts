@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { isCommunitySchemaError } from '@/lib/community/schema'
+import { createDirectAssetUrlMap, isDirectAssetUrl } from '@/lib/storage/asset-paths'
 import { createPublicClient } from '@/lib/supabase/public'
 import { createClient } from '@/lib/supabase/server'
 import type {
@@ -601,21 +602,22 @@ export async function getCreatorModerationCardsWithUrls(limit: number = 20) {
 
   const cards = (data ?? []) as CommunityCardRecord[]
   const uniquePaths = [...new Set(cards.map((card) => card.image_url).filter(Boolean))]
-  let signedUrls: Record<string, string> = {}
+  let signedUrls: Record<string, string> = createDirectAssetUrlMap(uniquePaths)
+  const storagePaths = uniquePaths.filter((path) => !isDirectAssetUrl(path))
 
-  if (uniquePaths.length > 0) {
+  if (storagePaths.length > 0) {
     const { data: signed, error: signedError } = await publicClient.storage
       .from('cards')
-      .createSignedUrls(uniquePaths, 60 * 60)
+      .createSignedUrls(storagePaths, 60 * 60)
 
     if (!signedError) {
-      signedUrls = uniquePaths.reduce<Record<string, string>>((acc, path, index) => {
+      signedUrls = storagePaths.reduce<Record<string, string>>((acc, path, index) => {
         const signedUrl = signed?.[index]?.signedUrl
         if (signedUrl) {
           acc[path] = signedUrl
         }
         return acc
-      }, {})
+      }, signedUrls)
     }
   }
 
@@ -721,6 +723,13 @@ export async function getCommunityCardByIdWithUrl(cardId: string) {
 
   if (!card?.image_url) {
     return null
+  }
+
+  if (isDirectAssetUrl(card.image_url)) {
+    return {
+      ...card,
+      signedUrl: card.image_url,
+    }
   }
 
   const { data: signed, error: signedError } = await supabase.storage
@@ -837,24 +846,25 @@ export async function fetchCommunityCardsWithUrls(
   const safeCards = cards ?? []
 
   const uniquePaths = [...new Set(safeCards.map((card) => card.image_url).filter(Boolean))]
-  let signedUrls: Record<string, string> = {}
+  let signedUrls: Record<string, string> = createDirectAssetUrlMap(uniquePaths)
+  const storagePaths = uniquePaths.filter((path) => !isDirectAssetUrl(path))
 
-  if (uniquePaths.length > 0) {
+  if (storagePaths.length > 0) {
     const supabase = createPublicClient()
-    const { data, error } = await supabase.storage.from('cards').createSignedUrls(uniquePaths, 60 * 60)
+    const { data, error } = await supabase.storage.from('cards').createSignedUrls(storagePaths, 60 * 60)
 
     if (error) {
       if (!isCommunitySchemaError(error)) {
         throw error
       }
     } else {
-      signedUrls = uniquePaths.reduce<Record<string, string>>((acc, path, index) => {
+      signedUrls = storagePaths.reduce<Record<string, string>>((acc, path, index) => {
         const signedUrl = data?.[index]?.signedUrl
         if (signedUrl) {
           acc[path] = signedUrl
         }
         return acc
-      }, {})
+      }, signedUrls)
     }
   }
 

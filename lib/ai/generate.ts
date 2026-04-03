@@ -188,6 +188,11 @@ export async function generateVisualPlan(
   profileId: string
   templateId: ToonTemplateId
   routeLevel: ToonRouteLevel
+  plannerUsage: {
+    prompt_tokens?: number | null
+    completion_tokens?: number | null
+    total_tokens?: number | null
+  } | null
 }> {
   const resolvedStrategy = strategy ?? resolveGenerationStrategy(pointText, category, category)
   const deterministicPlan = buildDeterministicPlan(resolvedStrategy.profileId, pointText, category)
@@ -199,6 +204,7 @@ export async function generateVisualPlan(
       profileId: resolvedStrategy.profileId,
       templateId: resolvedStrategy.templateId,
       routeLevel: resolvedStrategy.routeLevel,
+      plannerUsage: null,
     }
   }
 
@@ -241,6 +247,13 @@ export async function generateVisualPlan(
       templateId: plan.recommendedTemplateId || resolvedStrategy.templateId,
       routeLevel: resolvedStrategy.routeLevel,
       plan,
+      plannerUsage: response.usage
+        ? {
+            prompt_tokens: response.usage.prompt_tokens ?? null,
+            completion_tokens: response.usage.completion_tokens ?? null,
+            total_tokens: response.usage.total_tokens ?? null,
+          }
+        : null,
     }
   } catch (error) {
     console.error('Visual planning failed:', error)
@@ -250,6 +263,7 @@ export async function generateVisualPlan(
       profileId: resolvedStrategy.profileId,
       templateId: resolvedStrategy.templateId,
       routeLevel: resolvedStrategy.routeLevel,
+      plannerUsage: null,
     }
   }
 }
@@ -271,9 +285,30 @@ export async function generateCardImage(
   templateId: ToonTemplateId
   routeLevel: ToonRouteLevel
   model: string
+  plannerModel: typeof PLANNER_MODEL
+  quality: 'high'
+  size: typeof IMAGE_SIZE
   promptVersion: string
+  plannerUsage: {
+    prompt_tokens?: number | null
+    completion_tokens?: number | null
+    total_tokens?: number | null
+  } | null
+  imageUsage: {
+    input_tokens?: number | null
+    output_tokens?: number | null
+    total_tokens?: number | null
+    input_tokens_details?: {
+      image_tokens?: number | null
+      text_tokens?: number | null
+    } | null
+    output_tokens_details?: {
+      image_tokens?: number | null
+      text_tokens?: number | null
+    } | null
+  } | null
 }> {
-  const { plan, plannerMode, profileId, templateId, routeLevel } = await generateVisualPlan(
+  const { plan, plannerMode, profileId, templateId, routeLevel, plannerUsage } = await generateVisualPlan(
     text,
     category,
     sessionContext,
@@ -305,6 +340,29 @@ export async function generateCardImage(
     templateId,
     routeLevel,
     model: IMAGE_MODEL,
+    plannerModel: PLANNER_MODEL,
+    quality: 'high',
+    size: IMAGE_SIZE,
     promptVersion: PROMPT_VERSION,
+    plannerUsage,
+    imageUsage: response.usage
+      ? {
+          input_tokens: response.usage.input_tokens ?? null,
+          output_tokens: response.usage.output_tokens ?? null,
+          total_tokens: response.usage.total_tokens ?? null,
+          input_tokens_details: response.usage.input_tokens_details
+            ? {
+                image_tokens: response.usage.input_tokens_details.image_tokens ?? null,
+                text_tokens: response.usage.input_tokens_details.text_tokens ?? null,
+              }
+            : null,
+          output_tokens_details: response.usage.output_tokens_details
+            ? {
+                image_tokens: response.usage.output_tokens_details.image_tokens ?? null,
+                text_tokens: response.usage.output_tokens_details.text_tokens ?? null,
+              }
+            : null,
+        }
+      : null,
   }
 }

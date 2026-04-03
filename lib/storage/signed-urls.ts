@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { createClient } from '@/lib/supabase/server'
+import { createDirectAssetUrlMap, isDirectAssetUrl } from './asset-paths'
 
 function isMissingStorageError(error: unknown) {
   if (!error || typeof error !== 'object') {
@@ -17,6 +18,10 @@ export async function createSignedObjectUrl(
   path: string,
   expiresIn = 60 * 60,
 ) {
+  if (isDirectAssetUrl(path)) {
+    return path
+  }
+
   const supabase = await createClient()
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, expiresIn)
 
@@ -54,20 +59,27 @@ export async function createSignedObjectUrls(
     return {} as Record<string, string>
   }
 
+  const directUrls = createDirectAssetUrlMap(uniquePaths)
+  const storagePaths = uniquePaths.filter((path) => !isDirectAssetUrl(path))
+
+  if (storagePaths.length === 0) {
+    return directUrls
+  }
+
   const supabase = await createClient()
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrls(uniquePaths, expiresIn)
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrls(storagePaths, expiresIn)
 
   if (error) {
     throw error
   }
 
-  return uniquePaths.reduce<Record<string, string>>((acc, path, index) => {
+  return storagePaths.reduce<Record<string, string>>((acc, path, index) => {
     const signedUrl = data?.[index]?.signedUrl
     if (signedUrl) {
       acc[path] = signedUrl
     }
     return acc
-  }, {})
+  }, directUrls)
 }
 
 export async function createSignedObjectUrlsSafe(
