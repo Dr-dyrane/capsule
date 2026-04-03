@@ -60,6 +60,10 @@
   --scrollbar-thumb: rgba(255, 255, 255, 0.16);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.26);
   --scrollbar-track: transparent;
+  --image-stage-bg: linear-gradient(180deg, #efe7d8 0%, #e6dccb 100%);
+  --image-stage-border: rgba(255, 248, 236, 0.26);
+  --image-stage-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+  --image-stage-surface: rgba(255, 252, 246, 0.82);
 }
 
 [data-theme='light'] {
@@ -92,4 +96,8 @@
   --scrollbar-thumb: rgba(21, 21, 24, 0.16);
   --scrollbar-thumb-hover: rgba(21, 21, 24, 0.26);
   --scrollbar-track: transparent;
+  --image-stage-bg: linear-gradient(180deg, #f8f2e7 0%, #f0e7d8 100%);
+  --image-stage-border: rgba(137, 109, 61, 0.12);
+  --image-stage-shadow: 0 16px 36px rgba(129, 101, 56, 0.12);
+  --image-stage-surface: rgba(255, 253, 248, 0.94);
 }

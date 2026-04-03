@@ -36,14 +36,16 @@ export default function ImagePreview({ src, alt }: ImagePreviewProps) {
         aria-label="View full screen"
         onKeyDown={(e) => e.key === 'Enter' && setIsFullscreen(true)}
       >
-        <Image
-          src={src}
-          alt={alt}
-          fill
-          unoptimized
-          sizes="(max-width: 1023px) 100vw, 60vw"
-          className={styles.image}
-        />
+        <div className={styles.frame}>
+          <Image
+            src={src}
+            alt={alt}
+            fill
+            unoptimized
+            sizes="(max-width: 1023px) 100vw, 60vw"
+            className={styles.image}
+          />
+        </div>
         <div className={styles.overlay}>
           <ZoomIn size={24} />
         </div>

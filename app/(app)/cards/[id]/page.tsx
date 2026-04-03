@@ -1,7 +1,7 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ChevronLeft, Images, Sparkles } from 'lucide-react'
+import Image from 'next/image'
+import { ChevronLeft, Images, ScanText, Sparkles } from 'lucide-react'
 
 import { createSignedObjectUrlSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
@@ -21,7 +21,7 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
 
   const { data: card, error } = await supabase
     .from('cards')
-    .select('id, title, image_url, created_at, status, points(text, category)')
+    .select('id, title, image_url, created_at, status, session_id, points(text, category)')
     .eq('id', id)
     .single()
 
@@ -30,6 +30,13 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
   }
 
   const signedUrl = card.status === 'complete' ? await createSignedObjectUrlSafe('cards', card.image_url) : null
+  const { data: session } = await supabase
+    .from('sessions')
+    .select('id, source_url')
+    .eq('id', card.session_id)
+    .single()
+
+  const sourceNoteUrl = session?.source_url ? await createSignedObjectUrlSafe('notes', session.source_url) : null
   const point = Array.isArray(card.points) ? card.points[0] : card.points
   const category = point?.category ?? 'Learning card'
   const statusLabel =
@@ -105,6 +112,33 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
               <p className={styles.label}>Source point</p>
               <p className={styles.pointText}>{point?.text ?? 'Original point unavailable.'}</p>
             </div>
+
+            {card.session_id ? (
+              <div className={styles.section}>
+                <p className={styles.label}>Original note</p>
+                <Link href={`/scan/${card.session_id}`} className={styles.sourceLink}>
+                  <div className={styles.sourceLinkCopy}>
+                    <div className={styles.sourceLinkTitle}>
+                      <ScanText size={14} aria-hidden="true" />
+                      <span>Open source scan</span>
+                    </div>
+                    <p className={styles.sourceLinkHint}>Trace this card back to the uploaded note.</p>
+                  </div>
+                  {sourceNoteUrl ? (
+                    <div className={styles.sourceThumb}>
+                      <Image
+                        src={sourceNoteUrl}
+                        alt="Original note"
+                        fill
+                        unoptimized
+                        sizes="72px"
+                        className={styles.sourceThumbImage}
+                      />
+                    </div>
+                  ) : null}
+                </Link>
+              </div>
+            ) : null}
 
             <div className={styles.note}>
               {card.status === 'complete'

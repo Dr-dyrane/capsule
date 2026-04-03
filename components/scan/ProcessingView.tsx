@@ -1,14 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { ArrowUp, CheckCircle2, Sparkles } from 'lucide-react'
+import { CheckCircle2, ScanText, Sparkles } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 import { getSignedCardUrls } from '@/app/actions/assets'
 import { ensureCardPlaceholders, generateCard } from '@/app/actions/generate'
 import { processNote, restartSession } from '@/app/actions/process'
+import ImagePreview from '@/components/cards/ImagePreview'
 import { createClient } from '@/lib/supabase/client'
 import type { CardRecord, PointRecord, SessionRecord, SessionStatus } from '@/lib/types'
 
@@ -38,17 +40,20 @@ function getPointPreview(text: string) {
   return `${compact.slice(0, 117).trimEnd()}...`
 }
 
-export default function ProcessingView({ sessionId }: { sessionId: string }) {
+export default function ProcessingView({
+  sessionId,
+  sourceImageUrl,
+}: {
+  sessionId: string
+  sourceImageUrl?: string | null
+}) {
   const [session, setSession] = useState<SessionRecord | null>(null)
   const [points, setPoints] = useState<PointRecord[]>(EMPTY_POINTS)
   const [cards, setCards] = useState<CardRecord[]>(EMPTY_CARDS)
   const [cardUrls, setCardUrls] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<SessionStatus | 'loading'>('loading')
   const [isRetrying, startRetryTransition] = useTransition()
-  const [queuedPointIds, setQueuedPointIds] = useState<string[]>([])
-  const [activePointId, setActivePointId] = useState<string | null>(null)
 
-  const activePointIdRef = useRef<string | null>(null)
   const placeholderSyncRef = useRef(false)
   const processingStartedRef = useRef(false)
 
@@ -169,47 +174,6 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
   }, [cards, points, sessionId, status])
 
   useEffect(() => {
-    if (status !== 'generating') {
-      return
-    }
-
-    setQueuedPointIds((current) => {
-      const missingPointIds = points
-        .filter((point) => {
-          const card = cards.find((candidate) => candidate.point_id === point.id)
-          return !card || card.status === 'queued'
-        })
-        .map((point) => point.id)
-
-      const next = missingPointIds.filter((id) => !current.includes(id) && activePointIdRef.current !== id)
-      return next.length > 0 ? [...current, ...next] : current
-    })
-  }, [cards, points, status])
-
-  useEffect(() => {
-    if (status !== 'generating' || activePointId || queuedPointIds.length === 0) {
-      return
-    }
-
-    const [nextId, ...rest] = queuedPointIds
-
-    queueMicrotask(() => {
-      setActivePointId(nextId)
-      activePointIdRef.current = nextId
-      setQueuedPointIds(rest)
-
-      void generateCard(nextId)
-        .catch((error) => {
-          console.error('Generation failure:', error)
-        })
-        .finally(() => {
-          setActivePointId(null)
-          activePointIdRef.current = null
-        })
-    })
-  }, [activePointId, queuedPointIds, status])
-
-  useEffect(() => {
     const freshPaths = cards
       .filter((card) => card.status === 'complete' && !cardUrls[card.image_url])
       .map((card) => card.image_url)
@@ -225,34 +189,12 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
       .catch(console.error)
   }, [cardUrls, cards])
 
-  const handlePromote = useCallback(
-    (id: string) => {
-      if (activePointId === id) {
-        return
-      }
-
-      setQueuedPointIds((current) => [id, ...current.filter((entry) => entry !== id)])
-    },
-    [activePointId],
-  )
-
-  const handleRefine = useCallback(async (pointId: string, cardId: string) => {
-    try {
-      await generateCard(pointId, cardId)
-    } catch (error) {
-      console.error('Refinement failed:', error)
-    }
-  }, [])
-
   function handleRetry() {
     startRetryTransition(() => {
       void restartSession(sessionId).then(() => {
         setPoints(EMPTY_POINTS)
         setCards(EMPTY_CARDS)
         setCardUrls({})
-        setQueuedPointIds([])
-        setActivePointId(null)
-        activePointIdRef.current = null
         setStatus('processing')
         processingStartedRef.current = false
       })
@@ -265,6 +207,7 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
   const erroredCards = cards.filter((card) => card.status === 'error')
   const totalPoints = points.length || session?.point_count || 0
   const progressWidth = totalPoints > 0 ? (completeCards.length / totalPoints) * 100 : 0
+  const pointsById = useMemo(() => new Map(points.map((point) => [point.id, point])), [points])
 
   const statusTitle =
     status === 'complete'
@@ -279,12 +222,12 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
 
   const statusCopy =
     status === 'complete'
-      ? 'Open any card below.'
+      ? 'Open any card.'
       : status === 'processing'
-        ? 'The point list comes first, then the card queue fills in.'
+        ? 'Extracting points first.'
         : status === 'error'
-          ? 'Some cards can still be reviewed. Retry the session or restart individual cards below.'
-          : 'Cards appear as soon as they enter the queue. You do not need to wait for the whole batch.'
+          ? 'Retry the session or a single card.'
+          : 'Open cards as they appear.'
 
   const displayCards =
     cards.length > 0
@@ -342,13 +285,35 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
         </div>
       </section>
 
+      {sourceImageUrl ? (
+        <section className={`${styles.panel} ${styles.sourcePanel}`}>
+          <div className={`${styles.panelInner} ${styles.sourceInner}`}>
+            <div className={styles.sourceCopy}>
+              <div className={styles.panelEyebrow}>
+                <ScanText size={14} aria-hidden="true" />
+                <span>Original note</span>
+              </div>
+              <h3 className={styles.panelTitle}>Source scan</h3>
+              <p className={styles.panelCopy}>The note image that started this session.</p>
+              <Link href="/library" className={styles.inlineAction}>
+                Back to sessions
+              </Link>
+            </div>
+
+            <div className={styles.sourcePreview}>
+              <ImagePreview src={sourceImageUrl} alt="Original note scan" />
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <div className={styles.content}>
         <section className={`${styles.panel} ${styles.cardsPanel}`}>
           <div className={styles.panelInner}>
             <div className={styles.panelHeader}>
               <div>
                 <h3 className={styles.panelTitle}>Cards</h3>
-                <p className={styles.panelCopy}>Each card advances on its own. Open it the moment it appears.</p>
+                <p className={styles.panelCopy}>Live build state.</p>
               </div>
               <div className={styles.panelCount}>{displayCards.length}</div>
             </div>
@@ -366,6 +331,8 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
                     const statusLabel = getCardStatusLabel(card.status)
                     const isPersisted = !card.id.startsWith('shadow-')
                     const showRetry = card.status === 'error' && isPersisted
+                    const linkedPoint = pointsById.get(card.point_id)
+                    const pointPreview = linkedPoint ? getPointPreview(linkedPoint.text) : ''
 
                     return (
                       <motion.article
@@ -392,25 +359,30 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
                           <div className={styles.cardStatus}>{statusLabel}</div>
 
                           {card.status === 'complete' && signedUrl ? (
-                            <Image
-                              src={signedUrl}
-                              alt={card.title || 'Generated card'}
-                              fill
-                              unoptimized
-                              sizes="(max-width: 767px) 100vw, (max-width: 1439px) 50vw, 33vw"
-                              className={styles.cardImage}
-                            />
+                            <div className={styles.cardFrame}>
+                              <Image
+                                src={signedUrl}
+                                alt={card.title || 'Generated card'}
+                                fill
+                                unoptimized
+                                sizes="(max-width: 767px) 100vw, (max-width: 1439px) 50vw, 33vw"
+                                className={styles.cardImage}
+                              />
+                            </div>
                           ) : (
                             <div className={`${styles.cardPlaceholder} ${card.status === 'generating' ? styles.shimmering : ''}`}>
-                              <span className={styles.cardPlaceholderText}>
-                                {card.status === 'queued'
-                                  ? 'Waiting in queue'
-                                  : card.status === 'generating'
-                                    ? 'Rendering image'
-                                    : card.status === 'error'
-                                      ? 'Stopped before finish'
-                                      : 'Preparing card'}
-                              </span>
+                              <div className={styles.cardPlaceholderBody}>
+                                <span className={styles.cardPlaceholderText}>
+                                  {card.status === 'queued'
+                                    ? 'Waiting in queue'
+                                    : card.status === 'generating'
+                                      ? 'Rendering image'
+                                      : card.status === 'error'
+                                        ? 'Stopped before finish'
+                                        : 'Preparing card'}
+                                </span>
+                                {pointPreview ? <p className={styles.cardPreview}>{pointPreview}</p> : null}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -434,7 +406,9 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
                               onClick={(event) => {
                                 event.preventDefault()
                                 event.stopPropagation()
-                                void handleRefine(card.point_id, card.id)
+                                void generateCard(card.point_id, card.id).catch((error) => {
+                                  console.error('Refinement failed:', error)
+                                })
                               }}
                             >
                               Retry
@@ -455,7 +429,7 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
             <div className={styles.panelHeader}>
               <div>
                 <h3 className={styles.panelTitle}>Queue</h3>
-                <p className={styles.panelCopy}>Compact point summaries with live status.</p>
+                <p className={styles.panelCopy}>Point order.</p>
               </div>
               <div className={styles.panelCount}>{points.length}</div>
             </div>
@@ -464,9 +438,8 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
               <AnimatePresence mode="popLayout">
                 {points.map((point, index) => {
                   const card = cards.find((candidate) => candidate.point_id === point.id)
-                  const pointState = activePointId === point.id ? 'Generating' : getCardStatusLabel(card?.status ?? 'queued')
+                  const pointState = getCardStatusLabel(card?.status ?? 'queued')
                   const isDone = pointState === 'Ready'
-                  const canPromote = pointState === 'Queued' && status === 'generating'
 
                   return (
                     <motion.div
@@ -486,19 +459,6 @@ export default function ProcessingView({ sessionId }: { sessionId: string }) {
                           <p className={styles.pointText}>{getPointPreview(point.text)}</p>
                         </div>
                       </div>
-
-                      {canPromote ? (
-                        <div className={styles.pointFooter}>
-                          <button
-                            type="button"
-                            className={styles.promoteButton}
-                            onClick={() => handlePromote(point.id)}
-                          >
-                            <ArrowUp size={14} aria-hidden="true" />
-                            <span>Move next</span>
-                          </button>
-                        </div>
-                      ) : null}
                     </motion.div>
                   )
                 })}

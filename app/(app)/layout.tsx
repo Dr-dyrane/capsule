@@ -1,16 +1,19 @@
 import Link from 'next/link'
 
+import { registerGeneratingSessionsForCurrentUser } from '@/lib/generation/run-manager'
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import TabBar from '@/components/navigation/TabBar'
 import Sidebar from '@/components/navigation/Sidebar'
 import Logo from '@/components/ui/Logo'
 import styles from './AppShell.module.css'
 
-export default function AppLayout({
+export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  await registerGeneratingSessionsForCurrentUser()
+
   return (
     <div className={styles.shell}>
       <div className={styles.frame}>

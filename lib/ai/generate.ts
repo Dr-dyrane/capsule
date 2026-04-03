@@ -1,37 +1,22 @@
 import 'server-only'
 import OpenAI from 'openai'
-import { readFile } from 'node:fs/promises'
+
+import type { PlannerMode } from '@/lib/types'
+import { routePromptProfile } from './prompt-router'
+import {
+  buildCompactPlannerGuidance,
+  buildDeterministicPlan,
+  IMAGE_MODEL,
+  IMAGE_SIZE,
+  PLANNER_MODEL,
+  PROMPT_VERSION,
+  trimText,
+  type VisualPlan,
+} from './prompt-profiles'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
-
-const IMAGE_MODEL = 'gpt-image-1.5'
-const PLANNER_MODEL = 'gpt-4.1'
-const IMAGE_SIZE = '1536x1024'
-
-type VisualPlan = {
-  conceptType: string
-  learningObjective: string
-  densityMode: string
-  visualStory: string
-  visualStructure: string
-  dominantScanPath: string
-  titleText: string
-  microLabels: string[]
-  supportingCues: string[]
-  avoid: string[]
-  sceneDescription: string
-}
-
-function trimText(value: string | null | undefined, limit: number) {
-  const compact = (value ?? '').replace(/\s+/g, ' ').trim()
-  if (compact.length <= limit) {
-    return compact
-  }
-
-  return `${compact.slice(0, Math.max(0, limit - 3)).trimEnd()}...`
-}
 
 function uniqueShortList(values: unknown, maxItems: number, maxLength: number) {
   if (!Array.isArray(values)) {
@@ -85,72 +70,25 @@ function buildFallbackPlan(pointText: string, concept: string, sessionContext: s
   }
 }
 
-/**
- * Loads the root Agent.md so the prompt planner follows the real project rules,
- * not a hard-coded approximation inside the generator.
- */
-async function loadAgentGuidance() {
-  const guidancePath = new URL('../../agent.md', import.meta.url)
-
-  try {
-    return await readFile(guidancePath, 'utf8')
-  } catch (error) {
-    console.error('Failed to load capsule/agent.md:', error)
-    return ''
-  }
-}
-
-function buildPlannerSystemPrompt(agentGuidance: string) {
-  return `You are Capsule's visual teaching planner.
-
-Your job is to turn one medical teaching point into a single excellent visual plan for a 16:9 illustrative learning card.
-
-Priorities:
-- understanding first, memorization second
-- choose structure dynamically instead of forcing templates
-- keep the visual concept-pure and medically accurate
-- reduce visual clutter aggressively
-- prefer pale editorial medical boards over dark cinematic posters
-- allow text only when it truly improves comprehension
-- prefer iconography, arrows, anatomy, and chips over long rendered text
-- keep the result in the visual family described by the project rules
-
-Return JSON only.
-
-Required JSON keys:
-- conceptType
-- learningObjective
-- densityMode
-- visualStory
-- visualStructure
-- dominantScanPath
-- titleText
-- microLabels
-- supportingCues
-- avoid
-- sceneDescription
-
-JSON rules:
-- titleText: short, 2-5 words when possible
-- microLabels: array of 0-4 very short labels only, ideally 1-2 words each
-- supportingCues: array of 0-4 compact icon-friendly cues
-- avoid: array of 4-8 concrete things to avoid
-- sceneDescription: one concise paragraph describing the actual scene
-
-Project guidance:
-${agentGuidance}`
-}
-
 export async function generateVisualPlan(
   pointText: string,
-  concept: string,
+  category: string,
   sessionContext: string,
-  preferences?: { density?: string; specialty?: string }
-): Promise<VisualPlan> {
-  const agentGuidance = await loadAgentGuidance()
+  preferences?: { density?: string; specialty?: string },
+): Promise<{
+  plan: VisualPlan
+  plannerMode: PlannerMode
+  profileId: string
+}> {
+  const route = routePromptProfile(pointText, category, category)
+  const deterministicPlan = buildDeterministicPlan(route.profileId, pointText, category)
 
-  if (!agentGuidance) {
-    return buildFallbackPlan(pointText, concept, sessionContext)
+  if (route.plannerMode === 'deterministic' && deterministicPlan) {
+    return {
+      plan: deterministicPlan,
+      plannerMode: route.plannerMode,
+      profileId: route.profileId,
+    }
   }
 
   try {
@@ -161,12 +99,12 @@ export async function generateVisualPlan(
       messages: [
         {
           role: 'system',
-          content: buildPlannerSystemPrompt(agentGuidance),
+          content: buildCompactPlannerGuidance(),
         },
         {
           role: 'user',
           content: `Teaching point: ${pointText}
-Category: ${concept || 'Not specified'}
+Category: ${category || 'Not specified'}
 Session context: ${trimText(sessionContext, 1400) || 'None'}
 User Preference - Density: ${preferences?.density || 'balanced'}
 User Preference - Specialty: ${preferences?.specialty || 'General Medicine'}
@@ -180,23 +118,31 @@ Choose the best single-image teaching approach for this one point. Keep the plan
     const parsed = JSON.parse(raw) as Partial<VisualPlan>
 
     return {
-      conceptType: trimText(parsed.conceptType, 64) || concept || 'medical concept',
-      learningObjective:
-        trimText(parsed.learningObjective, 220) ||
-        'Show what is happening, where the intervention acts, and what follows.',
-      densityMode: trimText(parsed.densityMode, 64) || 'quick-scan card',
-      visualStory: trimText(parsed.visualStory, 220) || 'One clear medical teaching story.',
-      visualStructure: trimText(parsed.visualStructure, 64) || 'mechanism strip',
-      dominantScanPath: trimText(parsed.dominantScanPath, 64) || 'left to right',
-      titleText: trimText(parsed.titleText, 48) || trimText(concept || 'Learning card', 48),
-      microLabels: uniqueShortList(parsed.microLabels, 5, 28),
-      supportingCues: uniqueShortList(parsed.supportingCues, 4, 80),
-      avoid: uniqueShortList(parsed.avoid, 8, 80),
-      sceneDescription: trimText(parsed.sceneDescription, 420) || trimText(pointText, 280),
+      plannerMode: 'planner',
+      profileId: route.profileId,
+      plan: {
+        conceptType: trimText(parsed.conceptType, 64) || category || 'medical concept',
+        learningObjective:
+          trimText(parsed.learningObjective, 220) ||
+          'Show what is happening, where the intervention acts, and what follows.',
+        densityMode: trimText(parsed.densityMode, 64) || 'quick-scan card',
+        visualStory: trimText(parsed.visualStory, 220) || 'One clear medical teaching story.',
+        visualStructure: trimText(parsed.visualStructure, 64) || 'mechanism strip',
+        dominantScanPath: trimText(parsed.dominantScanPath, 64) || 'left to right',
+        titleText: trimText(parsed.titleText, 48) || trimText(category || 'Learning card', 48),
+        microLabels: uniqueShortList(parsed.microLabels, 5, 28),
+        supportingCues: uniqueShortList(parsed.supportingCues, 4, 80),
+        avoid: uniqueShortList(parsed.avoid, 8, 80),
+        sceneDescription: trimText(parsed.sceneDescription, 420) || trimText(pointText, 280),
+      },
     }
   } catch (error) {
     console.error('Visual planning failed:', error)
-    return buildFallbackPlan(pointText, concept, sessionContext)
+    return {
+      plan: buildFallbackPlan(pointText, category, sessionContext),
+      plannerMode: 'planner',
+      profileId: route.profileId,
+    }
   }
 }
 
@@ -243,7 +189,7 @@ export function buildCardImagePrompt(
     `Title text if needed: "${plan.titleText || trimText(concept || 'Learning card', 40)}"`,
     `Allowed micro-labels only if essential: ${labelLine}`,
     `Supporting cues: ${cueLine}`,
-    'Style/medium: premium editorial medical infographic, soft anatomy and cellular illustration, clear academic hierarchy, clean white or pale warm background, subtle gradient or paper-like texture, crisp boxed modules or flow rails only when they improve comprehension.',
+    'Style/medium: premium editorial medical infographic, soft anatomy and cellular illustration, clear academic hierarchy, clean clinical composition, crisp boxed modules or flow rails only when they improve comprehension.',
     'Composition/framing: one dominant scene or one tightly controlled modular board, visually understandable in a few seconds, strong foreground subject, generous spacing, calm negative space, no decorative clutter.',
     'Text rules: keep text sparse, short, and purposeful. Use at most one short title and a few tiny labels. Prefer icons, arrows, and symbol chips over extra words. If a label would be longer than two words, convert it into iconography instead. No paragraphs. No provenance text. No prompt notes. No page numbers. No repeated labels.',
     'Medical rules: concept-pure, mechanism-accurate, no imported logic from unrelated diseases or drug classes.',
@@ -258,13 +204,17 @@ export async function generateCardImage(
   text: string,
   category: string,
   sessionContext: string,
-  preferences?: { density?: string; specialty?: string }
+  preferences?: { density?: string; specialty?: string },
 ): Promise<{
   imageBase64: string
   prompt: string
   plan: VisualPlan
+  plannerMode: PlannerMode
+  profileId: string
+  model: string
+  promptVersion: string
 }> {
-  const plan = await generateVisualPlan(text, category, sessionContext, preferences)
+  const { plan, plannerMode, profileId } = await generateVisualPlan(text, category, sessionContext, preferences)
   const prompt = buildCardImagePrompt(text, category, sessionContext, plan)
 
   const response = await openai.images.generate({
@@ -285,5 +235,9 @@ export async function generateCardImage(
     imageBase64,
     prompt,
     plan,
+    plannerMode,
+    profileId,
+    model: IMAGE_MODEL,
+    promptVersion: PROMPT_VERSION,
   }
 }

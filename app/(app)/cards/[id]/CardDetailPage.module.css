@@ -44,7 +44,7 @@
   min-height: 280px; /* Base height for immersion */
   overflow: hidden;
   border-radius: 0; /* Flush for edge-to-edge mobile */
-  background: rgba(255, 255, 255, 0.02);
+  background: transparent;
   box-shadow: none;
 }
 
@@ -54,10 +54,14 @@
 
 .placeholder {
   position: absolute;
-  inset: 0;
+  inset: 12px;
   display: grid;
   place-items: center;
   padding: 32px;
+  border-radius: 24px;
+  background: var(--image-stage-bg);
+  border: 1px solid var(--image-stage-border);
+  box-shadow: var(--image-stage-shadow);
   color: var(--text-tertiary);
   font-size: 17px;
   text-align: center;
@@ -122,6 +126,66 @@
   line-height: 1.5;
   font-weight: 400;
   text-wrap: pretty;
+}
+
+.sourceLink {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 180ms var(--ease-apple),
+    box-shadow 180ms var(--ease-apple),
+    background-color 180ms var(--ease-apple);
+}
+
+.sourceLink:hover,
+.sourceLink:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.sourceLinkCopy {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.sourceLinkTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.sourceLinkHint {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.sourceThumb {
+  position: relative;
+  width: 72px;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--image-stage-bg);
+  border: 1px solid var(--image-stage-border);
+  box-shadow: var(--image-stage-shadow);
+}
+
+.sourceThumbImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .note {

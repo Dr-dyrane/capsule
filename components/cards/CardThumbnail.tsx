@@ -102,14 +102,16 @@ export default function CardThumbnail({
           </AnimatePresence>
 
           {imageUrl ? (
-            <Image
-              src={imageUrl}
-              alt={card.title || 'Generated card'}
-              fill
-              unoptimized
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className={styles.image}
-            />
+            <div className={styles.imageFrame}>
+              <Image
+                src={imageUrl}
+                alt={card.title || 'Generated card'}
+                fill
+                unoptimized
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                className={styles.image}
+              />
+            </div>
           ) : (
             <div className={styles.placeholder}>Preview unavailable</div>
           )}

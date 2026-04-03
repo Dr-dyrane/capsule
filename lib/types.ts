@@ -39,3 +39,59 @@ export interface CardRecord {
   created_at?: string
   points?: PointRecord | PointRecord[]
 }
+
+export type GenerationRunStatus = 'queued' | 'running' | 'complete' | 'error' | 'cancelled'
+
+export interface GenerationRunRecord {
+  id: string
+  session_id: string
+  user_id: string
+  status: GenerationRunStatus
+  total_cards: number
+  completed_cards: number
+  failed_cards: number
+  active_card_id: string | null
+  last_error: string | null
+  started_at: string | null
+  finished_at: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export type CardJobStatus = 'queued' | 'running' | 'complete' | 'error'
+export type PlannerMode = 'deterministic' | 'planner'
+
+export interface CardJobRecord {
+  id: string
+  session_id: string
+  card_id: string
+  point_id: string
+  user_id: string
+  status: CardJobStatus
+  planner_mode: PlannerMode
+  cache_key: string | null
+  prompt_hash: string | null
+  model: string | null
+  prompt_version: string | null
+  attempt_count: number
+  claimed_at: string | null
+  finished_at: string | null
+  last_error: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface RenderCacheRecord {
+  id: string
+  user_id: string
+  cache_key: string
+  prompt_hash: string
+  prompt_version: string
+  model: string
+  image_url: string
+  prompt: string | null
+  plan: Record<string, unknown> | null
+  concept_type: string | null
+  created_at?: string
+  updated_at?: string
+}

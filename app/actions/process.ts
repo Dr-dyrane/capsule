@@ -1,5 +1,8 @@
 'use server'
 
+import { cookies } from 'next/headers'
+
+import { registerGenerationSession } from '@/lib/generation/run-manager'
 import { createClient } from '@/lib/supabase/server'
 import { extractPointsFromImage } from '@/lib/ai/ocr'
 import { createSignedObjectUrl } from '@/lib/storage/signed-urls'
@@ -11,6 +14,7 @@ function getCardTitle(text: string) {
 
 export async function processNote(sessionId: string) {
   const supabase = await createClient()
+  const cookieSnapshot = (await cookies()).getAll().map(({ name, value }) => ({ name, value }))
 
   // 1. Get Session
   const { data: session, error: sessionError } = await supabase
@@ -69,6 +73,46 @@ export async function processNote(sessionId: string) {
 
     if (cardsError) throw cardsError
 
+    const { error: runError } = await supabase.from('generation_runs').upsert(
+      {
+        session_id: sessionId,
+        user_id: session.user_id,
+        status: 'queued',
+        total_cards: queuedCards.length,
+        completed_cards: 0,
+        failed_cards: 0,
+        active_card_id: null,
+        last_error: null,
+        started_at: null,
+        finished_at: null,
+      },
+      { onConflict: 'session_id' },
+    )
+
+    if (runError) throw runError
+
+    const queuedJobs = queuedCards.map((card, index) => ({
+      session_id: sessionId,
+      card_id: card.id,
+      point_id: card.point_id,
+      user_id: session.user_id,
+      status: 'queued',
+      planner_mode: 'planner',
+      attempt_count: 0,
+      prompt_version: null,
+      model: null,
+      cache_key: null,
+      prompt_hash: null,
+      claimed_at: null,
+      finished_at: null,
+      last_error: null,
+      created_at: new Date(Date.now() + index).toISOString(),
+    }))
+
+    const { error: jobsError } = await supabase.from('card_jobs').upsert(queuedJobs, { onConflict: 'card_id' })
+
+    if (jobsError) throw jobsError
+
     // 5. Update Session
     await supabase
       .from('sessions')
@@ -78,6 +122,8 @@ export async function processNote(sessionId: string) {
         session_context: result.session_context,
       })
       .eq('id', sessionId)
+
+    registerGenerationSession(sessionId, cookieSnapshot)
 
     return { success: true, count: points.length }
   } catch (error) {
@@ -117,7 +163,9 @@ export async function restartSession(sessionId: string) {
   }
 
   await supabase.from('cards').delete().eq('session_id', sessionId)
+  await supabase.from('card_jobs').delete().eq('session_id', sessionId)
   await supabase.from('points').delete().eq('session_id', sessionId)
+  await supabase.from('generation_runs').delete().eq('session_id', sessionId)
 
   const { error: updateError } = await supabase
     .from('sessions')

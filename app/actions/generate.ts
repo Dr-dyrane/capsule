@@ -1,7 +1,11 @@
 'use server'
 
+import { cookies } from 'next/headers'
+
+import { queueCardForRetry, syncGenerationRunState } from '@/lib/generation/card-worker'
+import { registerGenerationSession } from '@/lib/generation/run-manager'
+import { routePromptProfile } from '@/lib/ai/prompt-router'
 import { createClient } from '@/lib/supabase/server'
-import { generateCardImage } from '@/lib/ai/generate'
 import type { CardRecord, PointRecord } from '@/lib/types'
 
 function getCardTitle(text: string) {
@@ -23,199 +27,15 @@ function buildPlaceholderCard(point: PointRecord, sessionId: string, userId: str
   }
 }
 
-export async function ensureCardPlaceholders(sessionId: string) {
+async function ensureGenerationArtifacts(sessionId: string) {
   const supabase = await createClient()
 
-  const [{ data: session, error: sessionError }, { data: points, error: pointsError }, { data: existingCards }] =
+  const [{ data: session, error: sessionError }, { data: points, error: pointsError }, { data: existingCards }, { data: existingJobs }] =
     await Promise.all([
       supabase.from('sessions').select('id, user_id').eq('id', sessionId).single(),
       supabase.from('points').select('*').eq('session_id', sessionId).order('sort_order', { ascending: true }),
-      supabase.from('cards').select('id, point_id').eq('session_id', sessionId),
-    ])
-
-  if (sessionError) throw sessionError
-  if (pointsError) throw pointsError
-
-  const typedPoints = (points ?? []) as PointRecord[]
-  const existingPointIds = new Set((existingCards ?? []).map((card) => card.point_id))
-  const missingPoints = typedPoints.filter((point) => !existingPointIds.has(point.id))
-
-  if (missingPoints.length === 0) {
-    return { success: true, created: 0 }
-  }
-
-  const placeholderCards = missingPoints.map((point) => buildPlaceholderCard(point, sessionId, session.user_id))
-  const { error: insertError } = await supabase.from('cards').insert(placeholderCards)
-
-  if (insertError) throw insertError
-
-  await syncSessionState(supabase, sessionId)
-
-  return { success: true, created: placeholderCards.length }
-}
-
-async function finalizeSessionProgress(supabase: Awaited<ReturnType<typeof createClient>>, sessionId: string) {
-  const { count } = await supabase
-    .from('cards')
-    .select('*', { count: 'exact', head: true })
-    .eq('session_id', sessionId)
-    .eq('status', 'complete')
-
-  await supabase
-    .from('sessions')
-    .update({
-      card_count: count ?? 0,
-    })
-    .eq('id', sessionId)
-
-  return count ?? 0
-}
-
-async function syncSessionState(supabase: Awaited<ReturnType<typeof createClient>>, sessionId: string) {
-  const completeCount = await finalizeSessionProgress(supabase, sessionId)
-
-  const { count: unfinishedCount } = await supabase
-    .from('cards')
-    .select('*', { count: 'exact', head: true })
-    .eq('session_id', sessionId)
-    .in('status', ['queued', 'generating'])
-
-  await supabase
-    .from('sessions')
-    .update({
-      status: (unfinishedCount ?? 0) === 0 ? 'complete' : 'generating',
-      card_count: completeCount,
-    })
-    .eq('id', sessionId)
-
-  return {
-    completeCount,
-    unfinishedCount: unfinishedCount ?? 0,
-  }
-}
-
-export async function generateCard(pointId: string, existingCardId?: string) {
-  const supabase = await createClient()
-
-  const { data: point, error: pointError } = await supabase
-    .from('points')
-    .select('*, sessions(user_id, session_context)')
-    .eq('id', pointId)
-    .single()
-
-  if (pointError) throw pointError
-
-  const sessionId = point.session_id
-  const userId = point.sessions.user_id
-
-  if (!existingCardId) {
-    const { data: existingCard } = await supabase
-      .from('cards')
-      .select('id')
-      .eq('point_id', pointId)
-      .maybeSingle()
-
-    existingCardId = existingCard?.id
-  }
-
-  let cardId = existingCardId ?? crypto.randomUUID()
-  let filePath = `${userId}/${sessionId}/${cardId}.png`
-
-  if (existingCardId) {
-    const { data: existingCard, error: existingCardError } = await supabase
-      .from('cards')
-      .select('id, image_url')
-      .eq('id', existingCardId)
-      .single()
-
-    if (existingCardError) throw existingCardError
-
-    cardId = existingCard.id
-    filePath = existingCard.image_url
-
-    const { error: queueError } = await supabase
-      .from('cards')
-      .update({
-        title: getCardTitle(point.text),
-        status: 'generating',
-        card_order: point.sort_order ?? 1,
-      })
-      .eq('id', cardId)
-
-    if (queueError) throw queueError
-  } else {
-    const { error: placeholderError } = await supabase
-      .from('cards')
-      .insert({
-        id: cardId,
-        point_id: pointId,
-        session_id: sessionId,
-        image_url: filePath,
-        title: getCardTitle(point.text),
-        status: 'generating',
-        card_order: point.sort_order ?? 1,
-      })
-
-    if (placeholderError) throw placeholderError
-  }
-
-  try {
-    // Fetch User Preferences (Rule 35: Anticipate)
-    const { data: { user } } = await supabase.auth.getUser()
-    const preferences = user?.user_metadata?.preferences || {}
-
-    const { imageBase64 } = await generateCardImage(
-      point.text,
-      point.category,
-      point.sessions.session_context || '',
-      preferences
-    )
-
-    const imageBuffer = Buffer.from(imageBase64, 'base64')
-
-    const { error: uploadError } = await supabase.storage.from('cards').upload(filePath, imageBuffer, {
-      contentType: 'image/png',
-      upsert: true,
-    })
-
-    if (uploadError) throw uploadError
-
-    const { data: card, error: cardError } = await supabase
-      .from('cards')
-      .update({
-        image_url: filePath,
-        status: 'complete',
-      })
-      .eq('id', cardId)
-      .select()
-      .single()
-
-    if (cardError) throw cardError
-
-    await syncSessionState(supabase, sessionId)
-
-    return card
-  } catch (error) {
-    console.error(error)
-    await supabase
-      .from('cards')
-      .update({ status: 'error' })
-      .eq('id', cardId)
-
-    await syncSessionState(supabase, sessionId)
-
-    throw error
-  }
-}
-
-export async function generateSessionCards(sessionId: string) {
-  const supabase = await createClient()
-
-  const [{ data: session, error: sessionError }, { data: points, error: pointsError }, { data: existingCards }] =
-    await Promise.all([
-      supabase.from('sessions').select('id, user_id').eq('id', sessionId).single(),
-      supabase.from('points').select('*').eq('session_id', sessionId).order('sort_order', { ascending: true }),
-      supabase.from('cards').select('*').eq('session_id', sessionId).order('card_order', { ascending: true }),
+      supabase.from('cards').select('*').eq('session_id', sessionId),
+      supabase.from('card_jobs').select('card_id').eq('session_id', sessionId),
     ])
 
   if (sessionError) throw sessionError
@@ -223,42 +43,107 @@ export async function generateSessionCards(sessionId: string) {
 
   const typedPoints = (points ?? []) as PointRecord[]
   const typedExistingCards = (existingCards ?? []) as CardRecord[]
+  const cardByPointId = new Map(typedExistingCards.map((card) => [card.point_id, card]))
+  const placeholderCards = typedPoints
+    .filter((point) => !cardByPointId.has(point.id))
+    .map((point) => buildPlaceholderCard(point, sessionId, session.user_id))
 
-  const cardsByPointId = new Map(typedExistingCards.map((card) => [card.point_id, card]))
-  const missingPoints = typedPoints.filter((point) => !cardsByPointId.has(point.id))
-
-  if (missingPoints.length > 0) {
-    const placeholderCards = missingPoints.map((point) => buildPlaceholderCard(point, sessionId, session.user_id))
-
-    const { data: insertedCards, error: insertError } = await supabase.from('cards').insert(placeholderCards).select()
-    if (insertError) throw insertError
-
-    for (const card of (insertedCards ?? []) as CardRecord[]) {
-      cardsByPointId.set(card.point_id, card)
+  if (placeholderCards.length > 0) {
+    const { error: cardsError } = await supabase.from('cards').insert(placeholderCards)
+    if (cardsError) throw cardsError
+    for (const card of placeholderCards) {
+      cardByPointId.set(card.point_id, card)
     }
   }
 
-  let hadFailure = false
+  const jobCardIds = new Set((existingJobs ?? []).map((job) => job.card_id))
+  const jobsToCreate = typedPoints
+    .map((point) => {
+      const card = cardByPointId.get(point.id)
+      if (!card || jobCardIds.has(card.id)) {
+        return null
+      }
 
-  for (const point of typedPoints) {
-    const card = cardsByPointId.get(point.id)
+      const route = routePromptProfile(point.text, point.category, point.concept)
 
-    if (!card) continue
-    if (card.status === 'complete') continue
+      return {
+        session_id: sessionId,
+        card_id: card.id,
+        point_id: point.id,
+        user_id: session.user_id,
+        status: 'queued',
+        planner_mode: route.plannerMode,
+        attempt_count: 0,
+      }
+    })
+    .filter(Boolean)
 
-    try {
-      await generateCard(point.id, card.id)
-    } catch (error) {
-      hadFailure = true
-      console.error(error)
-    }
+  if (jobsToCreate.length > 0) {
+    const { error: jobsError } = await supabase.from('card_jobs').insert(jobsToCreate)
+    if (jobsError) throw jobsError
   }
 
-  const { completeCount } = await syncSessionState(supabase, sessionId)
+  const { error: runError } = await supabase.from('generation_runs').upsert(
+    {
+      session_id: sessionId,
+      user_id: session.user_id,
+      status: 'queued',
+      total_cards: typedPoints.length,
+    },
+    { onConflict: 'session_id' },
+  )
 
-  return {
-    success: !hadFailure,
-    count: completeCount,
-    error: hadFailure ? 'One or more cards could not finish.' : undefined,
+  if (runError) throw runError
+
+  await syncGenerationRunState(supabase, sessionId)
+  return { session, points: typedPoints }
+}
+
+export async function ensureCardPlaceholders(sessionId: string) {
+  await ensureGenerationArtifacts(sessionId)
+  return { success: true }
+}
+
+export async function generateCard(pointId: string, existingCardId?: string) {
+  const supabase = await createClient()
+  const cookieSnapshot = (await cookies()).getAll().map(({ name, value }) => ({ name, value }))
+
+  const { data: point, error: pointError } = await supabase
+    .from('points')
+    .select('id, session_id')
+    .eq('id', pointId)
+    .single()
+
+  if (pointError) throw pointError
+
+  await ensureGenerationArtifacts(point.session_id)
+
+  let cardId = existingCardId
+
+  if (!cardId) {
+    const { data: card, error: cardError } = await supabase
+      .from('cards')
+      .select('id')
+      .eq('point_id', pointId)
+      .single()
+
+    if (cardError) throw cardError
+    cardId = card.id
   }
+
+  if (!cardId) {
+    throw new Error('Card not found')
+  }
+
+  await queueCardForRetry(supabase, cardId)
+  registerGenerationSession(point.session_id, cookieSnapshot)
+
+  return { success: true, cardId }
+}
+
+export async function generateSessionCards(sessionId: string) {
+  const cookieSnapshot = (await cookies()).getAll().map(({ name, value }) => ({ name, value }))
+  await ensureGenerationArtifacts(sessionId)
+  registerGenerationSession(sessionId, cookieSnapshot)
+  return { success: true }
 }

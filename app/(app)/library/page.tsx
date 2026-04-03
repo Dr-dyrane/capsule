@@ -78,6 +78,7 @@ export default async function LibraryPage() {
                       ) : (
                         <div className={listStyles.thumbFallback}>Note</div>
                       )}
+                      <div className={listStyles.thumbLabel}>Original note</div>
                     </div>
                     <div className={listStyles.info}>
                       <p className={listStyles.name}>Note session</p>
