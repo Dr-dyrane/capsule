@@ -65,6 +65,45 @@
   gap: 16px;
 }
 
+.mobileActions {
+  display: none;
+}
+
+.mobileSheetTrigger {
+  min-height: 44px;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mobileSheetTriggerCopy {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobileCount {
+  min-width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--text-on-accent);
+  background: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .filterStack,
 .utilityStack {
   display: grid;
@@ -150,6 +189,28 @@
   padding: 4px;
   border-radius: var(--radius-full);
   background: var(--surface-1);
+}
+
+.sheetSection {
+  display: grid;
+  gap: 12px;
+}
+
+.sheetLabel {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sheetFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
 }
 
 .viewBtn {
@@ -255,6 +316,14 @@
 @media (max-width: 767px) {
   .searchBar {
     max-width: none;
+  }
+
+  .mobileActions {
+    display: flex;
+  }
+
+  .controls {
+    display: none;
   }
 
   .filterSelect {

@@ -9,6 +9,7 @@ import {
   List,
   Loader2,
   Search,
+  SlidersHorizontal,
   TrendingUp,
   X,
 } from 'lucide-react'
@@ -28,6 +29,7 @@ import type {
   CommunityViewerState,
 } from '@/lib/types'
 import CommunityCard from '@/components/cards/CommunityCard'
+import MobileBottomSheet from '@/components/ui/MobileBottomSheet'
 import styles from './CommunityFeed.module.css'
 
 interface CommunityFeedProps {
@@ -70,6 +72,7 @@ export default function CommunityFeed({
   const [sort, setSort] = useState<CommunitySort>(initialFilters?.sort ?? 'recent')
   const [layout, setLayout] = useState<'grid' | 'list'>('grid')
   const [savedOnly, setSavedOnly] = useState(Boolean(initialFilters?.savedOnly) && !lockedAuthor)
+  const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const hydratedRef = useRef(false)
   const deferredSearch = useDeferredValue(searchQuery)
@@ -256,6 +259,7 @@ export default function CommunityFeed({
     setSelectedTopic(null)
     setSort('recent')
     setSavedOnly(false)
+    setLayout('grid')
   }
 
   const showingFilters = Boolean(
@@ -266,6 +270,13 @@ export default function CommunityFeed({
       savedOnly ||
       sort === 'trending',
   )
+  const mobileFilterCount =
+    (selectedTemplate ? 1 : 0) +
+    (selectedCategory ? 1 : 0) +
+    (selectedTopic ? 1 : 0) +
+    (savedOnly ? 1 : 0) +
+    (sort === 'trending' ? 1 : 0) +
+    (layout === 'list' ? 1 : 0)
 
   if (cards.length === 0) {
     return (
@@ -344,6 +355,16 @@ export default function CommunityFeed({
               <X size={14} />
             </button>
           ) : null}
+        </div>
+
+        <div className={styles.mobileActions}>
+          <button type="button" className={styles.mobileSheetTrigger} onClick={() => setIsMobileSheetOpen(true)}>
+            <span className={styles.mobileSheetTriggerCopy}>
+              <SlidersHorizontal size={16} />
+              <span>Filters</span>
+            </span>
+            {mobileFilterCount > 0 ? <span className={styles.mobileCount}>{mobileFilterCount}</span> : null}
+          </button>
         </div>
 
         <div className={styles.controls}>
@@ -453,6 +474,133 @@ export default function CommunityFeed({
           </div>
         </div>
       </div>
+
+      <MobileBottomSheet open={isMobileSheetOpen} onClose={() => setIsMobileSheetOpen(false)} title="Browse community">
+        <div className={styles.sheetSection}>
+          <p className={styles.sheetLabel}>Templates</p>
+          <div className={styles.filterRow}>
+            <button
+              type="button"
+              className={`${styles.filterChip} ${selectedTemplate === null ? styles.activeFilter : ''}`}
+              onClick={() => setSelectedTemplate(null)}
+            >
+              All templates
+            </button>
+            {filterMeta.templates.map((template) => (
+              <button
+                key={template}
+                type="button"
+                className={`${styles.filterChip} ${selectedTemplate === template ? styles.activeFilter : ''}`}
+                onClick={() => setSelectedTemplate(template)}
+              >
+                {template.replace(/-/g, ' ')}
+              </button>
+            ))}
+            {!lockedAuthor ? (
+              <button
+                type="button"
+                className={`${styles.filterChip} ${savedOnly ? styles.activeFilter : ''}`}
+                onClick={() => setSavedOnly((current) => !current)}
+              >
+                <Bookmark size={14} />
+                <span>Saved</span>
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        <div className={styles.sheetSection}>
+          <p className={styles.sheetLabel}>Category</p>
+          <label className={styles.selectWrap}>
+            <span className={styles.selectLabel}>Category</span>
+            <select
+              value={selectedCategory ?? 'all'}
+              className={styles.filterSelect}
+              onChange={(event) => setSelectedCategory(event.target.value === 'all' ? null : event.target.value)}
+            >
+              <option value="all">All categories</option>
+              {filterMeta.categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className={styles.sheetSection}>
+          <p className={styles.sheetLabel}>Topic</p>
+          <label className={styles.selectWrap}>
+            <span className={styles.selectLabel}>Topic</span>
+            <select
+              value={selectedTopic ?? 'all'}
+              className={styles.filterSelect}
+              onChange={(event) => setSelectedTopic(event.target.value === 'all' ? null : event.target.value)}
+            >
+              <option value="all">All topics</option>
+              {filterMeta.topics.map((topic) => (
+                <option key={topic} value={topic}>
+                  {topic}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className={styles.sheetSection}>
+          <p className={styles.sheetLabel}>Sort</p>
+          <div className={styles.sortRow}>
+            <button
+              type="button"
+              className={`${styles.sortChip} ${sort === 'recent' ? styles.activeSort : ''}`}
+              onClick={() => setSort('recent')}
+            >
+              Recent
+            </button>
+            <button
+              type="button"
+              className={`${styles.sortChip} ${sort === 'trending' ? styles.activeSort : ''}`}
+              onClick={() => setSort('trending')}
+            >
+              <TrendingUp size={14} />
+              <span>Trending</span>
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.sheetSection}>
+          <p className={styles.sheetLabel}>View</p>
+          <div className={styles.viewToggles}>
+            <button
+              type="button"
+              className={`${styles.viewBtn} ${layout === 'grid' ? styles.activeView : ''}`}
+              onClick={() => setLayout('grid')}
+              title="Grid view"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              type="button"
+              className={`${styles.viewBtn} ${layout === 'list' ? styles.activeView : ''}`}
+              onClick={() => setLayout('list')}
+              title="List view"
+            >
+              <List size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.sheetFooter}>
+          {showingFilters || layout === 'list' ? (
+            <button type="button" className={styles.resetButton} onClick={resetFilters}>
+              Reset
+            </button>
+          ) : null}
+          <button type="button" className={styles.primaryLink} onClick={() => setIsMobileSheetOpen(false)}>
+            Done
+          </button>
+        </div>
+      </MobileBottomSheet>
 
       <div className={`${styles.grid} ${layout === 'list' ? styles.list : ''}`}>
         {cards.map((card, index) => {

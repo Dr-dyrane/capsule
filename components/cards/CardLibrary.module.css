@@ -71,6 +71,10 @@
   gap: 20px;
 }
 
+.mobileActions {
+  display: none;
+}
+
 .searchBar {
   position: relative;
   width: 100%;
@@ -132,6 +136,41 @@
   gap: 16px;
 }
 
+.mobileSheetTrigger {
+  min-height: 44px;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mobileSheetTriggerCopy {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobileCount {
+  min-width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: var(--text-on-accent);
+  background: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -173,6 +212,28 @@
   padding: 4px;
   border-radius: var(--radius-full);
   background: var(--surface-1);
+}
+
+.sheetSection {
+  display: grid;
+  gap: 12px;
+}
+
+.sheetLabel {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sheetFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
 }
 
 .viewBtn {
@@ -256,6 +317,30 @@
   text-underline-offset: 4px;
 }
 
+.primaryLink,
+.resetButton {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: var(--radius-full);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.primaryLink {
+  color: var(--text-on-accent);
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: var(--shadow-md);
+}
+
+.resetButton {
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
 /* Loading Footer */
 .footer {
   display: flex;
@@ -277,4 +362,14 @@
   background: var(--surface-2);
   color: var(--text-primary);
   transform: translateY(-2px);
+}
+
+@media (max-width: 767px) {
+  .toolbar {
+    display: none;
+  }
+
+  .mobileActions {
+    display: flex;
+  }
 }
