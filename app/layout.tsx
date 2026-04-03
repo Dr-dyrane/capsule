@@ -21,9 +21,6 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'Capsule',
   },
-  icons: {
-    icon: '/favicon.svg',
-  },
 };
 
 export const viewport: Viewport = {
@@ -57,7 +54,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#f5f4ef" media="(prefers-color-scheme: light)" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

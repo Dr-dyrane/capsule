@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { Camera, CircleAlert, Loader2, ScanLine, Upload } from 'lucide-react'
+import { Camera, CheckCircle2, CircleAlert, Loader2, ScanLine, Upload, X } from 'lucide-react'
 
 import { uploadNote } from '@/app/actions/upload'
 
@@ -10,26 +11,76 @@ import shellStyles from '../AppScreen.module.css'
 import styles from './ScanPage.module.css'
 
 export default function ScanPage() {
-  const [isUploading, setIsUploading] = useState(false)
+  const [pickerKey, setPickerKey] = useState(0)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [uploadState, setUploadState] = useState<'idle' | 'review' | 'uploading' | 'success'>('idle')
   const [uploadError, setUploadError] = useState<string | null>(null)
   const router = useRouter()
 
-  async function handleUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl(null)
+      return
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile)
+    setPreviewUrl(objectUrl)
+
+    return () => {
+      URL.revokeObjectURL(objectUrl)
+    }
+  }, [selectedFile])
+
+  function formatFileSize(bytes: number) {
+    if (bytes < 1024 * 1024) {
+      return `${Math.max(1, Math.round(bytes / 1024))} KB`
+    }
+
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  function getUploadErrorMessage(error: unknown) {
+    if (error instanceof Error && error.message) {
+      return error.message
+    }
+
+    return 'We could not upload this image. Please try again.'
+  }
+
+  function handleSelectFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
 
-    setIsUploading(true)
+    setSelectedFile(file)
+    setUploadState('review')
+    setUploadError(null)
+  }
+
+  function handleChangeImage() {
+    setSelectedFile(null)
+    setPreviewUrl(null)
+    setUploadError(null)
+    setUploadState('idle')
+    setPickerKey((current) => current + 1)
+  }
+
+  async function handleUpload() {
+    if (!selectedFile) return
+
+    setUploadState('uploading')
     setUploadError(null)
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('file', selectedFile)
 
     try {
       const session = await uploadNote(formData)
+      setUploadState('success')
       router.push(`/scan/${session.id}`)
     } catch (error) {
       console.error(error)
-      setUploadError('Upload failed. Please try again.')
-      setIsUploading(false)
+      setUploadError(getUploadErrorMessage(error))
+      setUploadState('review')
     }
   }
 
@@ -51,65 +102,118 @@ export default function ScanPage() {
         </div>
       ) : null}
 
-      <div className={styles.grid}>
-        <label className={styles.card}>
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleUpload}
-            disabled={isUploading}
-            className={styles.input}
-          />
-          <div className={styles.topRow}>
-            <div className={`${styles.iconWrap} ${styles.accentIcon}`}>
-              <Camera size={32} strokeWidth={2.5} />
-            </div>
-            <div className={styles.badge}>Recommended</div>
-          </div>
-          <div className={styles.body}>
-            <p className={styles.title}>Take photo</p>
-            <p className={styles.copy}>Fastest way to start.</p>
+      {uploadState === 'review' && selectedFile && previewUrl ? (
+        <section className={styles.reviewPanel}>
+          <div className={styles.reviewCopy}>
+            <div className={styles.badge}>Ready</div>
+            <p className={styles.title}>Check the image first.</p>
+            <p className={styles.copy}>If the crop or clarity is off, change it before uploading.</p>
             <div className={styles.meta}>
-              <span className={styles.metaChip}>One page</span>
-              <span className={styles.metaChip}>Good light</span>
+              <span className={styles.metaChip}>{selectedFile.name}</span>
+              <span className={styles.metaChip}>{formatFileSize(selectedFile.size)}</span>
+            </div>
+            <div className={styles.reviewActions}>
+              <button type="button" className={styles.primaryAction} onClick={handleUpload}>
+                Use image
+              </button>
+              <button type="button" className={styles.secondaryAction} onClick={handleChangeImage}>
+                Change image
+              </button>
             </div>
           </div>
-        </label>
 
-        <label className={styles.card}>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleUpload}
-            disabled={isUploading}
-            className={styles.input}
-          />
-          <div className={styles.topRow}>
-            <div className={styles.iconWrap}>
-              <Upload size={32} strokeWidth={2.5} />
-            </div>
-            <div className={styles.badge}>Gallery</div>
-          </div>
-          <div className={styles.body}>
-            <p className={styles.title}>Upload file</p>
-            <p className={styles.copy}>Use a photo you already have.</p>
-            <div className={styles.meta}>
-              <span className={styles.metaChip}>Photos</span>
-              <span className={styles.metaChip}>Screenshots</span>
+          <div className={styles.previewStage}>
+            <div className={styles.previewFrame}>
+              <button
+                type="button"
+                className={styles.previewClose}
+                onClick={handleChangeImage}
+                aria-label="Close image preview"
+              >
+                <X size={16} />
+              </button>
+              <Image
+                src={previewUrl}
+                alt="Selected note preview"
+                fill
+                unoptimized
+                sizes="(max-width: 767px) 100vw, 50vw"
+                className={styles.previewImage}
+              />
             </div>
           </div>
-        </label>
-      </div>
+        </section>
+      ) : (
+        <div className={styles.grid}>
+          <label className={styles.card}>
+            <input
+              key={`camera-${pickerKey}`}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleSelectFile}
+              disabled={uploadState === 'uploading' || uploadState === 'success'}
+              className={styles.input}
+            />
+            <div className={styles.topRow}>
+              <div className={`${styles.iconWrap} ${styles.accentIcon}`}>
+                <Camera size={32} strokeWidth={2.5} />
+              </div>
+              <div className={styles.badge}>Recommended</div>
+            </div>
+            <div className={styles.body}>
+              <p className={styles.title}>Take photo</p>
+              <p className={styles.copy}>Fastest way to start.</p>
+              <div className={styles.meta}>
+                <span className={styles.metaChip}>One page</span>
+                <span className={styles.metaChip}>Good light</span>
+              </div>
+            </div>
+          </label>
+
+          <label className={styles.card}>
+            <input
+              key={`gallery-${pickerKey}`}
+              type="file"
+              accept="image/*"
+              onChange={handleSelectFile}
+              disabled={uploadState === 'uploading' || uploadState === 'success'}
+              className={styles.input}
+            />
+            <div className={styles.topRow}>
+              <div className={styles.iconWrap}>
+                <Upload size={32} strokeWidth={2.5} />
+              </div>
+              <div className={styles.badge}>Gallery</div>
+            </div>
+            <div className={styles.body}>
+              <p className={styles.title}>Upload file</p>
+              <p className={styles.copy}>Use a photo you already have.</p>
+              <div className={styles.meta}>
+                <span className={styles.metaChip}>Photos</span>
+                <span className={styles.metaChip}>Screenshots</span>
+              </div>
+            </div>
+          </label>
+        </div>
+      )}
 
       <div className={styles.supportPanel}>Flat page. Good light. Tight crop.</div>
 
-      {isUploading ? (
+      {uploadState === 'uploading' || uploadState === 'success' ? (
         <div className={styles.uploadOverlay}>
           <div className={styles.uploadPanel}>
-            <Loader2 className={styles.spinner} size={42} />
-            <p className={styles.uploadTitle}>Uploading note</p>
-            <p className={styles.uploadCopy}>Starting extraction.</p>
+            {uploadState === 'success' ? (
+              <CheckCircle2 size={42} />
+            ) : (
+              <Loader2 className={styles.spinner} size={42} />
+            )}
+            <p className={styles.uploadTitle}>
+              {uploadState === 'success' ? 'Upload complete' : 'Uploading note'}
+            </p>
+            <p className={styles.uploadCopy}>
+              {uploadState === 'success' ? 'Opening your session.' : 'Starting extraction.'}
+            </p>
           </div>
         </div>
       ) : null}

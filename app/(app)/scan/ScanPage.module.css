@@ -3,6 +3,113 @@
   gap: 16px;
 }
 
+.reviewPanel {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 92%, transparent), var(--surface-1));
+  box-shadow: var(--shadow-xl);
+}
+
+.reviewCopy {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.reviewActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.primaryAction,
+.secondaryAction {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  font-weight: 600;
+  transition:
+    transform 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple);
+}
+
+.primaryAction {
+  color: var(--text-on-accent);
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: var(--shadow-md);
+}
+
+.secondaryAction {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.primaryAction:hover,
+.secondaryAction:hover,
+.primaryAction:focus-visible,
+.secondaryAction:focus-visible {
+  transform: translateY(-1px);
+}
+
+.previewStage {
+  position: relative;
+  width: 100%;
+  padding: 12px;
+  border-radius: 28px;
+  background: var(--image-stage-bg);
+  border: 1px solid var(--image-stage-border);
+  box-shadow: var(--image-stage-shadow);
+}
+
+.previewFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--image-stage-surface);
+}
+
+.previewClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  color: var(--image-overlay-text);
+  background: var(--image-overlay);
+  border: 1px solid color-mix(in srgb, var(--image-overlay-text) 14%, transparent);
+  box-shadow: var(--shadow-sm);
+  opacity: 0.72;
+  transition:
+    opacity 150ms var(--ease-apple),
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple);
+}
+
+.previewClose:hover,
+.previewClose:focus-visible {
+  opacity: 1;
+  transform: scale(1.03);
+}
+
+.previewImage {
+  object-fit: contain;
+}
+
 .card {
   position: relative;
   min-height: 17rem;
@@ -185,6 +292,13 @@
 @media (min-width: 768px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .reviewPanel {
+    grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+    padding: 24px;
   }
 
   .card {
