@@ -275,7 +275,7 @@
   border-radius: 24px;
   background: var(--surface-1);
   border: 1px dashed var(--surface-3);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   transition: all 200ms var(--ease-apple);
 }
 
@@ -293,7 +293,9 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--surface-1);
+  color: var(--text-primary);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  box-shadow: var(--shadow-sm);
 }
 
 .createLabel {
