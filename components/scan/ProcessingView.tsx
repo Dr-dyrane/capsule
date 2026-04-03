@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
   CheckCircle2,
+  ChevronDown,
   Globe,
   Lock,
   RefreshCcw,
@@ -27,16 +28,34 @@ import {
 } from '@/app/actions/generate'
 import { processNote, restartSession } from '@/app/actions/process'
 import ImagePreview from '@/components/cards/ImagePreview'
+import { useFeedback } from '@/components/providers/FeedbackProvider'
+import ActivitySteps, { type ActivityStepItem } from '@/components/ui/ActivitySteps'
 import AdaptiveSheet from '@/components/ui/AdaptiveSheet'
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import { createClient } from '@/lib/supabase/client'
-import type { CardRecord, NoteRole, PointRecord, SessionRecommendationRecord, SessionRecord, SessionStatus } from '@/lib/types'
+import type {
+  CardRecord,
+  GenerationRunRecord,
+  NoteRole,
+  PointRecord,
+  SessionRecommendationRecord,
+  SessionRecord,
+  SessionStatus,
+} from '@/lib/types'
 
 import styles from './ProcessingView.module.css'
 
 const EMPTY_POINTS: PointRecord[] = []
 const EMPTY_CARDS: CardRecord[] = []
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+
+  return fallback
+}
 
 function getPointPreview(text: string) {
   const compact = text.replace(/\s+/g, ' ').trim()
@@ -91,9 +110,18 @@ export default function ProcessingView({
   const [session, setSession] = useState<SessionRecord | null>(null)
   const [points, setPoints] = useState<PointRecord[]>(EMPTY_POINTS)
   const [cards, setCards] = useState<CardRecord[]>(EMPTY_CARDS)
+  const [generationRun, setGenerationRun] = useState<GenerationRunRecord | null>(null)
   const [cardUrls, setCardUrls] = useState<Record<string, string>>({})
   const [recommendations, setRecommendations] = useState<Record<string, SessionRecommendationRecord>>({})
   const [status, setStatus] = useState<SessionStatus | 'loading'>('loading')
+  const [processingError, setProcessingError] = useState<string | null>(null)
+  const [isPlaceholderSyncing, setIsPlaceholderSyncing] = useState(false)
+  const [placeholderError, setPlaceholderError] = useState<string | null>(null)
+  const [isRecommendationLoading, setIsRecommendationLoading] = useState(false)
+  const [recommendationError, setRecommendationError] = useState<string | null>(null)
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const [isActivityExpanded, setIsActivityExpanded] = useState(false)
   const [cardActionTarget, setCardActionTarget] = useState<string | null>(null)
   const [isRetrying, startRetryTransition] = useTransition()
   const [isPublishing, startPublishTransition] = useTransition()
@@ -104,13 +132,15 @@ export default function ProcessingView({
   const processingStartedRef = useRef(false)
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
+  const { showFeedback } = useFeedback()
 
   useEffect(() => {
     async function bootstrap() {
-      const [{ data: initialSession }, { data: initialPoints }, { data: initialCards }] = await Promise.all([
+      const [{ data: initialSession }, { data: initialPoints }, { data: initialCards }, { data: initialRun }] = await Promise.all([
         supabase.from('sessions').select('*').eq('id', sessionId).single(),
         supabase.from('points').select('*').eq('session_id', sessionId).order('sort_order', { ascending: true }),
         supabase.from('cards').select('*').eq('session_id', sessionId).order('card_order', { ascending: true }),
+        supabase.from('generation_runs').select('*').eq('session_id', sessionId).maybeSingle(),
       ])
 
       if (initialSession) {
@@ -119,6 +149,7 @@ export default function ProcessingView({
       }
       if (initialPoints) setPoints(initialPoints as PointRecord[])
       if (initialCards) setCards(initialCards as CardRecord[])
+      if (initialRun) setGenerationRun(initialRun as GenerationRunRecord)
     }
 
     void bootstrap()
@@ -153,36 +184,115 @@ export default function ProcessingView({
       })
       .subscribe()
 
+    const runSub = supabase
+      .channel(`generation-run:${sessionId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'generation_runs', filter: `session_id=eq.${sessionId}` }, (payload) => {
+        setGenerationRun(payload.new as GenerationRunRecord)
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'generation_runs', filter: `session_id=eq.${sessionId}` }, (payload) => {
+        setGenerationRun(payload.new as GenerationRunRecord)
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'generation_runs', filter: `session_id=eq.${sessionId}` }, () => {
+        setGenerationRun(null)
+      })
+      .subscribe()
+
     return () => {
       void supabase.removeChannel(pointsSub)
       void supabase.removeChannel(cardsSub)
       void supabase.removeChannel(sessionSub)
+      void supabase.removeChannel(runSub)
     }
   }, [sessionId, supabase])
+
+  const hasMissingCards = useMemo(
+    () => points.some((point) => !cards.some((card) => card.point_id === point.id)),
+    [cards, points],
+  )
+
+  const missingPreviewPaths = useMemo(
+    () => [...new Set(cards.filter((card) => card.status === 'complete' && !cardUrls[card.image_url]).map((card) => card.image_url))],
+    [cardUrls, cards],
+  )
+
+  const syncPlaceholders = useCallback(async () => {
+    if (points.length === 0 || !hasMissingCards || placeholderSyncRef.current) return
+
+    placeholderSyncRef.current = true
+    setIsPlaceholderSyncing(true)
+    setPlaceholderError(null)
+
+    try {
+      await ensureCardPlaceholders(sessionId)
+    } catch (error) {
+      setPlaceholderError(getErrorMessage(error, 'Could not prepare card slots.'))
+    } finally {
+      placeholderSyncRef.current = false
+      setIsPlaceholderSyncing(false)
+    }
+  }, [hasMissingCards, points.length, sessionId])
+
+  const syncRecommendations = useCallback(async () => {
+    if (points.length === 0 || cards.length === 0) return
+
+    setIsRecommendationLoading(true)
+    setRecommendationError(null)
+
+    try {
+      const rows = await getSessionRecommendations(sessionId)
+      setRecommendations(
+        rows.reduce<Record<string, SessionRecommendationRecord>>((acc, row) => {
+          acc[row.point_id] = row
+          return acc
+        }, {}),
+      )
+    } catch (error) {
+      setRecommendationError(getErrorMessage(error, 'Could not load reuse suggestions.'))
+    } finally {
+      setIsRecommendationLoading(false)
+    }
+  }, [cards.length, points.length, sessionId])
+
+  const syncCardPreviews = useCallback(async (paths: string[]) => {
+    if (paths.length === 0) return
+
+    setIsPreviewLoading(true)
+    setPreviewError(null)
+
+    try {
+      const urls = await getSignedCardUrls(paths)
+      setCardUrls((current) => ({ ...current, ...urls }))
+    } catch (error) {
+      setPreviewError(getErrorMessage(error, 'Could not load card previews.'))
+    } finally {
+      setIsPreviewLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (status === 'processing' && !processingStartedRef.current) {
       processingStartedRef.current = true
       void processNote(sessionId)
         .then((result) => {
-          if (!result.success) setStatus('error')
+          if (!result.success) {
+            setProcessingError(result.error || 'Could not read the note.')
+            setStatus('error')
+            return
+          }
+
+          setProcessingError(null)
         })
-        .catch(() => setStatus('error'))
+        .catch((error) => {
+          setProcessingError(getErrorMessage(error, 'Could not read the note.'))
+          setStatus('error')
+        })
     }
   }, [sessionId, status])
 
   useEffect(() => {
-    if (status === 'loading' || status === 'processing' || points.length === 0) return
-    const hasMissingCards = points.some((point) => !cards.some((card) => card.point_id === point.id))
-    if (!hasMissingCards || placeholderSyncRef.current) return
-
-    placeholderSyncRef.current = true
-    void ensureCardPlaceholders(sessionId)
-      .catch((error) => console.error('Placeholder sync failed:', error))
-      .finally(() => {
-        placeholderSyncRef.current = false
-      })
-  }, [cards, points, sessionId, status])
+    if (status === 'loading' || status === 'processing' || points.length === 0 || !hasMissingCards) return
+    void syncPlaceholders()
+  }, [hasMissingCards, points.length, status, syncPlaceholders])
 
   const recommendationKey = useMemo(
     () => cards.map((card) => `${card.point_id}:${card.generation_gate ?? ''}:${card.community_match_card_id ?? ''}:${card.status}`).join('|'),
@@ -191,42 +301,41 @@ export default function ProcessingView({
 
   useEffect(() => {
     if (points.length === 0 || cards.length === 0) return
-    let active = true
-
-    void getSessionRecommendations(sessionId)
-      .then((rows) => {
-        if (!active) return
-        setRecommendations(rows.reduce<Record<string, SessionRecommendationRecord>>((acc, row) => {
-          acc[row.point_id] = row
-          return acc
-        }, {}))
-      })
-      .catch((error) => console.error('Recommendation sync failed:', error))
-
-    return () => {
-      active = false
-    }
-  }, [sessionId, points.length, cards.length, recommendationKey])
+    void syncRecommendations()
+  }, [cards.length, points.length, recommendationKey, syncRecommendations])
 
   useEffect(() => {
-    const freshPaths = cards.filter((card) => card.status === 'complete' && !cardUrls[card.image_url]).map((card) => card.image_url)
-    if (freshPaths.length === 0) return
-
-    void getSignedCardUrls(freshPaths)
-      .then((urls) => setCardUrls((current) => ({ ...current, ...urls })))
-      .catch(console.error)
-  }, [cardUrls, cards])
+    if (missingPreviewPaths.length === 0) return
+    void syncCardPreviews(missingPreviewPaths)
+  }, [missingPreviewPaths, syncCardPreviews])
 
   function handleRetrySession() {
     startRetryTransition(() => {
-      void restartSession(sessionId).then(() => {
-        setPoints(EMPTY_POINTS)
-        setCards(EMPTY_CARDS)
-        setRecommendations({})
-        setCardUrls({})
-        setStatus('processing')
-        processingStartedRef.current = false
-      })
+      void restartSession(sessionId)
+        .then(() => {
+          setPoints(EMPTY_POINTS)
+          setCards(EMPTY_CARDS)
+          setGenerationRun(null)
+          setRecommendations({})
+          setCardUrls({})
+          setProcessingError(null)
+          setIsPlaceholderSyncing(false)
+          setPlaceholderError(null)
+          setIsRecommendationLoading(false)
+          setRecommendationError(null)
+          setIsPreviewLoading(false)
+          setPreviewError(null)
+          setStatus('processing')
+          placeholderSyncRef.current = false
+          processingStartedRef.current = false
+        })
+        .catch((error) => {
+          showFeedback({
+            tone: 'error',
+            title: 'Could not restart this session',
+            message: getErrorMessage(error, 'Try again in a moment.'),
+          })
+        })
     })
   }
 
@@ -241,7 +350,20 @@ export default function ProcessingView({
               referenceCardId: referenceCardId ?? null,
             })
 
-      void task.catch((error) => console.error('Card action failed:', error)).finally(() => setCardActionTarget(null))
+      void task
+        .catch((error) => {
+          showFeedback({
+            tone: 'error',
+            title:
+              action === 'use'
+                ? 'Could not use this card'
+                : action === 'remix'
+                  ? 'Could not remix this card'
+                  : 'Could not start rendering',
+            message: getErrorMessage(error, 'Try again in a moment.'),
+          })
+        })
+        .finally(() => setCardActionTarget(null))
     })
   }
 
@@ -282,6 +404,9 @@ export default function ProcessingView({
   const progressWidth = status === 'complete' ? 100 : Math.max(8, Math.min(100, (completeCards.length / Math.max(activePipelineCards.length, 1)) * 100))
   const supportCount = Number(Boolean(sourceImageUrl)) + Number(Boolean(remixSource))
   const isSessionPublished = session?.visibility === 'published'
+  const activeRunCard = generationRun?.active_card_id ? cards.find((card) => card.id === generationRun.active_card_id) ?? null : null
+  const firstErroredCard = cards.find((card) => card.status === 'error') ?? null
+  const shouldShowActivity = status === 'loading' || status === 'processing' || status === 'generating' || isPlaceholderSyncing || isRecommendationLoading || isPreviewLoading || activePipelineCards.length > 0
 
   const statusTitle =
     status === 'complete'
@@ -304,19 +429,160 @@ export default function ProcessingView({
       : status === 'processing'
         ? 'Pulling teachable points from the note first.'
         : status === 'error'
-          ? 'Retry the session or rerun a single card.'
+          ? processingError ?? generationRun?.last_error ?? 'Retry the session or rerun a single card.'
           : 'One automatic hero card starts the session. The rest stay lightweight until you ask for more.'
+
+  const activitySteps = useMemo<ActivityStepItem[]>(() => {
+    const extractionStatus: ActivityStepItem['status'] =
+      processingError ? 'error' : points.length > 0 ? 'complete' : status === 'loading' || status === 'processing' ? 'active' : 'pending'
+
+    const prepStatus: ActivityStepItem['status'] =
+      placeholderError ? 'error' : points.length === 0 ? 'pending' : !hasMissingCards ? 'complete' : isPlaceholderSyncing || cards.length > 0 ? 'active' : 'pending'
+
+    const matchesStatus: ActivityStepItem['status'] =
+      recommendationError ? 'error' : points.length === 0 || cards.length === 0 ? 'pending' : isRecommendationLoading ? 'active' : 'complete'
+
+    const renderStatus: ActivityStepItem['status'] =
+      status === 'error' || generationRun?.status === 'error'
+        ? 'error'
+        : status === 'generating' || generationRun?.status === 'running' || generationRun?.status === 'queued' || activePipelineCards.length > 0
+          ? 'active'
+          : completeCards.length > 0 || status === 'complete'
+            ? 'complete'
+            : points.length > 0
+              ? 'pending'
+              : 'pending'
+
+    const previewStatus: ActivityStepItem['status'] =
+      previewError ? 'error' : completeCards.length === 0 ? 'pending' : missingPreviewPaths.length > 0 || isPreviewLoading ? 'active' : 'complete'
+
+    return [
+      {
+        id: 'extract',
+        title: 'Read note',
+        detail: processingError
+          ? processingError
+          : points.length > 0
+            ? `${points.length} teaching point${points.length === 1 ? '' : 's'} ready.`
+            : 'Reading the note and pulling the core ideas out first.',
+        status: extractionStatus,
+      },
+      {
+        id: 'prepare',
+        title: 'Prepare cards',
+        detail: placeholderError
+          ? placeholderError
+          : points.length === 0
+            ? 'Card slots appear after the note is parsed.'
+            : !hasMissingCards
+              ? `${cards.length} card slot${cards.length === 1 ? '' : 's'} prepared.`
+              : `Preparing ${points.length} card slot${points.length === 1 ? '' : 's'} and roles.`,
+        status: prepStatus,
+        actionLabel: prepStatus === 'error' ? 'Retry' : undefined,
+        onAction: prepStatus === 'error' ? () => void syncPlaceholders() : undefined,
+      },
+      {
+        id: 'matches',
+        title: 'Check reuse',
+        detail: recommendationError
+          ? recommendationError
+          : points.length === 0 || cards.length === 0
+            ? 'Reuse suggestions appear once the session structure is in place.'
+            : isRecommendationLoading
+              ? 'Checking community cards that can be reused or remixed fast.'
+              : suggestionCount > 0
+                ? `${suggestionCount} community match${suggestionCount === 1 ? '' : 'es'} ready.`
+                : 'No community reuse is needed for this note.',
+        status: matchesStatus,
+        actionLabel: matchesStatus === 'error' ? 'Retry' : undefined,
+        onAction: matchesStatus === 'error' ? () => void syncRecommendations() : undefined,
+      },
+      {
+        id: 'render',
+        title: 'Render cards',
+        detail:
+          renderStatus === 'error'
+            ? generationRun?.last_error ?? processingError ?? (firstErroredCard ? `${firstErroredCard.title || 'A card'} stopped before finishing.` : 'Rendering stopped before finish.')
+            : activeRunCard
+              ? `Rendering ${activeRunCard.title || 'the next card'}.`
+              : activePipelineCards.length > 0
+                ? `${activePipelineCards.length} card${activePipelineCards.length === 1 ? '' : 's'} moving through the pipeline.`
+                : generationRun?.completed_cards
+                  ? `${generationRun.completed_cards} of ${generationRun.total_cards || generationRun.completed_cards} automatic card${generationRun.completed_cards === 1 ? '' : 's'} ready.`
+                  : completeCards.length > 0
+                    ? `${completeCards.length} card${completeCards.length === 1 ? '' : 's'} ready.`
+                    : 'The hero card will start first.',
+        status: renderStatus,
+      },
+      {
+        id: 'preview',
+        title: 'Load previews',
+        detail: previewError
+          ? previewError
+          : completeCards.length === 0
+            ? 'Previews appear the moment a card finishes.'
+            : missingPreviewPaths.length > 0
+              ? `Loading ${missingPreviewPaths.length} preview${missingPreviewPaths.length === 1 ? '' : 's'} for completed cards.`
+              : `${completeCards.length} preview${completeCards.length === 1 ? '' : 's'} ready to open.`,
+        status: previewStatus,
+        actionLabel: previewStatus === 'error' ? 'Retry' : undefined,
+        onAction: previewStatus === 'error' ? () => void syncCardPreviews(missingPreviewPaths) : undefined,
+      },
+    ]
+  }, [
+    activePipelineCards.length,
+    activeRunCard,
+    cards.length,
+    completeCards.length,
+    firstErroredCard,
+    generationRun,
+    hasMissingCards,
+    isPlaceholderSyncing,
+    isPreviewLoading,
+    isRecommendationLoading,
+    missingPreviewPaths,
+    placeholderError,
+    points.length,
+    previewError,
+    processingError,
+    recommendationError,
+    status,
+    suggestionCount,
+    syncCardPreviews,
+    syncPlaceholders,
+    syncRecommendations,
+  ])
+
+  useEffect(() => {
+    if (shouldShowActivity) {
+      setIsActivityExpanded(false)
+      return
+    }
+
+    setIsActivityExpanded(false)
+  }, [shouldShowActivity])
 
   function handleToggleSessionVisibility(nextPublishedState: boolean) {
     startPublishTransition(() => {
       setSession((current) => current ? { ...current, visibility: nextPublishedState ? 'published' : 'private' } : current)
 
       void (nextPublishedState ? publishSession(sessionId) : unpublishSession(sessionId))
-        .then(() => setPublishPrompt(null))
+        .then(() => {
+          setPublishPrompt(null)
+          showFeedback({
+            tone: 'success',
+            title: nextPublishedState ? 'Session published' : 'Session is private',
+            message: nextPublishedState ? 'It is now visible in community.' : 'Only you can see it now.',
+          })
+        })
         .catch((error) => {
-          console.error('Failed to update session visibility', error)
           setSession((current) => current ? { ...current, visibility: nextPublishedState ? 'private' : 'published' } : current)
           setPublishPrompt(null)
+          showFeedback({
+            tone: 'error',
+            title: 'Could not update this session',
+            message: getErrorMessage(error, 'Try again in a moment.'),
+          })
         })
     })
   }
@@ -351,11 +617,39 @@ export default function ProcessingView({
                 </button>
               ) : null}
               <button type="button" className={styles.secondaryAction} onClick={() => setPublishPrompt(isSessionPublished ? 'unpublish' : 'publish')} disabled={isPublishing}>
-                {isPublishing ? 'Saving...' : isSessionPublished ? <><Lock size={14} /><span>Unpublish all</span></> : <><Globe size={14} /><span>Publish all</span></>}
+                {isPublishing ? (
+                  'Saving...'
+                ) : isSessionPublished ? (
+                  <>
+                    <Lock size={14} />
+                    <span>Unpublish all</span>
+                  </>
+                ) : (
+                  <>
+                    <Globe size={14} />
+                    <span>Publish all</span>
+                  </>
+                )}
               </button>
               <DeleteActionButton targetId={sessionId} targetType="session" redirectTo="/library" compactOnMobile />
             </div>
           </div>
+
+          {shouldShowActivity ? (
+            <div className={styles.statusActivity}>
+              <button
+                type="button"
+                className={styles.activityToggle}
+                onClick={() => setIsActivityExpanded((current) => !current)}
+                aria-expanded={isActivityExpanded}
+              >
+                <span>{isActivityExpanded ? 'Hide processing details' : 'Show processing details'}</span>
+                <ChevronDown size={16} className={`${styles.activityToggleIcon} ${isActivityExpanded ? styles.activityToggleIconExpanded : ''}`} />
+              </button>
+
+              {isActivityExpanded ? <ActivitySteps items={activitySteps} /> : null}
+            </div>
+          ) : null}
 
           <div className={styles.progressRail}>
             <motion.div className={styles.progressFill} initial={{ width: 0 }} animate={{ width: `${progressWidth}%` }} transition={{ type: 'spring', damping: 22, stiffness: 90 }} />

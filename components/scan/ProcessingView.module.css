@@ -121,6 +121,45 @@
   gap: 12px 16px;
 }
 
+.statusActivity {
+  display: grid;
+  gap: 12px;
+}
+
+.activityToggle {
+  min-height: 44px;
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple);
+}
+
+.activityToggle:hover,
+.activityToggle:focus-visible {
+  transform: translateY(-1px);
+  background: var(--surface-3);
+}
+
+.activityToggleIcon {
+  transition: transform 150ms var(--ease-apple);
+}
+
+.activityToggleIconExpanded {
+  transform: rotate(180deg);
+}
+
 .statusChip {
   color: var(--text-secondary);
   min-height: 30px;

@@ -45,7 +45,7 @@ export async function syncGenerationRunState(supabase: SupabaseClient, sessionId
   const [{ data: jobs, error: jobsError }, { data: runningCard }, { count: completeCardCount, error: cardsError }] = await Promise.all([
     supabase
       .from('card_jobs')
-      .select('status, card_id')
+      .select('status, card_id, last_error')
       .eq('session_id', sessionId),
     supabase
       .from('card_jobs')
@@ -64,12 +64,13 @@ export async function syncGenerationRunState(supabase: SupabaseClient, sessionId
   if (jobsError) throw jobsError
   if (cardsError) throw cardsError
 
-  const jobList = (jobs ?? []) as Array<Pick<CardJobRecord, 'status' | 'card_id'>>
+  const jobList = (jobs ?? []) as Array<Pick<CardJobRecord, 'status' | 'card_id' | 'last_error'>>
   const totalCards = jobList.length
   const completedCards = jobList.filter((job) => job.status === 'complete').length
   const failedCards = jobList.filter((job) => job.status === 'error').length
   const runningCards = jobList.filter((job) => job.status === 'running').length
   const queuedCards = jobList.filter((job) => job.status === 'queued').length
+  const latestError = jobList.find((job) => job.status === 'error' && job.last_error)?.last_error ?? null
 
   let runStatus: GenerationRunStatus = 'queued'
   let sessionStatus: 'processing' | 'generating' | 'complete' | 'error' = 'processing'
@@ -99,6 +100,7 @@ export async function syncGenerationRunState(supabase: SupabaseClient, sessionId
         completed_cards: completedCards,
         failed_cards: failedCards,
         active_card_id: runningCard?.card_id ?? null,
+        last_error: failedCards > 0 ? latestError : null,
         finished_at: runStatus === 'complete' || runStatus === 'error' ? now : null,
         started_at: totalCards > 0 ? now : null,
       })

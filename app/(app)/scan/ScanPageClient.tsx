@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Camera, CheckCircle2, CircleAlert, Loader2, Repeat2, ScanLine, Upload, X } from 'lucide-react'
 
-import { uploadNote } from '@/app/actions/upload'
+import { useFeedback } from '@/components/providers/FeedbackProvider'
+import ActivitySteps, { type ActivityStepItem } from '@/components/ui/ActivitySteps'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 
 import shellStyles from '../AppScreen.module.css'
@@ -28,8 +29,14 @@ export default function ScanPageClient({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [uploadState, setUploadState] = useState<'idle' | 'review' | 'uploading' | 'success'>('idle')
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadPresentation, setUploadPresentation] = useState<'foreground' | 'background'>('foreground')
+  const [readySessionId, setReadySessionId] = useState<string | null>(null)
   const [publish, setPublish] = useState(initialAutoPublish)
   const router = useRouter()
+  const { showFeedback } = useFeedback()
+  const mountedRef = useRef(true)
+  const uploadPresentationRef = useRef<'foreground' | 'background'>('foreground')
+  const uploadAbortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     if (!selectedFile) {
@@ -48,6 +55,16 @@ export default function ScanPageClient({
   useEffect(() => {
     setPublish(initialAutoPublish)
   }, [initialAutoPublish])
+
+  useEffect(() => {
+    uploadPresentationRef.current = uploadPresentation
+  }, [uploadPresentation])
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   function formatFileSize(bytes: number) {
     if (bytes < 1024 * 1024) {
@@ -79,6 +96,9 @@ export default function ScanPageClient({
     setPreviewUrl(null)
     setUploadError(null)
     setUploadState('idle')
+    setUploadPresentation('foreground')
+    uploadPresentationRef.current = 'foreground'
+    setReadySessionId(null)
     setPublish(initialAutoPublish)
     setPickerKey((current) => current + 1)
   }
@@ -86,8 +106,14 @@ export default function ScanPageClient({
   async function handleUpload() {
     if (!selectedFile) return
 
+    uploadAbortRef.current?.abort()
+    const controller = new AbortController()
+    uploadAbortRef.current = controller
     setUploadState('uploading')
     setUploadError(null)
+    setUploadPresentation('foreground')
+    uploadPresentationRef.current = 'foreground'
+    setReadySessionId(null)
     const formData = new FormData()
     formData.append('file', selectedFile)
     formData.append('publish', publish ? 'true' : 'false')
@@ -96,15 +122,100 @@ export default function ScanPageClient({
     }
 
     try {
-      const session = await uploadNote(formData)
+      const response = await fetch('/api/upload-note', {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+      })
+      const payload = (await response.json()) as { id?: string; error?: string }
+
+      if (!response.ok || !payload.id) {
+        throw new Error(payload.error || 'We could not upload this image. Please try again.')
+      }
+
+      if (!mountedRef.current) return
+
+      uploadAbortRef.current = null
+      setReadySessionId(payload.id)
       setUploadState('success')
-      router.push(`/scan/${session.id}`)
+      if (uploadPresentationRef.current === 'foreground') {
+        router.push(`/scan/${payload.id}`)
+        return
+      }
+
+      showFeedback({
+        tone: 'success',
+        title: 'Session ready',
+        message: 'Open it now or leave it in Library for later.',
+      })
     } catch (error) {
-      console.error(error)
+      if (!mountedRef.current) return
+
+      uploadAbortRef.current = null
+      if (error instanceof Error && error.name === 'AbortError') {
+        setUploadState('review')
+        showFeedback({
+          tone: 'info',
+          title: 'Upload canceled',
+          message: 'Your image was not submitted.',
+          durationMs: 2200,
+        })
+        return
+      }
+
       setUploadError(getUploadErrorMessage(error))
       setUploadState('review')
     }
   }
+
+  function handleBackgroundUpload() {
+    setUploadPresentation('background')
+    uploadPresentationRef.current = 'background'
+    showFeedback({
+      tone: 'info',
+      title: 'Upload continues in background',
+      message: 'You can keep browsing while this finishes.',
+      durationMs: 2400,
+    })
+  }
+
+  function handleCancelUpload() {
+    uploadAbortRef.current?.abort()
+  }
+
+  const uploadSteps: ActivityStepItem[] = [
+    {
+      id: 'upload',
+      title: 'Send note',
+      detail:
+        uploadState === 'success'
+          ? 'Your image is stored and locked to this session.'
+          : 'Uploading the selected image to Capsule.',
+      status: uploadState === 'success' ? 'complete' : 'active',
+    },
+    {
+      id: 'session',
+      title: 'Start session',
+      detail:
+        uploadState === 'success'
+          ? 'Extraction started and the session is ready.'
+          : 'Preparing a private workspace for this capture.',
+      status: uploadState === 'success' ? 'complete' : 'pending',
+    },
+    {
+      id: 'open',
+      title: 'Open workspace',
+      detail:
+        uploadState === 'success'
+          ? uploadPresentation === 'background'
+            ? 'Ready when you want to open it.'
+            : 'Taking you into the live processing view.'
+          : 'The session opens as soon as setup finishes.',
+      status: uploadState === 'success' ? (uploadPresentation === 'background' ? 'pending' : 'active') : 'pending',
+    },
+  ]
+
+  const showUploadDock = uploadState === 'uploading' || (uploadState === 'success' && Boolean(readySessionId))
 
   return (
     <div className={shellStyles.screen}>
@@ -262,20 +373,60 @@ export default function ScanPageClient({
 
       <div className={styles.supportPanel}>Flat page. Good light. Tight crop.</div>
 
-      {uploadState === 'uploading' || uploadState === 'success' ? (
-        <div className={styles.uploadOverlay}>
+      {showUploadDock ? (
+        <div className={`${styles.uploadDock} ${uploadPresentation === 'background' ? styles.uploadDockBackground : ''}`}>
           <div className={styles.uploadPanel}>
-            {uploadState === 'success' ? (
-              <CheckCircle2 size={42} />
-            ) : (
-              <Loader2 className={styles.spinner} size={42} />
-            )}
+            <div className={styles.uploadTopRow}>
+              {uploadState === 'success' ? (
+                <CheckCircle2 size={42} />
+              ) : (
+                <Loader2 className={styles.spinner} size={42} />
+              )}
+
+              {uploadState === 'uploading' && uploadPresentation === 'foreground' ? (
+                <div className={styles.uploadTopActions}>
+                  <button type="button" className={styles.uploadSecondaryAction} onClick={handleBackgroundUpload}>
+                    Continue in background
+                  </button>
+                  <button type="button" className={styles.uploadSecondaryAction} onClick={handleCancelUpload}>
+                    Cancel upload
+                  </button>
+                </div>
+              ) : uploadState === 'uploading' ? (
+                <button type="button" className={styles.uploadSecondaryAction} onClick={handleCancelUpload}>
+                  Cancel upload
+                </button>
+              ) : uploadState === 'success' ? (
+                <button type="button" className={styles.uploadSecondaryAction} onClick={handleChangeImage}>
+                  Dismiss
+                </button>
+              ) : null}
+            </div>
+
             <p className={styles.uploadTitle}>
-              {uploadState === 'success' ? 'Upload complete' : 'Uploading note'}
+              {uploadState === 'success' ? 'Session ready' : 'Uploading note'}
             </p>
             <p className={styles.uploadCopy}>
-              {uploadState === 'success' ? 'Opening your session.' : 'Starting extraction.'}
+              {uploadState === 'success'
+                ? uploadPresentation === 'background'
+                  ? 'Open it now or leave it in Library for later.'
+                  : 'Opening your session now.'
+                : uploadPresentation === 'background'
+                  ? 'This can finish while you keep browsing.'
+                  : 'Keeping the handoff visible while setup runs.'}
             </p>
+            {uploadState === 'uploading' ? <ActivitySteps items={uploadSteps} compact /> : null}
+
+            {uploadState === 'success' && readySessionId ? (
+              <div className={styles.uploadActions}>
+                <button type="button" className={styles.primaryAction} onClick={() => router.push(`/scan/${readySessionId}`)}>
+                  Open session
+                </button>
+                <Link href="/library" className={styles.uploadLinkAction}>
+                  Open Library
+                </Link>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}
