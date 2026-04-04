@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { BadgeDollarSign, DatabaseZap, Shield } from 'lucide-react'
+import { BadgeDollarSign, ChartColumn, DatabaseZap, Shield } from 'lucide-react'
 import { notFound } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
 import { isCapsuleAdminEmail, syncCurrentUserDirectory } from '@/lib/billing/entitlements'
-import { getAccessAdminSnapshot, getLegacySeedMigrationStatus } from '@/app/actions/admin'
+import { getAccessAdminSnapshot, getLegacySeedMigrationStatus, getProductAnalyticsSnapshot } from '@/app/actions/admin'
 
 import shellStyles from '@/app/(app)/AppScreen.module.css'
 import styles from '@/app/(app)/profile/ProfilePage.module.css'
@@ -25,9 +25,10 @@ export default async function AdminHomePage() {
     notFound()
   }
 
-  const [accessSnapshot, storageStatus] = await Promise.all([
+  const [accessSnapshot, storageStatus, analyticsSnapshot] = await Promise.all([
     getAccessAdminSnapshot(),
     getLegacySeedMigrationStatus(),
+    getProductAnalyticsSnapshot(),
   ])
 
   return (
@@ -52,6 +53,10 @@ export default async function AdminHomePage() {
             <Link href="/profile/admin/storage" className={styles.actionItem}>
               <DatabaseZap size={20} />
               <span>Legacy asset storage</span>
+            </Link>
+            <Link href="/profile/admin/analytics" className={styles.actionItem}>
+              <ChartColumn size={20} />
+              <span>Product analytics</span>
             </Link>
           </div>
         </section>
@@ -79,6 +84,13 @@ export default async function AdminHomePage() {
                 <span>Seed cards pending</span>
               </div>
               <span className={styles.countText}>{storageStatus.cardCount}</span>
+            </div>
+            <div className={styles.settingItem}>
+              <div className={styles.settingLabel}>
+                <ChartColumn size={18} />
+                <span>Signals ({analyticsSnapshot.windowDays}d)</span>
+              </div>
+              <span className={styles.countText}>{analyticsSnapshot.totalEvents}</span>
             </div>
           </div>
         </section>
