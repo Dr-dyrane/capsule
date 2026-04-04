@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { trackProductEvent } from '@/lib/analytics/events'
 import { isCommunitySchemaError } from '@/lib/community/schema'
 import { ensureReviewItemExists } from '@/lib/review/queue'
 import { getNextReviewSchedule } from '@/lib/review/schedule'
@@ -720,7 +721,7 @@ export async function submitReviewResult(reviewItemId: string, score: ReviewScor
 
   const { data: reviewItem, error } = await supabase
     .from('review_items')
-    .select('id, card_id, state, review_count, lapse_count, cards!inner(session_id)')
+    .select('id, card_id, source_type, state, review_count, lapse_count, cards!inner(session_id)')
     .eq('id', reviewItemId)
     .eq('user_id', user.id)
     .single()
@@ -775,6 +776,20 @@ export async function submitReviewResult(reviewItemId: string, score: ReviewScor
 
     throw eventError
   }
+
+  await trackProductEvent({
+    eventName: 'review_item_scored',
+    userId: user.id,
+    cardId: reviewItem.card_id,
+    sessionId: session?.session_id ?? null,
+    properties: {
+      next_state: schedule.nextState,
+      score,
+      source_type: reviewItem.source_type,
+    },
+    includeClarificationSummary: true,
+    supabase,
+  })
 
   revalidateReviewPaths(reviewItem.card_id, session?.session_id ?? undefined)
 

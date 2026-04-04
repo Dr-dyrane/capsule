@@ -14,8 +14,9 @@ import {
   X,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from 'react'
 
+import { trackClarificationPanelViewed } from '@/app/actions/analytics'
 import {
   createClarificationWithEvidence,
   deleteClarificationItem,
@@ -248,6 +249,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null)
   const [resolvedOpen, setResolvedOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const hasTrackedView = useRef(false)
 
   const openThreads = useMemo(
     () => data.threads.filter((thread) => thread.status === 'open'),
@@ -271,6 +273,21 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
       }
     }
   }, [evidencePreviewUrl])
+
+  useEffect(() => {
+    if (!data.supported || hasTrackedView.current) {
+      return
+    }
+
+    hasTrackedView.current = true
+
+    void trackClarificationPanelViewed({
+      cardId,
+      openCount: data.open_count,
+      resolvedCount: data.resolved_count,
+      evidenceCount: data.evidence_count,
+    })
+  }, [cardId, data.evidence_count, data.open_count, data.resolved_count, data.supported])
 
   function closeComposer() {
     if (isPending) return

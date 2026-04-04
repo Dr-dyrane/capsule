@@ -2,6 +2,7 @@ import 'server-only'
 
 import { v4 as uuidv4 } from 'uuid'
 
+import { trackProductEvent } from '@/lib/analytics/events'
 import { isCommunitySchemaError } from '@/lib/community/schema'
 import { createClient } from '@/lib/supabase/server'
 
@@ -69,6 +70,7 @@ export async function uploadNoteFromFormData(formData: FormData) {
     const sessionId = uuidv4()
     const filePath = `${user.id}/${sessionId}/source.${fileExt}`
     const remixCardId = formData.get('remix_card_id')
+    const wantsPublish = formData.get('publish') === 'true'
     const normalizedRemixCardId =
       typeof remixCardId === 'string' && remixCardId.trim().length > 0 ? remixCardId.trim() : null
     let uploaded = false
@@ -80,7 +82,6 @@ export async function uploadNoteFromFormData(formData: FormData) {
       if (uploadError) throw uploadError
       uploaded = true
 
-      const wantsPublish = formData.get('publish') === 'true'
       const baseSession = {
         id: sessionId,
         user_id: user.id,
@@ -131,6 +132,20 @@ export async function uploadNoteFromFormData(formData: FormData) {
       }
 
       sessionCreated = true
+
+      if (normalizedRemixCardId) {
+        await trackProductEvent({
+          eventName: 'community_card_remix_started',
+          userId: user.id,
+          cardId: normalizedRemixCardId,
+          sessionId: session.id,
+          properties: {
+            publish: wantsPublish,
+          },
+          includeClarificationSummary: true,
+          supabase,
+        })
+      }
 
       return session
     } catch (error) {

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { trackProductEvent } from '@/lib/analytics/events'
 import {
   getClarificationEvidenceFile,
   removeClarificationEvidenceFiles,
@@ -463,6 +464,15 @@ export async function createClarification(cardId: string, kind: ClarificationKin
     throw rootLinkError
   }
 
+  await trackProductEvent({
+    eventName: 'clarification_created',
+    userId: user.id,
+    cardId,
+    properties: { kind },
+    includeClarificationSummary: true,
+    supabase,
+  })
+
   revalidateClarificationPaths(cardId)
   return { created: true }
 }
@@ -522,6 +532,29 @@ export async function createClarificationWithEvidence(formData: FormData) {
     throw rootLinkError
   }
 
+  await trackProductEvent({
+    eventName: 'clarification_created',
+    userId: user.id,
+    cardId,
+    properties: { kind },
+    includeClarificationSummary: true,
+    supabase,
+  })
+
+  if (rootItem.evidence_image_path) {
+    await trackProductEvent({
+      eventName: 'clarification_evidence_attached',
+      userId: user.id,
+      cardId,
+      properties: {
+        kind,
+        mode: 'create',
+      },
+      includeClarificationSummary: true,
+      supabase,
+    })
+  }
+
   revalidateClarificationPaths(cardId)
   return { created: true }
 }
@@ -531,7 +564,7 @@ export async function replyToClarification(threadId: string, body: string) {
   const { supabase, user } = await ensureAuthenticatedUser()
   const { data: thread, error: threadError } = await supabase
     .from('card_clarification_threads')
-    .select('id, card_id, root_item_id, status')
+    .select('id, card_id, root_item_id, status, kind')
     .eq('id', threadId)
     .maybeSingle()
 
@@ -554,6 +587,15 @@ export async function replyToClarification(threadId: string, body: string) {
     userId: user.id,
     parentItemId: thread.root_item_id,
     body: normalizedBody,
+  })
+
+  await trackProductEvent({
+    eventName: 'clarification_reply_created',
+    userId: user.id,
+    cardId: thread.card_id,
+    properties: { kind: thread.kind },
+    includeClarificationSummary: true,
+    supabase,
   })
 
   revalidateClarificationPaths(thread.card_id)
@@ -566,7 +608,7 @@ export async function replyToClarificationWithEvidence(formData: FormData) {
   const { supabase, user } = await ensureAuthenticatedUser()
   const { data: thread, error: threadError } = await supabase
     .from('card_clarification_threads')
-    .select('id, card_id, root_item_id, status')
+    .select('id, card_id, root_item_id, status, kind')
     .eq('id', threadId)
     .maybeSingle()
 
@@ -582,7 +624,7 @@ export async function replyToClarificationWithEvidence(formData: FormData) {
     throw new Error('This clarification is no longer open for replies.')
   }
 
-  await createClarificationItemRecord({
+  const replyItem = await createClarificationItemRecord({
     supabase,
     threadId: thread.id,
     cardId: thread.card_id,
@@ -592,6 +634,29 @@ export async function replyToClarificationWithEvidence(formData: FormData) {
     evidenceFile,
   })
 
+  await trackProductEvent({
+    eventName: 'clarification_reply_created',
+    userId: user.id,
+    cardId: thread.card_id,
+    properties: { kind: thread.kind },
+    includeClarificationSummary: true,
+    supabase,
+  })
+
+  if (replyItem.evidence_image_path) {
+    await trackProductEvent({
+      eventName: 'clarification_evidence_attached',
+      userId: user.id,
+      cardId: thread.card_id,
+      properties: {
+        kind: thread.kind,
+        mode: 'reply',
+      },
+      includeClarificationSummary: true,
+      supabase,
+    })
+  }
+
   revalidateClarificationPaths(thread.card_id)
   return { created: true }
 }
@@ -600,7 +665,7 @@ export async function resolveClarification(threadId: string) {
   const { supabase, user } = await ensureAuthenticatedUser()
   const { data: thread, error: threadError } = await supabase
     .from('card_clarification_threads')
-    .select('id, card_id, status')
+    .select('id, card_id, kind, status')
     .eq('id', threadId)
     .maybeSingle()
 
@@ -638,6 +703,15 @@ export async function resolveClarification(threadId: string) {
 
     throw error
   }
+
+  await trackProductEvent({
+    eventName: 'clarification_resolved',
+    userId: user.id,
+    cardId: thread.card_id,
+    properties: { kind: thread.kind },
+    includeClarificationSummary: true,
+    supabase,
+  })
 
   revalidateClarificationPaths(thread.card_id)
   return { resolved: true }

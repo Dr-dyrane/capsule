@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { trackProductEvent } from '@/lib/analytics/events'
 import { isClarificationSchemaError } from '@/lib/clarifications/schema'
 import { isCommunitySchemaError } from '@/lib/community/schema'
 import { ensureReviewItemExists } from '@/lib/review/queue'
@@ -1141,6 +1142,14 @@ export async function toggleCommunityReaction(cardId: string, kind: CommunityRea
     } catch (reviewError) {
       console.error('Could not create saved community review item', reviewError)
     }
+
+    await trackProductEvent({
+      eventName: 'community_card_saved',
+      userId: user.id,
+      cardId,
+      includeClarificationSummary: true,
+      supabase,
+    })
   }
 
   revalidateCommunityPaths()
