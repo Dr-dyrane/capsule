@@ -1,146 +1,305 @@
-# Capsule Discussion Plan
+# Capsule Card Clarifications Plan
 
-## Product Position
+## Current Product Standpoint
 
-Capsule should support user-to-user discussion around learning objects.
-It should not become a messaging platform.
+## Document Map
 
-That means:
+- Product stance: [discussion-plan.md](./discussion-plan.md)
+- Full roadmap: [card-clarifications-roadmap.md](./card-clarifications-roadmap.md)
+- Current implementation spec: [card-clarifications-v1.md](./card-clarifications-v1.md)
 
-- discussion is attached to a public card or public library
-- discussion is visible in context
-- discussion helps understanding, correction, and reuse
-- no direct messages
-- no user inbox
-- no contact graph
-- no generic chat surface
+Capsule does not need generic discussion.
+Capsule needs a trust layer around public learning cards.
 
-## Recommendation
+The problem is not:
 
-Use public contextual discussion, not private messaging.
+- users lack places to talk
+- users need social engagement for its own sake
+- users need private messaging
 
-Good fit:
+The real problem is:
 
-- `Ask a question` on a public card
-- `Add clarification` on a public card
-- `Discuss this library` on a published library
-- image attachments inside a discussion reply when the image supports the teaching point
+- public cards can be useful but incomplete
+- users may need correction, clarification, or supporting evidence
+- community content needs a lightweight way to become more trustworthy
 
-Bad fit:
+So the right feature is not `Discussion`.
+The right feature is `Card Clarifications`.
 
-- person-to-person chat
-- off-topic conversations
-- long private back-and-forth threads
-- building a social network layer
+## Product Decision
+
+Build:
+
+- public, card-level clarifications
+- short structured responses
+- optional image evidence
+- creator and community replies
+- resolution state for answered or corrected issues
+
+Do not build:
+
+- direct messages
+- inboxes
+- generic comment systems
+- off-topic conversation spaces
+- user-to-user social chat
+
+Capsule should be a learning product with community verification, not a communication platform.
+
+## Why This Wins
+
+This feature fits Capsule because it improves:
+
+- trust in public cards
+- learning quality
+- reuse confidence
+- community value without social bloat
+
+It also avoids the cost of building:
+
+- moderation-heavy open discussion
+- messaging infrastructure
+- notifications and social graph logic
+- a second product inside Capsule
+
+## Feature Definition
+
+`Card Clarifications` is a structured public layer on top of published community cards.
+
+Users can add one of three things:
+
+- `Question`
+- `Clarification`
+- `Correction`
+
+Each item belongs to a published card.
+Each item can receive replies.
+Each item can optionally include one supporting image.
+
+The goal is to help the next learner understand the card better.
+
+## UX Principle
+
+The interaction model should feel native, compact, and familiar.
+
+Use a thread pattern similar to X/Twitter because it is fast to parse and widely understood.
+But only copy the thread interaction model, not the social product.
+
+Rules:
+
+- keep users on the same screen whenever possible
+- use sheets for compose, image attach, report, and focused reply
+- use progressive disclosure instead of long scrolling layouts
+- keep DOM shallow
+- avoid wrapper-in-wrapper layouts
+- avoid wasted horizontal padding on mobile
+- manage tight vertical space carefully
+- prefer inline expansion over navigation
+- use microinteractions for confirmation, not extra chrome
 
 ## V1 Scope
 
-V1 should stay narrow:
+V1 should be intentionally narrow:
 
-- discussions only on published community cards
-- top-level discussion posts plus one level of replies
+- only on published community cards
+- top-level clarification items
+- one reply depth only
 - text required
-- optional single image attachment per post or reply
-- creator and community can reply in the same thread
-- users can report a discussion item
-- users can delete their own discussion items
+- type required: `Question`, `Clarification`, or `Correction`
+- optional single image attachment
+- creator and community can reply
+- users can report items
+- users can delete their own items
+- creator can mark an item `Resolved`
 
-Out of scope for V1:
+V1 out of scope:
 
-- direct messaging
-- group chat
-- voice or video
-- threaded replies beyond one level
+- library-level clarification
+- private messaging
+- notifications
 - @mentions
-- push notifications
-- typing indicators
-- read receipts
+- multi-level reply trees
+- reactions on clarification items
+- quote repost / reshare behavior
+- voice or video replies
 
-## Why Image Support Makes Sense
+## User Jobs
 
-Image support is useful if it is evidence, not decoration.
+### Learner
 
-Allowed examples:
+- ask what a card means
+- point out ambiguity
+- add a better explanation
+- attach a supporting image or annotated note
 
-- annotated screenshot of a source note
+### Card Creator
+
+- clarify intent
+- respond to questions
+- accept or resolve a correction
+
+### Future Viewer
+
+- quickly see whether a public card has unanswered concerns
+- scan resolved clarifications without reading a long thread
+
+## Core UX Flow
+
+### Entry
+
+On a published card:
+
+- `Clarify`
+- `View clarifications`
+
+If there are existing items, show a small count near the action.
+
+### Main View
+
+Clarifications live inline on the community card detail screen.
+They can expand into a focused sheet on mobile.
+
+The view should include:
+
+- summary bar
+- clarification list
+- compact composer trigger
+- resolved and open grouping
+
+### Composer
+
+Use a sheet-based composer on mobile.
+
+Composer fields:
+
+- type picker
+- text field
+- optional image attach
+- submit
+
+No heavy rich text editor.
+No full-screen writing mode unless the input grows large.
+
+### Replies
+
+Replies should expand inline under a clarification item.
+If the user is replying on mobile, the reply composer can open in a bottom sheet.
+
+### Resolution
+
+Card creator can mark a clarification thread as `Resolved`.
+Resolved items should collapse by default behind a simple toggle.
+
+## Interaction Design Rules
+
+### Mobile
+
+- no large side gutters
+- keep horizontal padding tight, usually `12px` to `16px`
+- use bottom sheets for focused actions
+- action row stays compact
+- image preview should not dominate the thread
+- avoid sending users to a separate page unless the clarification task becomes primary
+
+### Desktop
+
+- same single-column thread model
+- more breathing room, not more complexity
+- avoid multi-panel discussion layouts
+- do not make it feel like Slack, Discord, or a forum
+
+### Layout
+
+- no unnecessary wrappers
+- no card inside card inside card
+- one main thread surface
+- compact row structure: avatar, content, actions, optional media
+- keep scroll depth under control with progressive disclosure
+
+## Clarification Types
+
+### Question
+
+Use when a learner does not understand the card or wants a missing link explained.
+
+### Clarification
+
+Use when the card is directionally right but needs added context.
+
+### Correction
+
+Use when the card is misleading, incomplete, or wrong.
+
+## Image Attachment Rules
+
+Allow one optional image per clarification item or reply.
+
+Good image examples:
+
+- annotated source note
 - supporting diagram
-- cropped reference image that clarifies a mechanism
-- comparison image that explains why a card should be corrected
+- comparison screenshot
+- marked-up explanation image
 
-Not ideal:
+Bad image examples:
 
-- casual selfies
-- unrelated media
-- generic meme usage
+- unrelated photos
+- reaction images
+- decorative uploads
 
-So yes, support image attachments in discussion.
-But attach them to a card discussion object, not to a user profile or chat thread.
-
-## UX Model
-
-### Entry Points
-
-- `Discuss` on community card detail
-- `View discussion` if a thread already exists
-- later: `Discuss library` on published library pages
-
-### Discussion Layout
-
-Each community card gets a compact discussion section:
-
-- thread count
-- top threads sorted by recent activity
-- composer with short prompt like `Add a question or clarification`
-- optional image attach action
-- replies nested one level only
-
-### Composer Rules
-
-- short and direct
-- placeholder should guide educational use
-- image attach should feel secondary
-- no giant rich text editor
-
-### Mobile Behavior
-
-- discussion opens inline below the card on detail pages
-- composer can expand into a sheet for image attachment
-- replies remain single-column
+This image is evidence, not social media content.
 
 ## Moderation Rules
 
-Need this from day one:
+Need from day one:
 
-- report discussion post
-- soft delete own post
-- basic rate limit
-- server-side file type and size validation
-- image upload constrained to supported formats
+- report clarification item
+- delete own item
+- creator resolve action
+- rate limiting
+- server-side file validation
+- image size limit
+- allowed mime type enforcement
 
-Recommended later:
+Recommended next:
 
-- creator moderation on their own published cards
-- admin moderation queue for flagged discussion items
+- creator hide / escalate action
+- admin moderation view for flagged items
+
+## Information Architecture
+
+Each published card detail page should expose:
+
+- card content
+- save / remix actions
+- clarification summary
+- clarification thread
+
+Clarifications should not become a separate top-level destination in navigation.
 
 ## Data Model
 
-### `discussion_threads`
+### `card_clarification_threads`
 
 - `id`
 - `card_id`
+- `root_item_id`
 - `created_by`
-- `root_post_id`
+- `kind`
+- `status` (`open`, `resolved`, `removed`)
 - `reply_count`
 - `last_activity_at`
+- `resolved_by` nullable
+- `resolved_at` nullable
 - `created_at`
 
-### `discussion_posts`
+### `card_clarification_items`
 
 - `id`
 - `thread_id`
 - `card_id`
 - `user_id`
-- `parent_post_id` nullable
+- `parent_item_id` nullable
 - `body`
 - `image_path` nullable
 - `image_width` nullable
@@ -149,71 +308,93 @@ Recommended later:
 - `created_at`
 - `updated_at`
 
-### `discussion_reports`
+### `card_clarification_reports`
 
 - `id`
-- `post_id`
+- `item_id`
 - `user_id`
 - `created_at`
 
 ## Storage
 
-Use a dedicated bucket such as `discussion`.
+Use a dedicated bucket such as `clarifications`.
 
 Rules:
 
-- authenticated users only for upload
+- authenticated upload only
 - path scoped by `card_id` and `user_id`
 - strict file size cap
-- signed URLs for display
+- signed URLs for rendering
 
 ## API / Action Layer
 
 Needed actions:
 
-- `getCardDiscussion(cardId)`
-- `createDiscussionPost(cardId, body, image?)`
-- `replyToDiscussion(postId, body, image?)`
-- `deleteDiscussionPost(postId)`
-- `reportDiscussionPost(postId)`
+- `getCardClarifications(cardId)`
+- `createClarification(cardId, kind, body, image?)`
+- `replyToClarification(threadId, body, image?)`
+- `resolveClarification(threadId)`
+- `deleteClarificationItem(itemId)`
+- `reportClarificationItem(itemId)`
+
+## UI Components
+
+Likely components:
+
+- `ClarificationSummary`
+- `ClarificationList`
+- `ClarificationThread`
+- `ClarificationComposerSheet`
+- `ClarificationReplyComposer`
+- `ClarificationImagePreview`
+- `ClarificationResolveAction`
 
 ## Rollout Plan
 
 ### Phase 1
 
-- card-level public discussion
-- text replies
-- no images yet
+- card-level clarifications
+- text only
+- one reply depth
+- resolved state
 
 ### Phase 2
 
-- single image attachment per post
-- storage validation
+- single image attachment
+- image validation
 - signed URL rendering
 
 ### Phase 3
 
-- library-level discussion if card-level usage is healthy
+- only if usage is healthy: library-level clarifications
 
-## Success Signals
+## Success Metrics
 
-- % of saved or remixed community cards with discussion views
-- % of cards with at least one useful thread
-- reply rate from creators or knowledgeable users
-- no moderation overload
+Primary:
 
-## Final Product Decision
+- % of public cards with viewed clarifications
+- % of public cards with at least one useful clarification thread
+- save-to-review rate on cards with clarifications vs cards without clarifications
 
-Yes to:
+Secondary:
 
-- user-to-user discussion
-- public replies
-- image attachments that support clarification
+- creator reply rate
+- resolution rate
+- correction-to-resolution time
+- clarification open rate from community card detail
 
-No to:
+Guardrails:
 
-- user-to-user messaging
-- private inboxes
-- open-ended social chat
+- moderation load
+- abuse rate
+- time-on-task inflation from too much reading
+- negative effect on remix conversion
 
-Capsule should be a learning discussion layer on top of cards, not a communication platform.
+## Final Recommendation
+
+Proceed with `Card Clarifications`.
+
+Do not proceed with broad `Discussion`.
+Do not build user-to-user messaging.
+
+This gives Capsule the missing community trust layer without compromising focus, native UX quality, or product scope.
