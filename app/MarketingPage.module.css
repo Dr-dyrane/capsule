@@ -110,6 +110,12 @@
   display: inline-flex;
 }
 
+@media (max-width: 767px) {
+  .examplesLink {
+    display: none;
+  }
+}
+
 .quietNavLink:hover,
 .quietNavLink:focus-visible {
   color: var(--text-primary);

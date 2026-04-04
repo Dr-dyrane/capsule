@@ -82,11 +82,8 @@ export default function DonatePage() {
           </PendingLink>
 
           <div className={styles.navActions}>
-            <PendingLink href="/community" className={styles.quietLink}>
-              Community
-            </PendingLink>
             <PendingLink href="/login" className={styles.navButton}>
-              Open Capsule
+              Open
             </PendingLink>
           </div>
         </nav>
