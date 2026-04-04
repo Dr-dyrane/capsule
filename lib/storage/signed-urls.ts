@@ -14,7 +14,7 @@ function isMissingStorageError(error: unknown) {
 }
 
 export async function createSignedObjectUrl(
-  bucket: 'notes' | 'cards',
+  bucket: 'notes' | 'cards' | 'clarifications',
   path: string,
   expiresIn = 60 * 60,
 ) {
@@ -33,7 +33,7 @@ export async function createSignedObjectUrl(
 }
 
 export async function createSignedObjectUrlSafe(
-  bucket: 'notes' | 'cards',
+  bucket: 'notes' | 'cards' | 'clarifications',
   path: string,
   expiresIn = 60 * 60,
 ) {
@@ -49,7 +49,7 @@ export async function createSignedObjectUrlSafe(
 }
 
 export async function createSignedObjectUrls(
-  bucket: 'notes' | 'cards',
+  bucket: 'notes' | 'cards' | 'clarifications',
   paths: string[],
   expiresIn = 60 * 60,
 ) {
@@ -83,7 +83,7 @@ export async function createSignedObjectUrls(
 }
 
 export async function createSignedObjectUrlsSafe(
-  bucket: 'notes' | 'cards',
+  bucket: 'notes' | 'cards' | 'clarifications',
   paths: string[],
   expiresIn = 60 * 60,
 ) {

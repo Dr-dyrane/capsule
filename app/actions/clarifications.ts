@@ -2,7 +2,13 @@
 
 import { revalidatePath } from 'next/cache'
 
+import {
+  getClarificationEvidenceFile,
+  removeClarificationEvidenceFiles,
+  uploadClarificationEvidenceFile,
+} from '@/lib/clarifications/evidence'
 import { isClarificationSchemaError } from '@/lib/clarifications/schema'
+import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import { createPublicClient } from '@/lib/supabase/public'
 import { createClient } from '@/lib/supabase/server'
 import type {
@@ -127,6 +133,7 @@ function toItemView(
   cardOwnerId: string | null,
   profilesById: Map<string, Pick<ProfileRecord, 'username' | 'avatar_url'>>,
   reportedItemIds: Set<string>,
+  evidenceUrls: Record<string, string>,
 ): CardClarificationItemView {
   const profile = profilesById.get(item.user_id)
   const hasReported = reportedItemIds.has(item.id)
@@ -137,6 +144,7 @@ function toItemView(
     user_id: item.user_id,
     parent_item_id: item.parent_item_id,
     body: item.body,
+    evidence_image_url: item.evidence_image_path ? evidenceUrls[item.evidence_image_path] ?? null : null,
     status: item.status,
     created_at: item.created_at,
     updated_at: item.updated_at,
@@ -146,6 +154,108 @@ function toItemView(
     can_delete: item.user_id === viewerId && item.status === 'active',
     can_report: item.user_id !== viewerId && item.status === 'active' && !hasReported,
     has_reported: hasReported,
+  }
+}
+
+async function createClarificationItemRecord({
+  supabase,
+  threadId,
+  cardId,
+  userId,
+  body,
+  parentItemId = null,
+  evidenceFile = null,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>
+  threadId: string
+  cardId: string
+  userId: string
+  body: string
+  parentItemId?: string | null
+  evidenceFile?: File | null
+}) {
+  let evidenceImagePath: string | null = null
+
+  try {
+    if (evidenceFile) {
+      evidenceImagePath = await uploadClarificationEvidenceFile(userId, cardId, evidenceFile)
+    }
+
+    const { data, error } = await supabase
+      .from('card_clarification_items')
+      .insert({
+        thread_id: threadId,
+        card_id: cardId,
+        user_id: userId,
+        parent_item_id: parentItemId,
+        body,
+        evidence_image_path: evidenceImagePath,
+      })
+      .select('id, evidence_image_path')
+      .single()
+
+    if (error) {
+      if (isClarificationSchemaError(error)) {
+        throw toClarificationsUnsupportedError()
+      }
+
+      throw error
+    }
+
+    return data as Pick<CardClarificationItemRecord, 'id' | 'evidence_image_path'>
+  } catch (error) {
+    await removeClarificationEvidenceFiles([evidenceImagePath])
+    throw error
+  }
+}
+
+function getCreateClarificationPayload(formData: FormData) {
+  const cardId = formData.get('cardId')
+  const kind = formData.get('kind')
+  const body = formData.get('body')
+
+  if (typeof cardId !== 'string' || typeof kind !== 'string' || typeof body !== 'string') {
+    throw new Error('Clarification details are incomplete.')
+  }
+
+  if (!['question', 'clarification', 'correction'].includes(kind)) {
+    throw new Error('Choose a valid clarification type.')
+  }
+
+  return {
+    cardId,
+    kind: kind as ClarificationKind,
+    body,
+    evidenceFile: getClarificationEvidenceFile(formData.get('evidence')),
+  }
+}
+
+function getReplyClarificationPayload(formData: FormData) {
+  const threadId = formData.get('threadId')
+  const body = formData.get('body')
+
+  if (typeof threadId !== 'string' || typeof body !== 'string') {
+    throw new Error('Reply details are incomplete.')
+  }
+
+  return {
+    threadId,
+    body,
+    evidenceFile: getClarificationEvidenceFile(formData.get('evidence')),
+  }
+}
+
+async function markClarificationThreadRemoved(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  threadId: string,
+) {
+  const { error } = await supabase
+    .from('card_clarification_threads')
+    .update({ status: 'removed' })
+    .eq('id', threadId)
+
+  if (error && !isClarificationSchemaError(error)) {
+    console.error('Failed to cleanup clarification thread:', error)
   }
 }
 
@@ -197,7 +307,7 @@ export async function getCardClarifications(cardId: string): Promise<CardClarifi
 
   const { data: itemRows, error: itemError } = await supabase
     .from('card_clarification_items')
-    .select('id, thread_id, card_id, user_id, parent_item_id, body, status, created_at, updated_at')
+    .select('id, thread_id, card_id, user_id, parent_item_id, body, evidence_image_path, status, created_at, updated_at')
     .in('thread_id', threadIds)
     .order('created_at', { ascending: true })
 
@@ -216,6 +326,10 @@ export async function getCardClarifications(cardId: string): Promise<CardClarifi
 
   const rawItems = (itemRows ?? []) as CardClarificationItemRecord[]
   const itemIds = rawItems.map((item) => item.id)
+  const evidenceUrls = await createSignedObjectUrlsSafe(
+    'clarifications',
+    rawItems.map((item) => item.evidence_image_path ?? ''),
+  )
   const { data: reportRows, error: reportError } = itemIds.length
     ? await supabase
         .from('card_clarification_reports')
@@ -253,10 +367,12 @@ export async function getCardClarifications(cardId: string): Promise<CardClarifi
         return null
       }
 
-      const root = toItemView(rootRecord, user.id, card.published_by, profilesById, reportedItemIds)
+      const root = toItemView(rootRecord, user.id, card.published_by, profilesById, reportedItemIds, evidenceUrls)
       const replies = threadItems
         .filter((item) => item.parent_item_id !== null && item.status === 'active')
-        .map((item) => toItemView(item, user.id, card.published_by, profilesById, reportedItemIds))
+        .map((item) =>
+          toItemView(item, user.id, card.published_by, profilesById, reportedItemIds, evidenceUrls),
+        )
 
       return {
         id: thread.id,
@@ -313,23 +429,19 @@ export async function createClarification(cardId: string, kind: ClarificationKin
     throw threadError
   }
 
-  const { data: rootItem, error: itemError } = await supabase
-    .from('card_clarification_items')
-    .insert({
-      thread_id: thread.id,
-      card_id: cardId,
-      user_id: user.id,
+  let rootItem: Pick<CardClarificationItemRecord, 'id' | 'evidence_image_path'>
+
+  try {
+    rootItem = await createClarificationItemRecord({
+      supabase,
+      threadId: thread.id,
+      cardId,
+      userId: user.id,
       body: normalizedBody,
     })
-    .select('id')
-    .single()
-
-  if (itemError) {
-    if (isClarificationSchemaError(itemError)) {
-      throw toClarificationsUnsupportedError()
-    }
-
-    throw itemError
+  } catch (error) {
+    await markClarificationThreadRemoved(supabase, thread.id)
+    throw error
   }
 
   const { error: rootLinkError } = await supabase
@@ -338,6 +450,66 @@ export async function createClarification(cardId: string, kind: ClarificationKin
     .eq('id', thread.id)
 
   if (rootLinkError && !isClarificationSchemaError(rootLinkError)) {
+    await markClarificationThreadRemoved(supabase, thread.id)
+    throw rootLinkError
+  }
+
+  revalidateClarificationPaths(cardId)
+  return { created: true }
+}
+
+export async function createClarificationWithEvidence(formData: FormData) {
+  const { cardId, kind, body, evidenceFile } = getCreateClarificationPayload(formData)
+  const normalizedBody = ensureClarificationBody(body)
+  const card = await getPublishedCardMeta(cardId)
+
+  if (!card) {
+    throw new Error('This card is not available for clarification.')
+  }
+
+  const { supabase, user } = await ensureAuthenticatedUser()
+  const { data: thread, error: threadError } = await supabase
+    .from('card_clarification_threads')
+    .insert({
+      card_id: cardId,
+      created_by: user.id,
+      kind,
+      status: 'open',
+    })
+    .select('id, card_id, created_by, kind, status, root_item_id, reply_count, last_activity_at, resolved_by, resolved_at, created_at, updated_at')
+    .single()
+
+  if (threadError) {
+    if (isClarificationSchemaError(threadError)) {
+      throw toClarificationsUnsupportedError()
+    }
+
+    throw threadError
+  }
+
+  let rootItem: Pick<CardClarificationItemRecord, 'id' | 'evidence_image_path'>
+
+  try {
+    rootItem = await createClarificationItemRecord({
+      supabase,
+      threadId: thread.id,
+      cardId,
+      userId: user.id,
+      body: normalizedBody,
+      evidenceFile,
+    })
+  } catch (error) {
+    await markClarificationThreadRemoved(supabase, thread.id)
+    throw error
+  }
+
+  const { error: rootLinkError } = await supabase
+    .from('card_clarification_threads')
+    .update({ root_item_id: rootItem.id })
+    .eq('id', thread.id)
+
+  if (rootLinkError && !isClarificationSchemaError(rootLinkError)) {
+    await markClarificationThreadRemoved(supabase, thread.id)
     throw rootLinkError
   }
 
@@ -366,23 +538,50 @@ export async function replyToClarification(threadId: string, body: string) {
     throw new Error('This clarification is no longer open for replies.')
   }
 
-  const { error } = await supabase
-    .from('card_clarification_items')
-    .insert({
-      thread_id: thread.id,
-      card_id: thread.card_id,
-      user_id: user.id,
-      parent_item_id: thread.root_item_id,
-      body: normalizedBody,
-    })
+  await createClarificationItemRecord({
+    supabase,
+    threadId: thread.id,
+    cardId: thread.card_id,
+    userId: user.id,
+    parentItemId: thread.root_item_id,
+    body: normalizedBody,
+  })
 
-  if (error) {
-    if (isClarificationSchemaError(error)) {
+  revalidateClarificationPaths(thread.card_id)
+  return { created: true }
+}
+
+export async function replyToClarificationWithEvidence(formData: FormData) {
+  const { threadId, body, evidenceFile } = getReplyClarificationPayload(formData)
+  const normalizedBody = ensureClarificationBody(body)
+  const { supabase, user } = await ensureAuthenticatedUser()
+  const { data: thread, error: threadError } = await supabase
+    .from('card_clarification_threads')
+    .select('id, card_id, root_item_id, status')
+    .eq('id', threadId)
+    .maybeSingle()
+
+  if (threadError) {
+    if (isClarificationSchemaError(threadError)) {
       throw toClarificationsUnsupportedError()
     }
 
-    throw error
+    throw threadError
   }
+
+  if (!thread?.card_id || !thread.root_item_id || thread.status !== 'open') {
+    throw new Error('This clarification is no longer open for replies.')
+  }
+
+  await createClarificationItemRecord({
+    supabase,
+    threadId: thread.id,
+    cardId: thread.card_id,
+    userId: user.id,
+    parentItemId: thread.root_item_id,
+    body: normalizedBody,
+    evidenceFile,
+  })
 
   revalidateClarificationPaths(thread.card_id)
   return { created: true }
@@ -439,7 +638,7 @@ export async function deleteClarificationItem(itemId: string) {
   const { supabase, user } = await ensureAuthenticatedUser()
   const { data: item, error: itemError } = await supabase
     .from('card_clarification_items')
-    .select('id, thread_id, card_id, user_id, parent_item_id, status')
+    .select('id, thread_id, card_id, user_id, parent_item_id, status, evidence_image_path')
     .eq('id', itemId)
     .maybeSingle()
 
@@ -474,6 +673,8 @@ export async function deleteClarificationItem(itemId: string) {
 
     throw error
   }
+
+  await removeClarificationEvidenceFiles([item.evidence_image_path])
 
   if (!item.parent_item_id) {
     const { error: threadError } = await supabase
@@ -581,7 +782,7 @@ export async function getCreatorModerationClarifications(
       .neq('status', 'removed'),
     supabase
       .from('card_clarification_items')
-      .select('id, thread_id, card_id, user_id, parent_item_id, body, status, created_at, updated_at')
+      .select('id, thread_id, card_id, user_id, parent_item_id, body, evidence_image_path, status, created_at, updated_at')
       .in('card_id', cardIds)
       .eq('status', 'active'),
   ])
@@ -599,6 +800,10 @@ export async function getCreatorModerationClarifications(
   const rawThreads = (threadRows ?? []) as CardClarificationThreadRecord[]
   const rawItems = (itemRows ?? []) as CardClarificationItemRecord[]
   const itemIds = rawItems.map((item) => item.id)
+  const evidenceUrls = await createSignedObjectUrlsSafe(
+    'clarifications',
+    rawItems.map((item) => item.evidence_image_path ?? ''),
+  )
 
   if (itemIds.length === 0) {
     return { supported: true, items: [] }
@@ -646,6 +851,7 @@ export async function getCreatorModerationClarifications(
         thread_kind: thread.kind,
         thread_status: thread.status,
         item_body: item.body,
+        evidence_image_url: item.evidence_image_path ? evidenceUrls[item.evidence_image_path] ?? null : null,
         parent_item_id: item.parent_item_id,
         item_created_at: item.created_at,
         author_name: profile?.username ?? 'Capsule learner',
@@ -716,7 +922,7 @@ export async function removeClarificationItemAsCreator(itemId: string) {
   const { supabase, user } = await ensureAuthenticatedUser()
   const { data: item, error: itemError } = await supabase
     .from('card_clarification_items')
-    .select('id, thread_id, card_id, parent_item_id, status')
+    .select('id, thread_id, card_id, parent_item_id, status, evidence_image_path')
     .eq('id', itemId)
     .maybeSingle()
 
@@ -753,6 +959,8 @@ export async function removeClarificationItemAsCreator(itemId: string) {
 
     throw error
   }
+
+  await removeClarificationEvidenceFiles([item.evidence_image_path])
 
   if (!item.parent_item_id) {
     const { error: threadError } = await supabase

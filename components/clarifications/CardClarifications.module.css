@@ -46,7 +46,8 @@
 .sheetButton,
 .sheetPrimary,
 .resolvedToggle,
-.actionButton {
+.actionButton,
+.removeImageButton {
   border: none;
   font: inherit;
 }
@@ -211,6 +212,22 @@
   overflow-wrap: anywhere;
 }
 
+.evidence {
+  width: min(100%, 320px);
+  overflow: hidden;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-3) 84%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.evidenceImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+  object-fit: cover;
+}
+
 .replyList {
   display: grid;
   gap: 12px;
@@ -310,6 +327,13 @@
   gap: 14px;
 }
 
+.composerTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .kindRow {
   display: flex;
   flex-wrap: wrap;
@@ -369,6 +393,55 @@
 .textarea:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
   outline-offset: 2px;
+}
+
+.attachButton,
+.removeImageButton {
+  position: relative;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-3) 86%, transparent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--ease-apple),
+    color 150ms var(--ease-apple),
+    transform 150ms var(--ease-apple);
+}
+
+.attachButton:hover,
+.attachButton:focus-visible,
+.removeImageButton:hover,
+.removeImageButton:focus-visible {
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.composerPreview {
+  overflow: hidden;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-3) 84%, transparent);
+}
+
+.composerPreviewImage {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
 }
 
 .counter {

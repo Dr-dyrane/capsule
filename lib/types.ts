@@ -170,6 +170,7 @@ export interface CardClarificationItemRecord {
   user_id: string
   parent_item_id: string | null
   body: string
+  evidence_image_path: string | null
   status: ClarificationItemStatus
   created_at: string
   updated_at: string
@@ -188,6 +189,7 @@ export interface CardClarificationItemView {
   user_id: string
   parent_item_id: string | null
   body: string
+  evidence_image_url: string | null
   status: ClarificationItemStatus
   created_at: string
   updated_at: string
@@ -231,6 +233,7 @@ export interface CardClarificationModerationItem {
   thread_kind: ClarificationKind
   thread_status: ClarificationThreadStatus
   item_body: string
+  evidence_image_url: string | null
   parent_item_id: string | null
   item_created_at: string
   author_name: string | null

@@ -10,6 +10,7 @@ const CLARIFICATION_SCHEMA_PATTERNS = [
   'card_clarification_threads',
   'card_clarification_items',
   'card_clarification_reports',
+  'evidence_image_path',
   'root_item_id',
   'reply_count',
   'last_activity_at',

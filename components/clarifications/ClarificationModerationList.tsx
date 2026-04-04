@@ -146,6 +146,18 @@ export default function ClarificationModerationList({ items }: ClarificationMode
             </div>
 
             <p className={styles.body}>{item.item_body}</p>
+            {item.evidence_image_url ? (
+              <div className={styles.evidence}>
+                <Image
+                  src={item.evidence_image_url}
+                  alt="Clarification evidence"
+                  width={720}
+                  height={540}
+                  unoptimized
+                  className={styles.evidenceImage}
+                />
+              </div>
+            ) : null}
 
             <div className={styles.actions}>
               <PendingLink href={`/community/${item.card_id}`} className={styles.linkAction}>
@@ -206,6 +218,18 @@ export default function ClarificationModerationList({ items }: ClarificationMode
               {removingItem.parent_item_id ? 'This reply will disappear.' : 'This item will disappear.'}
             </p>
             <p className={styles.sheetCopy}>{removingItem.item_body}</p>
+            {removingItem.evidence_image_url ? (
+              <div className={styles.evidence}>
+                <Image
+                  src={removingItem.evidence_image_url}
+                  alt="Clarification evidence"
+                  width={720}
+                  height={540}
+                  unoptimized
+                  className={styles.evidenceImage}
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
       </AdaptiveSheet>

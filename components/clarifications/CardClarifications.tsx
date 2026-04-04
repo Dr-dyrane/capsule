@@ -6,18 +6,20 @@ import {
   ChevronDown,
   CornerDownLeft,
   Flag,
+  ImagePlus,
   Loader2,
   MessageCirclePlus,
   ShieldAlert,
   Trash2,
+  X,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState, useTransition, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, useTransition, type FormEvent } from 'react'
 
 import {
-  createClarification,
+  createClarificationWithEvidence,
   deleteClarificationItem,
-  replyToClarification,
+  replyToClarificationWithEvidence,
   reportClarificationItem,
   resolveClarification,
 } from '@/app/actions/clarifications'
@@ -99,6 +101,27 @@ function ClarificationAvatar({
   )
 }
 
+function ClarificationEvidence({
+  src,
+  alt,
+}: {
+  src: string
+  alt: string
+}) {
+  return (
+    <div className={styles.evidence}>
+      <Image
+        src={src}
+        alt={alt}
+        width={960}
+        height={720}
+        unoptimized
+        className={styles.evidenceImage}
+      />
+    </div>
+  )
+}
+
 function ClarificationThread({
   thread,
   disabled,
@@ -141,6 +164,9 @@ function ClarificationThread({
           </div>
 
           <p className={styles.threadCopy}>{root.body}</p>
+          {root.evidence_image_url ? (
+            <ClarificationEvidence src={root.evidence_image_url} alt={`${KIND_LABELS[thread.kind]} evidence`} />
+          ) : null}
 
           <div className={styles.actionRow}>
             {thread.can_reply ? (
@@ -186,6 +212,9 @@ function ClarificationThread({
                       </time>
                     </div>
                     <p className={styles.replyCopy}>{reply.body}</p>
+                    {reply.evidence_image_url ? (
+                      <ClarificationEvidence src={reply.evidence_image_url} alt="Reply evidence" />
+                    ) : null}
                     <div className={styles.actionRow}>
                       {reply.can_delete ? (
                         <button type="button" className={styles.actionButton} onClick={() => onDelete(reply.id)} disabled={disabled}>
@@ -216,6 +245,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
   const { showFeedback } = useFeedback()
   const [composerState, setComposerState] = useState<ComposerState | null>(null)
   const [body, setBody] = useState('')
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null)
   const [resolvedOpen, setResolvedOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -229,11 +259,24 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
   )
   const activeCreateKind = composerState?.mode === 'create' ? composerState.kind : 'question'
   const composerTitle = composerState?.mode === 'reply' ? 'Reply' : 'Clarify'
+  const evidencePreviewUrl = useMemo(
+    () => (evidenceFile ? URL.createObjectURL(evidenceFile) : null),
+    [evidenceFile],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (evidencePreviewUrl) {
+        URL.revokeObjectURL(evidencePreviewUrl)
+      }
+    }
+  }, [evidencePreviewUrl])
 
   function closeComposer() {
     if (isPending) return
     setComposerState(null)
     setBody('')
+    setEvidenceFile(null)
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -245,15 +288,25 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
 
     startTransition(async () => {
       try {
+        const formData = new FormData()
+        formData.append('body', body)
+
+        if (evidenceFile) {
+          formData.append('evidence', evidenceFile)
+        }
+
         if (composerState.mode === 'reply') {
-          await replyToClarification(composerState.threadId, body)
+          formData.append('threadId', composerState.threadId)
+          await replyToClarificationWithEvidence(formData)
           showFeedback({
             tone: 'success',
             title: 'Reply added',
             message: 'Now live on this card.',
           })
         } else {
-          await createClarification(cardId, activeCreateKind, body)
+          formData.append('cardId', cardId)
+          formData.append('kind', activeCreateKind)
+          await createClarificationWithEvidence(formData)
           showFeedback({
             tone: 'success',
             title: 'Clarification posted',
@@ -263,6 +316,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
 
         setComposerState(null)
         setBody('')
+        setEvidenceFile(null)
         router.refresh()
       } catch (error) {
         showFeedback({
@@ -387,6 +441,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
               onReply={(threadId) => {
                 setComposerState({ mode: 'reply', threadId })
                 setBody('')
+                setEvidenceFile(null)
               }}
               onResolve={handleResolve}
               onDelete={handleDelete}
@@ -421,6 +476,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
                       onReply={(threadId) => {
                         setComposerState({ mode: 'reply', threadId })
                         setBody('')
+                        setEvidenceFile(null)
                       }}
                       onResolve={handleResolve}
                       onDelete={handleDelete}
@@ -490,6 +546,50 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
               }
             />
           </label>
+
+          <div className={styles.composerTools}>
+            <label className={styles.attachButton}>
+              <ImagePlus size={15} aria-hidden="true" />
+              <span>{evidenceFile ? 'Change image' : 'Add image'}</span>
+              <input
+                type="file"
+                accept="image/*"
+                className={styles.fileInput}
+                disabled={isPending}
+                onChange={(event) => {
+                  const nextFile = event.target.files?.[0] ?? null
+                  setEvidenceFile(nextFile)
+                  event.currentTarget.value = ''
+                }}
+              />
+            </label>
+
+            {evidenceFile ? (
+              <button
+                type="button"
+                className={styles.removeImageButton}
+                onClick={() => setEvidenceFile(null)}
+                disabled={isPending}
+              >
+                <X size={14} aria-hidden="true" />
+                <span>Remove</span>
+              </button>
+            ) : null}
+          </div>
+
+          {evidencePreviewUrl ? (
+            <div className={styles.composerPreview}>
+              <Image
+                src={evidencePreviewUrl}
+                alt="Selected evidence"
+                width={960}
+                height={720}
+                unoptimized
+                className={styles.composerPreviewImage}
+              />
+            </div>
+          ) : null}
+
           <div className={styles.counter}>{body.trim().length}/1200</div>
         </form>
       </AdaptiveSheet>
@@ -497,7 +597,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
       {isPending ? (
         <div className={styles.pending} aria-live="polite">
           <Loader2 size={14} className={styles.spinner} aria-hidden="true" />
-          <span>Updating clarifications…</span>
+          <span>Updating clarifications...</span>
         </div>
       ) : null}
     </section>

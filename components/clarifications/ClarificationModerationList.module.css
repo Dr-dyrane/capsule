@@ -120,6 +120,22 @@
   overflow-wrap: anywhere;
 }
 
+.evidence {
+  width: min(100%, 220px);
+  overflow: hidden;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-3) 84%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.evidenceImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  object-fit: cover;
+}
+
 .actions,
 .sheetFooter {
   display: flex;
