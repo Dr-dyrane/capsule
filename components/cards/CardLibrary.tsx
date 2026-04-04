@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { getSignedCardUrls } from '@/app/actions/assets'
 import { publishCards, unpublishCards } from '@/app/actions/community'
 import type { CardRecord } from '@/lib/types'
+import type { UiDensityMode } from '@/lib/ui/density'
 import { useFeedback } from '@/components/providers/FeedbackProvider'
 import AdaptiveSheet from '@/components/ui/AdaptiveSheet'
 import PendingLink from '@/components/ui/PendingLink'
@@ -19,9 +20,15 @@ interface CardLibraryProps {
   initialCards: CardRecord[]
   initialSignedUrls: Record<string, string>
   categories: string[]
+  densityMode: UiDensityMode
 }
 
-export default function CardLibrary({ initialCards, initialSignedUrls, categories }: CardLibraryProps) {
+export default function CardLibrary({
+  initialCards,
+  initialSignedUrls,
+  categories,
+  densityMode,
+}: CardLibraryProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [layout, setLayout] = useState<'grid' | 'list'>('grid')
@@ -33,6 +40,7 @@ export default function CardLibrary({ initialCards, initialSignedUrls, categorie
   const [isBulkPending, startBulkTransition] = useTransition()
   const { showFeedback } = useFeedback()
   const router = useRouter()
+  const isFocused = densityMode === 'focused'
 
   const filteredCards = useMemo(() => {
     return initialCards.filter((card) => {
@@ -140,12 +148,13 @@ export default function CardLibrary({ initialCards, initialSignedUrls, categorie
         layout={layout}
         setLayout={setLayout}
         categories={categories}
+        densityMode={densityMode}
       />
 
-      <div className={styles.selectionBar}>
+      <div className={`${styles.selectionBar} ${isFocused && !selectionMode ? styles.selectionBarQuiet : ''}`}>
         <button className={styles.selectionToggle} onClick={toggleSelectionMode}>
           {selectionMode ? <X size={16} /> : <CheckSquare size={16} />}
-          <span>{selectionMode ? 'Done' : 'Select cards'}</span>
+          <span>{selectionMode ? 'Done' : isFocused ? 'Manage cards' : 'Select cards'}</span>
         </button>
 
         {selectionMode ? (
@@ -176,6 +185,8 @@ export default function CardLibrary({ initialCards, initialSignedUrls, categorie
               <span>Unpublish selected</span>
             </button>
           </div>
+        ) : !isFocused ? (
+          <p className={styles.selectionHint}>Select a group to publish or make private.</p>
         ) : null}
       </div>
 

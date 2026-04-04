@@ -9,6 +9,8 @@ import {
   getViewerCommunityReports,
 } from '@/app/actions/community'
 import CommunityBrowser from '@/components/community/CommunityBrowser'
+import { createClient } from '@/lib/supabase/server'
+import { getUiDensity } from '@/lib/ui/density'
 import styles from '../AppScreen.module.css'
 
 export default async function CommunityPage({
@@ -25,6 +27,12 @@ export default async function CommunityPage({
   }>
 }) {
   const params = searchParams ? await searchParams : {}
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const densityMode = getUiDensity(user)
+
   const initialFilters = {
     search: params?.q ?? '',
     template: params?.template ?? null,
@@ -67,7 +75,9 @@ export default async function CommunityPage({
           <span>Community</span>
         </div>
         <h1 className={styles.title}>Shared knowledge.</h1>
-        <p className={styles.copy}>Discover visual clinical concepts published by the community.</p>
+        <p className={styles.copy}>
+          {densityMode === 'focused' ? 'Browse what others shared.' : 'Discover visual clinical concepts published by the community.'}
+        </p>
       </header>
 
       <CommunityBrowser
@@ -80,6 +90,7 @@ export default async function CommunityPage({
         initialFilters={initialFilters}
         libraries={libraries}
         libraryUrls={libraryUrls}
+        densityMode={densityMode}
       />
     </div>
   )

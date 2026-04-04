@@ -11,6 +11,10 @@
   gap: 12px;
 }
 
+.selectionBarQuiet {
+  gap: 0;
+}
+
 .selectionToggle,
 .bulkAction,
 .bulkActionMuted {
@@ -158,6 +162,12 @@
   font-weight: 600;
 }
 
+.selectionHint {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .selectionLink {
   color: var(--text-secondary);
   font-size: 13px;
@@ -181,6 +191,11 @@
 
 .mobileActions {
   display: none;
+}
+
+.desktopActions {
+  display: flex;
+  flex-shrink: 0;
 }
 
 .searchBar {
@@ -243,6 +258,36 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.filterSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.summaryChip,
+.summaryClear {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.summaryChip {
+  color: var(--text-secondary);
+  background: var(--surface-1);
+}
+
+.summaryClear {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
 }
 
 .mobileSheetTrigger {

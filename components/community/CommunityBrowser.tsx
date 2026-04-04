@@ -11,6 +11,7 @@ import type {
   CommunityFilterMeta,
   CommunityViewerState,
 } from '@/lib/types'
+import type { UiDensityMode } from '@/lib/ui/density'
 import CommunityFeed from '@/components/community/CommunityFeed'
 import CommunityLibraryCard from '@/components/community/CommunityLibraryCard'
 import styles from './CommunityBrowser.module.css'
@@ -33,6 +34,7 @@ type CommunityBrowserProps = {
   }
   libraries: CommunityLibraryRecord[]
   libraryUrls: Record<string, string>
+  densityMode: UiDensityMode
   lockedAuthor?: {
     id: string
     name: string
@@ -49,11 +51,13 @@ export default function CommunityBrowser({
   initialFilters,
   libraries,
   libraryUrls,
+  densityMode,
   lockedAuthor = null,
 }: CommunityBrowserProps) {
   const [view, setView] = useState<'cards' | 'libraries'>(
     initialFilters?.view ?? (initialCards.length === 0 && libraries.length > 0 ? 'libraries' : 'cards'),
   )
+  const isFocused = densityMode === 'focused'
 
   return (
     <div className={styles.root}>
@@ -65,7 +69,7 @@ export default function CommunityBrowser({
         >
           <Globe size={14} />
           <span>Cards</span>
-          <span className={styles.count}>{totalCardCount}</span>
+          {!isFocused ? <span className={styles.count}>{totalCardCount}</span> : null}
         </button>
         <button
           type="button"
@@ -74,7 +78,7 @@ export default function CommunityBrowser({
         >
           <Archive size={14} />
           <span>Libraries</span>
-          <span className={styles.count}>{totalLibraryCount}</span>
+          {!isFocused ? <span className={styles.count}>{totalLibraryCount}</span> : null}
         </button>
       </div>
 
@@ -86,15 +90,18 @@ export default function CommunityBrowser({
           filterMeta={filterMeta}
           initialFilters={initialFilters}
           lockedAuthor={lockedAuthor}
+          densityMode={densityMode}
         />
       ) : libraries.length > 0 ? (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <div>
-              <h2 className={styles.sectionTitle}>Published libraries</h2>
-              <p className={styles.sectionCopy}>
-                Full shared collections built from published cards.
-              </p>
+              <h2 className={styles.sectionTitle}>{isFocused ? 'Shared libraries' : 'Published libraries'}</h2>
+              {!isFocused ? (
+                <p className={styles.sectionCopy}>
+                  Full shared collections built from published cards.
+                </p>
+              ) : null}
             </div>
           </div>
 

@@ -11,6 +11,8 @@ import {
   getViewerCommunityReports,
 } from '@/app/actions/community'
 import CommunityBrowser from '@/components/community/CommunityBrowser'
+import { createClient } from '@/lib/supabase/server'
+import { getUiDensity } from '@/lib/ui/density'
 import styles from '../../../AppScreen.module.css'
 
 export default async function CommunityAuthorPage({
@@ -19,6 +21,11 @@ export default async function CommunityAuthorPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const densityMode = getUiDensity(user)
   const author = await getCommunityAuthorSummary(id)
 
   if (!author) {
@@ -75,6 +82,7 @@ export default async function CommunityAuthorPage({
         initialFilters={{ sort: 'recent', view: 'cards' }}
         libraries={libraries}
         libraryUrls={libraryUrls}
+        densityMode={densityMode}
         lockedAuthor={{ id, name: author.username }}
       />
     </div>

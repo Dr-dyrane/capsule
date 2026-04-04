@@ -27,6 +27,7 @@ import type {
   CommunitySort,
   CommunityViewerState,
 } from '@/lib/types'
+import type { UiDensityMode } from '@/lib/ui/density'
 import CommunityCard from '@/components/cards/CommunityCard'
 import { useFeedback } from '@/components/providers/FeedbackProvider'
 import MobileBottomSheet from '@/components/ui/MobileBottomSheet'
@@ -46,6 +47,7 @@ interface CommunityFeedProps {
     sort?: CommunitySort
     savedOnly?: boolean
   }
+  densityMode: UiDensityMode
   lockedAuthor?: {
     id: string
     name: string
@@ -58,6 +60,7 @@ export default function CommunityFeed({
   initialViewerReactions,
   filterMeta,
   initialFilters,
+  densityMode,
   lockedAuthor = null,
 }: CommunityFeedProps) {
   const [cards, setCards] = useState<CommunityCardRecord[]>(initialCards)
@@ -80,6 +83,7 @@ export default function CommunityFeed({
   const hydratedRef = useRef(false)
   const deferredSearch = useDeferredValue(searchQuery)
   const { showFeedback } = useFeedback()
+  const isFocused = densityMode === 'focused'
 
   const mergeViewerState = useCallback(async (cardIds: string[]) => {
     const ids = [...new Set(cardIds.filter(Boolean))]
@@ -308,6 +312,14 @@ export default function CommunityFeed({
     (savedOnly ? 1 : 0) +
     (sort === 'trending' ? 1 : 0) +
     (layout === 'list' ? 1 : 0)
+  const activeSummaries = [
+    selectedTemplate ? selectedTemplate.replace(/-/g, ' ') : null,
+    selectedCategory,
+    selectedTopic,
+    savedOnly ? 'Saved' : null,
+    sort === 'trending' ? 'Trending' : null,
+    layout === 'list' ? 'List view' : null,
+  ].filter(Boolean) as string[]
 
   if (cards.length === 0) {
     return (
@@ -323,6 +335,21 @@ export default function CommunityFeed({
                 onChange={(event) => setSearchQuery(event.target.value)}
                 className={styles.searchInput}
               />
+            </div>
+
+            <div className={`${styles.mobileActions} ${isFocused ? styles.desktopActions : ''}`}>
+              <button
+                type="button"
+                className={styles.mobileSheetTrigger}
+                onClick={() => setIsMobileSheetOpen(true)}
+                aria-label="Open community filters"
+              >
+                <span className={styles.mobileSheetTriggerCopy}>
+                  <SlidersHorizontal size={16} />
+                  <span>{isFocused ? 'Refine' : 'Filters'}</span>
+                </span>
+                {mobileFilterCount > 0 ? <span className={styles.mobileCount}>{mobileFilterCount}</span> : null}
+              </button>
             </div>
           </div>
         </div>
@@ -403,16 +430,16 @@ export default function CommunityFeed({
             ) : null}
           </div>
 
-          <div className={styles.mobileActions}>
+          <div className={`${styles.mobileActions} ${isFocused ? styles.desktopActions : ''}`}>
             <button
               type="button"
               className={styles.mobileSheetTrigger}
               onClick={() => setIsMobileSheetOpen(true)}
-              aria-label="Open filters"
+              aria-label="Open community filters"
             >
               <span className={styles.mobileSheetTriggerCopy}>
                 <SlidersHorizontal size={16} />
-                <span>Filters</span>
+                <span>{isFocused ? 'Refine' : 'Filters'}</span>
               </span>
               {mobileFilterCount > 0 ? <span className={styles.mobileCount}>{mobileFilterCount}</span> : null}
             </button>
@@ -431,7 +458,21 @@ export default function CommunityFeed({
           </div>
         ) : null}
 
-        <div className={styles.controls}>
+        {isFocused && activeSummaries.length > 0 ? (
+          <div className={styles.filterSummary} role="status" aria-live="polite">
+            {activeSummaries.map((item) => (
+              <span key={item} className={styles.summaryChip}>
+                {item}
+              </span>
+            ))}
+            <button type="button" className={styles.summaryClear} onClick={resetFilters}>
+              Clear
+            </button>
+          </div>
+        ) : null}
+
+        {!isFocused ? (
+          <div className={styles.controls}>
           <div className={styles.filterStack}>
             <div className={styles.filterRow}>
               <button
@@ -536,10 +577,11 @@ export default function CommunityFeed({
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        ) : null}
       </div>
 
-      <MobileBottomSheet open={isMobileSheetOpen} onClose={() => setIsMobileSheetOpen(false)} title="Browse community">
+      <MobileBottomSheet open={isMobileSheetOpen} onClose={() => setIsMobileSheetOpen(false)} title="Refine community">
         <div className={styles.sheetSection}>
           <p className={styles.sheetLabel}>Templates</p>
           <div className={styles.filterRow}>

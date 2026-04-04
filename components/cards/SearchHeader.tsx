@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, X, ChevronDown, List, LayoutGrid, SlidersHorizontal } from 'lucide-react'
+import { ChevronDown, LayoutGrid, List, Search, SlidersHorizontal, X } from 'lucide-react'
+
+import type { UiDensityMode } from '@/lib/ui/density'
 import MobileBottomSheet from '@/components/ui/MobileBottomSheet'
+
 import styles from './CardLibrary.module.css'
 
 interface SearchHeaderProps {
@@ -13,6 +16,7 @@ interface SearchHeaderProps {
   layout: 'grid' | 'list'
   setLayout: (layout: 'grid' | 'list') => void
   categories: string[]
+  densityMode: UiDensityMode
 }
 
 export default function SearchHeader({
@@ -23,9 +27,11 @@ export default function SearchHeader({
   layout,
   setLayout,
   categories,
+  densityMode,
 }: SearchHeaderProps) {
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false)
   const mobileFilterCount = (selectedCategory ? 1 : 0) + (layout === 'list' ? 1 : 0)
+  const isFocused = densityMode === 'focused'
 
   return (
     <header className={styles.libraryHeader}>
@@ -36,75 +42,94 @@ export default function SearchHeader({
             type="text"
             placeholder="Search titles or concepts..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(event) => setSearchQuery(event.target.value)}
             className={styles.searchInput}
           />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className={styles.clearSearch}>
+          {searchQuery ? (
+            <button type="button" onClick={() => setSearchQuery('')} className={styles.clearSearch}>
               <X size={14} />
             </button>
-          )}
+          ) : null}
         </div>
 
-        <div className={styles.mobileActions}>
+        <div className={`${styles.mobileActions} ${isFocused ? styles.desktopActions : ''}`}>
           <button
             type="button"
             className={styles.mobileSheetTrigger}
             onClick={() => setIsMobileSheetOpen(true)}
-            aria-label="Open filters"
+            aria-label="Open archive filters"
           >
             <span className={styles.mobileSheetTriggerCopy}>
               <SlidersHorizontal size={16} />
-              <span>Filters</span>
+              <span>{isFocused ? 'Refine' : 'Filters'}</span>
             </span>
             {mobileFilterCount > 0 ? <span className={styles.mobileCount}>{mobileFilterCount}</span> : null}
           </button>
         </div>
       </div>
 
-      <div className={styles.toolbar}>
-        <div className={styles.filters}>
+      {isFocused && mobileFilterCount > 0 ? (
+        <div className={styles.filterSummary} role="status" aria-live="polite">
+          {selectedCategory ? <span className={styles.summaryChip}>{selectedCategory}</span> : null}
+          {layout === 'list' ? <span className={styles.summaryChip}>List view</span> : null}
           <button
-            className={`${styles.filterChip} ${!selectedCategory ? styles.activeFilter : ''}`}
-            onClick={() => setSelectedCategory(null)}
+            type="button"
+            className={styles.summaryClear}
+            onClick={() => {
+              setSelectedCategory(null)
+              setLayout('grid')
+            }}
           >
-            All
+            Clear
           </button>
-          {categories.slice(0, 4).map((cat) => (
+        </div>
+      ) : null}
+
+      {!isFocused ? (
+        <div className={styles.toolbar}>
+          <div className={styles.filters}>
             <button
-              key={cat}
-              className={`${styles.filterChip} ${selectedCategory === cat ? styles.activeFilter : ''}`}
-              onClick={() => setSelectedCategory(cat)}
+              className={`${styles.filterChip} ${!selectedCategory ? styles.activeFilter : ''}`}
+              onClick={() => setSelectedCategory(null)}
             >
-              {cat}
+              All
             </button>
-          ))}
-          {categories.length > 4 && (
-             <div className={styles.moreCategories}>
+            {categories.slice(0, 4).map((cat) => (
+              <button
+                key={cat}
+                className={`${styles.filterChip} ${selectedCategory === cat ? styles.activeFilter : ''}`}
+                onClick={() => setSelectedCategory(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+            {categories.length > 4 ? (
+              <div className={styles.moreCategories}>
                 <ChevronDown size={14} />
-             </div>
-          )}
-        </div>
+              </div>
+            ) : null}
+          </div>
 
-        <div className={styles.viewToggles}>
-          <button
-            className={`${styles.viewBtn} ${layout === 'grid' ? styles.activeView : ''}`}
-            onClick={() => setLayout('grid')}
-            title="Grid view"
-          >
-            <LayoutGrid size={16} />
-          </button>
-          <button
-            className={`${styles.viewBtn} ${layout === 'list' ? styles.activeView : ''}`}
-            onClick={() => setLayout('list')}
-            title="List view"
-          >
-            <List size={16} />
-          </button>
+          <div className={styles.viewToggles}>
+            <button
+              className={`${styles.viewBtn} ${layout === 'grid' ? styles.activeView : ''}`}
+              onClick={() => setLayout('grid')}
+              title="Grid view"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              className={`${styles.viewBtn} ${layout === 'list' ? styles.activeView : ''}`}
+              onClick={() => setLayout('list')}
+              title="List view"
+            >
+              <List size={16} />
+            </button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
-      <MobileBottomSheet open={isMobileSheetOpen} onClose={() => setIsMobileSheetOpen(false)} title="Browse cards">
+      <MobileBottomSheet open={isMobileSheetOpen} onClose={() => setIsMobileSheetOpen(false)} title="Refine archive">
         <div className={styles.sheetSection}>
           <p className={styles.sheetLabel}>Category</p>
           <div className={styles.filters}>

@@ -2,6 +2,7 @@ import { Images } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
+import { getUiDensity } from '@/lib/ui/density'
 import CardLibrary from '@/components/cards/CardLibrary'
 import styles from '../AppScreen.module.css'
 
@@ -12,6 +13,8 @@ export default async function CardsPage() {
   } = await supabase.auth.getUser()
 
   if (!user) return null
+
+  const densityMode = getUiDensity(user)
 
   // 1. Fetch Cards
   const { data: cards } = await supabase
@@ -48,13 +51,16 @@ export default async function CardsPage() {
           <span>Library</span>
         </div>
         <h1 className={styles.title}>Visual archive.</h1>
-        <p className={styles.copy}>Search, filter, and manage your clinical visual points.</p>
+        <p className={styles.copy}>
+          {densityMode === 'focused' ? 'Open a card or scan a note.' : 'Search, filter, and manage your clinical visual points.'}
+        </p>
       </header>
 
       <CardLibrary 
         initialCards={cards ?? []} 
         initialSignedUrls={signedUrls}
         categories={categories as string[]} 
+        densityMode={densityMode}
       />
     </div>
   )

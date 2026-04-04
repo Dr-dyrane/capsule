@@ -6,6 +6,7 @@ import PendingLink from '@/components/ui/PendingLink'
 import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
 import type { SessionRecord } from '@/lib/types'
+import { getUiDensity } from '@/lib/ui/density'
 import LibrarySessionList from './LibrarySessionList'
 
 import styles from '../AppScreen.module.css'
@@ -130,6 +131,8 @@ export default async function LibraryPage() {
 
   if (!user) return null
 
+  const densityMode = getUiDensity(user)
+
   const [{ data: sessions }, { cards: savedCards, signedUrls: savedCardUrls }] = await Promise.all([
     supabase.from('sessions').select('*').order('created_at', { ascending: false }),
     getSavedCommunityCardsWithUrls(12),
@@ -166,7 +169,7 @@ export default async function LibraryPage() {
           <span>Library</span>
         </div>
         <h1 className={styles.title}>Past sessions.</h1>
-        <p className={styles.copy}>Open any capture.</p>
+        <p className={styles.copy}>{densityMode === 'focused' ? 'Pick up where you left off.' : 'Open any capture.'}</p>
       </header>
 
       {!hasSessions && !hasSavedCards ? (
@@ -186,7 +189,7 @@ export default async function LibraryPage() {
         </div>
       ) : (
         <div className={listStyles.sections}>
-          {hasSavedCards ? (
+          {hasSavedCards && densityMode === 'detailed' ? (
             <section className={listStyles.savedSection}>
               <div className={listStyles.savedHeader}>
                 <div>
@@ -207,6 +210,20 @@ export default async function LibraryPage() {
                   />
                 ))}
               </div>
+            </section>
+          ) : null}
+
+          {hasSavedCards && densityMode === 'focused' ? (
+            <section className={listStyles.savedShortcut}>
+              <div>
+                <h2 className={listStyles.savedShortcutTitle}>Saved cards</h2>
+                <p className={listStyles.savedShortcutCopy}>
+                  Cards you kept from the community.
+                </p>
+              </div>
+              <PendingLink href="/community?saved=1" className={listStyles.savedShortcutLink}>
+                Open saved
+              </PendingLink>
             </section>
           ) : null}
 
