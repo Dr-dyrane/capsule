@@ -47,6 +47,22 @@
   -webkit-backdrop-filter: blur(30px);
 }
 
+.profileCard {
+  overflow: hidden;
+}
+
+.profileLayout {
+  display: grid;
+  gap: 16px;
+}
+
+.profileSidebar,
+.profileMain {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+
 .header {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -123,6 +139,36 @@
   background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
 }
 
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summaryCard {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface-2) 90%, transparent);
+}
+
+.summaryLabel {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  color: var(--text-primary);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
 .spinner {
   animation: spin 1s linear infinite;
 }
@@ -131,6 +177,24 @@
   display: grid;
   gap: 12px;
   margin-top: 0;
+}
+
+.sectionBlock {
+  padding: 14px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface-2) 82%, transparent);
+}
+
+.sectionGrid {
+  display: grid;
+  gap: 16px;
+}
+
+.sectionCommunity,
+.sectionDisplay,
+.sectionArchive,
+.sectionActions {
+  min-width: 0;
 }
 
 .sectionTitle {
@@ -316,6 +380,15 @@
   margin-top: 4px;
 }
 
+.profileActions {
+  display: grid;
+  gap: 10px;
+}
+
+.actionForm {
+  width: 100%;
+}
+
 .actionItem {
   width: 100%;
   min-height: 50px;
@@ -379,6 +452,17 @@
     border-radius: 32px;
   }
 
+  .profileLayout {
+    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .profileSidebar,
+  .profileMain {
+    gap: 18px;
+  }
+
   .header {
     gap: 20px;
   }
@@ -398,7 +482,118 @@
     font-size: 15px;
   }
 
+  .summaryCard {
+    padding: 16px;
+  }
+
+  .summaryValue {
+    font-size: 24px;
+  }
+
+  .sectionBlock {
+    padding: 16px;
+  }
+
+  .sectionGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sectionWide {
+    grid-column: auto;
+  }
+
   .inlineGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profileActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 639px) {
+  .card {
+    gap: 14px;
+    padding: 12px;
+    border-radius: 26px;
+  }
+
+  .header {
+    gap: 14px;
+  }
+
+  .summaryValue {
+    font-size: 20px;
+  }
+
+  .sectionBlock {
+    padding: 12px;
+    border-radius: 22px;
+  }
+
+  .settingItem {
+    min-height: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px 16px;
+  }
+
+  .settingControl {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .toggleGroup {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .select {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1024px) {
+  .profileLayout {
+    grid-template-columns: minmax(292px, 332px) minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .profileSidebar {
+    position: sticky;
+    top: 24px;
+  }
+
+  .profileMain {
+    gap: 20px;
+  }
+
+  .sectionGrid {
+    grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr);
+  }
+
+  .sectionWide {
+    grid-column: 1 / -1;
+  }
+
+  .sectionCommunity {
+    grid-column: 1;
+  }
+
+  .sectionDisplay {
+    grid-column: 2;
+  }
+
+  .sectionArchive {
+    grid-column: 1;
+  }
+
+  .sectionActions {
+    grid-column: 2;
+  }
+
+  .profileActions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
