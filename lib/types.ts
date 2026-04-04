@@ -220,6 +220,26 @@ export interface CardClarificationListResult {
   threads: CardClarificationThreadView[]
 }
 
+export interface CardClarificationModerationItem {
+  item_id: string
+  thread_id: string
+  card_id: string
+  card_title: string | null
+  thread_kind: ClarificationKind
+  thread_status: ClarificationThreadStatus
+  item_body: string
+  parent_item_id: string | null
+  item_created_at: string
+  author_name: string | null
+  author_avatar_url: string | null
+  report_count: number
+}
+
+export interface CardClarificationModerationResult {
+  supported: boolean
+  items: CardClarificationModerationItem[]
+}
+
 export interface ReviewItemRecord {
   id: string
   user_id: string

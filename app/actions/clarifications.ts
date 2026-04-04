@@ -7,6 +7,8 @@ import { createPublicClient } from '@/lib/supabase/public'
 import { createClient } from '@/lib/supabase/server'
 import type {
   CardClarificationItemRecord,
+  CardClarificationModerationItem,
+  CardClarificationModerationResult,
   CardClarificationItemView,
   CardClarificationListResult,
   CardClarificationThreadRecord,
@@ -45,6 +47,7 @@ function ensureClarificationBody(body: string) {
 
 function revalidateClarificationPaths(cardId: string) {
   revalidatePath('/community')
+  revalidatePath('/community/reports')
   revalidatePath(`/community/${cardId}`)
 }
 
@@ -541,4 +544,244 @@ export async function reportClarificationItem(itemId: string) {
 
   revalidateClarificationPaths(item.card_id)
   return { reported: true }
+}
+
+export async function getCreatorModerationClarifications(
+  limit: number = 24,
+): Promise<CardClarificationModerationResult> {
+  const { supabase, user } = await ensureAuthenticatedUser()
+  const publicClient = createPublicClient()
+  const { data: cards, error: cardsError } = await publicClient
+    .from('cards')
+    .select('id, title')
+    .eq('published_by', user.id)
+    .eq('visibility', 'published')
+    .eq('status', 'complete')
+
+  if (cardsError) {
+    if (isClarificationSchemaError(cardsError)) {
+      return { supported: false, items: [] }
+    }
+
+    throw cardsError
+  }
+
+  const cardRows = (cards ?? []) as Array<{ id: string; title: string | null }>
+  const cardIds = cardRows.map((card) => card.id)
+
+  if (cardIds.length === 0) {
+    return { supported: true, items: [] }
+  }
+
+  const [{ data: threadRows, error: threadError }, { data: itemRows, error: itemError }] = await Promise.all([
+    supabase
+      .from('card_clarification_threads')
+      .select('id, card_id, created_by, kind, status, root_item_id, reply_count, last_activity_at, resolved_by, resolved_at, created_at, updated_at')
+      .in('card_id', cardIds)
+      .neq('status', 'removed'),
+    supabase
+      .from('card_clarification_items')
+      .select('id, thread_id, card_id, user_id, parent_item_id, body, status, created_at, updated_at')
+      .in('card_id', cardIds)
+      .eq('status', 'active'),
+  ])
+
+  if (threadError || itemError) {
+    const error = threadError ?? itemError
+
+    if (isClarificationSchemaError(error)) {
+      return { supported: false, items: [] }
+    }
+
+    throw error
+  }
+
+  const rawThreads = (threadRows ?? []) as CardClarificationThreadRecord[]
+  const rawItems = (itemRows ?? []) as CardClarificationItemRecord[]
+  const itemIds = rawItems.map((item) => item.id)
+
+  if (itemIds.length === 0) {
+    return { supported: true, items: [] }
+  }
+
+  const { data: reportRows, error: reportError } = await supabase
+    .from('card_clarification_reports')
+    .select('item_id')
+    .in('item_id', itemIds)
+
+  if (reportError) {
+    if (isClarificationSchemaError(reportError)) {
+      return { supported: false, items: [] }
+    }
+
+    throw reportError
+  }
+
+  const reportCounts = (reportRows ?? []).reduce<Map<string, number>>((acc, row) => {
+    acc.set(row.item_id, (acc.get(row.item_id) ?? 0) + 1)
+    return acc
+  }, new Map())
+
+  const threadById = new Map(rawThreads.map((thread) => [thread.id, thread]))
+  const cardById = new Map(cardRows.map((card) => [card.id, card]))
+  const reportedItems = rawItems.filter((item) => (reportCounts.get(item.id) ?? 0) > 0)
+  const profilesById = await fetchProfilesById([...new Set(reportedItems.map((item) => item.user_id))])
+
+  const moderationItems = reportedItems
+    .map<CardClarificationModerationItem | null>((item) => {
+      const thread = threadById.get(item.thread_id)
+      const card = cardById.get(item.card_id)
+
+      if (!thread || !card) {
+        return null
+      }
+
+      const profile = profilesById.get(item.user_id)
+
+      return {
+        item_id: item.id,
+        thread_id: item.thread_id,
+        card_id: item.card_id,
+        card_title: card.title,
+        thread_kind: thread.kind,
+        thread_status: thread.status,
+        item_body: item.body,
+        parent_item_id: item.parent_item_id,
+        item_created_at: item.created_at,
+        author_name: profile?.username ?? 'Capsule learner',
+        author_avatar_url: profile?.avatar_url ?? null,
+        report_count: reportCounts.get(item.id) ?? 0,
+      }
+    })
+    .filter((item): item is CardClarificationModerationItem => Boolean(item))
+    .sort((a, b) => {
+      if (a.report_count !== b.report_count) {
+        return b.report_count - a.report_count
+      }
+
+      return new Date(b.item_created_at).getTime() - new Date(a.item_created_at).getTime()
+    })
+    .slice(0, limit)
+
+  return {
+    supported: true,
+    items: moderationItems,
+  }
+}
+
+export async function clearClarificationReports(itemId: string) {
+  const { supabase, user } = await ensureAuthenticatedUser()
+  const { data: item, error: itemError } = await supabase
+    .from('card_clarification_items')
+    .select('id, card_id')
+    .eq('id', itemId)
+    .maybeSingle()
+
+  if (itemError) {
+    if (isClarificationSchemaError(itemError)) {
+      throw toClarificationsUnsupportedError()
+    }
+
+    throw itemError
+  }
+
+  if (!item?.card_id) {
+    return { cleared: true }
+  }
+
+  const card = await getPublishedCardMeta(item.card_id)
+
+  if (!card || card.published_by !== user.id) {
+    throw new Error('Only the card creator can review reports on this clarification.')
+  }
+
+  const { error } = await supabase
+    .from('card_clarification_reports')
+    .delete()
+    .eq('item_id', itemId)
+
+  if (error) {
+    if (isClarificationSchemaError(error)) {
+      throw toClarificationsUnsupportedError()
+    }
+
+    throw error
+  }
+
+  revalidateClarificationPaths(item.card_id)
+  return { cleared: true }
+}
+
+export async function removeClarificationItemAsCreator(itemId: string) {
+  const { supabase, user } = await ensureAuthenticatedUser()
+  const { data: item, error: itemError } = await supabase
+    .from('card_clarification_items')
+    .select('id, thread_id, card_id, parent_item_id, status')
+    .eq('id', itemId)
+    .maybeSingle()
+
+  if (itemError) {
+    if (isClarificationSchemaError(itemError)) {
+      throw toClarificationsUnsupportedError()
+    }
+
+    throw itemError
+  }
+
+  if (!item?.card_id) {
+    return { removed: true }
+  }
+
+  const card = await getPublishedCardMeta(item.card_id)
+
+  if (!card || card.published_by !== user.id) {
+    throw new Error('Only the card creator can remove this clarification.')
+  }
+
+  const { error } = await supabase
+    .from('card_clarification_items')
+    .update({
+      body: 'Removed by card author',
+      status: 'deleted',
+    })
+    .eq('id', item.id)
+
+  if (error) {
+    if (isClarificationSchemaError(error)) {
+      throw toClarificationsUnsupportedError()
+    }
+
+    throw error
+  }
+
+  if (!item.parent_item_id) {
+    const { error: threadError } = await supabase
+      .from('card_clarification_threads')
+      .update({ status: 'removed' })
+      .eq('id', item.thread_id)
+
+    if (threadError) {
+      if (isClarificationSchemaError(threadError)) {
+        throw toClarificationsUnsupportedError()
+      }
+
+      throw threadError
+    }
+  }
+
+  const { error: reportError } = await supabase
+    .from('card_clarification_reports')
+    .delete()
+    .eq('item_id', item.id)
+
+  if (reportError) {
+    if (isClarificationSchemaError(reportError)) {
+      throw toClarificationsUnsupportedError()
+    }
+
+    throw reportError
+  }
+
+  revalidateClarificationPaths(item.card_id)
+  return { removed: true }
 }
