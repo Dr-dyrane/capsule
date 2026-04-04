@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { Bookmark, Brain, Flag, Globe, Heart, Repeat2, User } from 'lucide-react'
 
 import type { CommunityCardRecord } from '@/app/actions/community'
+import { getCommunityClarificationSignal } from '@/lib/community/clarification-signal'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import PendingLink from '@/components/ui/PendingLink'
 import styles from './CommunityCard.module.css'
@@ -37,6 +38,7 @@ export default function CommunityCard({
   const authorHref = card.published_by ? `/community/author/${card.published_by}` : null
   const topic = card.concept || card.category
   const showInteractiveActions = Boolean(onToggleLike || onToggleSave || onReport)
+  const clarificationSignal = getCommunityClarificationSignal(card)
 
   return (
     <article className={`${styles.root} ${layout === 'list' ? styles.list : ''}`}>
@@ -111,6 +113,21 @@ export default function CommunityCard({
             <span className={styles.hint}>by {authorName}</span>
           )}
         </div>
+        {clarificationSignal ? (
+          <div className={styles.signalRow}>
+            <span
+              className={`${styles.signalChip} ${
+                clarificationSignal.tone === 'warning'
+                  ? styles.signalChipWarning
+                  : clarificationSignal.tone === 'info'
+                    ? styles.signalChipInfo
+                    : styles.signalChipCalm
+              }`}
+            >
+              {clarificationSignal.compactLabel}
+            </span>
+          </div>
+        ) : null}
       </div>
 
       <div className={styles.footer}>

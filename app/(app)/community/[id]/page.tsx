@@ -4,6 +4,7 @@ import { ChevronLeft, Globe, User } from 'lucide-react'
 
 import { getCardClarifications } from '@/app/actions/clarifications'
 import { getCommunityCardByIdWithUrl, getViewerCommunityReactions, getViewerCommunityReports } from '@/app/actions/community'
+import { getCommunityClarificationSignal } from '@/lib/community/clarification-signal'
 import ImagePreview from '@/components/cards/ImagePreview'
 import CardClarifications from '@/components/clarifications/CardClarifications'
 import CommunityDetailActions from '@/components/community/CommunityDetailActions'
@@ -45,6 +46,7 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
   const authorHref = card.published_by ? `/community/author/${card.published_by}` : null
   const remixHref = `/scan?remix=${card.card_id}`
   const reviewHref = viewer.saved ? `/review?card=${card.card_id}&entry=card` : null
+  const clarificationSignal = getCommunityClarificationSignal(card)
 
   return (
     <div className={shellStyles.screen}>
@@ -60,7 +62,6 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
         </div>
 
         <h1 className={styles.pageTitle}>{card.title || 'Untitled card'}</h1>
-        <p className={styles.pageCopy}>Save, review, remix.</p>
       </header>
 
       <div className={styles.layout}>
@@ -90,6 +91,19 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
               <div className={styles.chip}>{template}</div>
               <div className={styles.chip}>{topic}</div>
               {publishedAt ? <div className={styles.chip}>{publishedAt}</div> : null}
+              {clarificationSignal ? (
+                <div
+                  className={`${styles.chip} ${
+                    clarificationSignal.tone === 'warning'
+                      ? styles.chipWarning
+                      : clarificationSignal.tone === 'info'
+                        ? styles.chipInfo
+                        : styles.chipCalm
+                  }`}
+                >
+                  {clarificationSignal.detailLabel}
+                </div>
+              ) : null}
             </div>
 
             <CommunityDetailActions
@@ -129,8 +143,6 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
                 <div className={styles.statValue}>{card.report_count}</div>
               </div>
             </div>
-
-            <div className={styles.note}>Save to review or remix.</div>
           </div>
         </section>
       </div>

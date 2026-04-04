@@ -120,6 +120,9 @@ export interface CommunityIndexRecord {
   save_count: number
   report_count: number
   trend_score: number
+  clarification_open_count: number
+  clarification_resolved_count: number
+  has_unresolved_correction: boolean
 }
 
 export interface CommunityLibraryIndexRecord {

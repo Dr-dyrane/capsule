@@ -102,7 +102,6 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
         </div>
 
         <h1 className={shellStyles.title}>{card.title || 'Untitled card'}</h1>
-        <p className={shellStyles.copy}>One card. One point.</p>
       </header>
 
       <div className={styles.layout}>
@@ -167,7 +166,6 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
                       <ScanText size={14} aria-hidden="true" />
                       <span>Open source scan</span>
                     </div>
-                    <p className={styles.sourceLinkHint}>Trace this card back to the uploaded note.</p>
                   </div>
                   {sourceNoteUrl ? (
                     <div className={styles.sourceThumb}>
@@ -196,7 +194,6 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
                       <Repeat2 size={14} aria-hidden="true" />
                       <span>{remixSource.title || 'Reopen remix reference'}</span>
                     </div>
-                    <p className={styles.sourceLinkHint}>This session was started from a published community card.</p>
                   </div>
                   {remixSource.signedUrl ? (
                     <div className={styles.sourceThumb}>
@@ -216,11 +213,6 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
               </div>
             ) : null}
 
-            <div className={styles.note}>
-              {card.status === 'complete'
-                ? 'Scan the image first. Open the source point only if you need the wording.'
-                : 'The source point is already ready. The image catches up here when generation finishes.'}
-            </div>
           </div>
         </section>
       </div>

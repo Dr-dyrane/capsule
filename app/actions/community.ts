@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 
+import { isClarificationSchemaError } from '@/lib/clarifications/schema'
 import { isCommunitySchemaError } from '@/lib/community/schema'
 import { ensureReviewItemExists } from '@/lib/review/queue'
 import { isReviewSchemaError } from '@/lib/review/schema'
@@ -32,6 +33,17 @@ export type CommunityQueryOptions = {
   savedOnly?: boolean
   authorId?: string | null
   sessionId?: string | null
+}
+
+type CommunityClarificationSummary = Pick<
+  CommunityIndexRecord,
+  'clarification_open_count' | 'clarification_resolved_count' | 'has_unresolved_correction'
+>
+
+const EMPTY_COMMUNITY_CLARIFICATION_SUMMARY: CommunityClarificationSummary = {
+  clarification_open_count: 0,
+  clarification_resolved_count: 0,
+  has_unresolved_correction: false,
 }
 
 function toCommunityUnsupportedError() {
@@ -162,6 +174,77 @@ async function fetchProfilesById(userIds: string[]) {
   )
 }
 
+function mergeCommunityClarificationSummary<T extends Pick<CommunityIndexRecord, 'card_id'>>(
+  card: T,
+  summary?: CommunityClarificationSummary,
+) {
+  return {
+    ...card,
+    ...(summary ?? EMPTY_COMMUNITY_CLARIFICATION_SUMMARY),
+  }
+}
+
+async function getCommunityClarificationSummaries(cardIds: string[]) {
+  const ids = [...new Set(cardIds.filter(Boolean))]
+
+  if (ids.length === 0) {
+    return new Map<string, CommunityClarificationSummary>()
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return new Map<string, CommunityClarificationSummary>()
+  }
+
+  const { data, error } = await supabase
+    .from('card_clarification_threads')
+    .select('card_id, kind, status')
+    .in('card_id', ids)
+    .neq('status', 'removed')
+
+  if (error) {
+    if (isClarificationSchemaError(error)) {
+      return new Map<string, CommunityClarificationSummary>()
+    }
+
+    throw error
+  }
+
+  return (data ?? []).reduce<Map<string, CommunityClarificationSummary>>((acc, thread) => {
+    const current = acc.get(thread.card_id) ?? { ...EMPTY_COMMUNITY_CLARIFICATION_SUMMARY }
+
+    if (thread.status === 'open') {
+      current.clarification_open_count += 1
+    }
+
+    if (thread.status === 'resolved') {
+      current.clarification_resolved_count += 1
+    }
+
+    if (thread.kind === 'correction' && thread.status === 'open') {
+      current.has_unresolved_correction = true
+    }
+
+    acc.set(thread.card_id, current)
+    return acc
+  }, new Map<string, CommunityClarificationSummary>())
+}
+
+async function enrichCommunityCardsWithClarifications<T extends Pick<CommunityIndexRecord, 'card_id'>>(
+  cards: T[],
+) {
+  if (cards.length === 0) {
+    return [] as Array<T & CommunityClarificationSummary>
+  }
+
+  const summaries = await getCommunityClarificationSummaries(cards.map((card) => card.card_id))
+  return cards.map((card) => mergeCommunityClarificationSummary(card, summaries.get(card.card_id)))
+}
+
 async function getCommunityCardsFallback(page: number, limit: number) {
   const supabase = createPublicClient()
 
@@ -187,7 +270,7 @@ async function getCommunityCardsFallback(page: number, limit: number) {
   const authorIds = [...new Set(cards.map((card) => card.published_by).filter(Boolean) as string[])]
   const profilesById = await fetchProfilesById(authorIds)
 
-  return cards.map((card) => {
+  const fallbackCards = cards.map((card) => {
     const point = Array.isArray(card.points) ? card.points[0] : card.points
 
     return {
@@ -208,6 +291,8 @@ async function getCommunityCardsFallback(page: number, limit: number) {
       trend_score: 0,
     }
   })
+
+  return enrichCommunityCardsWithClarifications(fallbackCards)
 }
 
 export async function publishCard(cardId: string) {
@@ -483,7 +568,7 @@ export async function getCommunityCards(
     throw error
   }
 
-  return (data ?? []) as CommunityCardRecord[]
+  return enrichCommunityCardsWithClarifications((data ?? []) as CommunityCardRecord[])
 }
 
 export async function getCommunityCardCount(options: Omit<CommunityQueryOptions, 'sort'> = {}) {
@@ -709,7 +794,7 @@ export async function getCreatorModerationCardsWithUrls(limit: number = 20) {
     throw error
   }
 
-  const cards = (data ?? []) as CommunityCardRecord[]
+  const cards = await enrichCommunityCardsWithClarifications((data ?? []) as CommunityCardRecord[])
   const uniquePaths = [...new Set(cards.map((card) => card.image_url).filter(Boolean))]
   let signedUrls: Record<string, string> = createDirectAssetUrlMap(uniquePaths)
   const storagePaths = uniquePaths.filter((path) => !isDirectAssetUrl(path))
@@ -834,23 +919,26 @@ export async function getCommunityCardByIdWithUrl(cardId: string) {
     return null
   }
 
-  if (isDirectAssetUrl(card.image_url)) {
+  const [enrichedCard] = await enrichCommunityCardsWithClarifications([card])
+  const safeCard = enrichedCard ?? mergeCommunityClarificationSummary(card)
+
+  if (isDirectAssetUrl(safeCard.image_url)) {
     return {
-      ...card,
-      signedUrl: card.image_url,
+      ...safeCard,
+      signedUrl: safeCard.image_url,
     }
   }
 
   const { data: signed, error: signedError } = await supabase.storage
     .from('cards')
-    .createSignedUrl(card.image_url, 60 * 60)
+    .createSignedUrl(safeCard.image_url, 60 * 60)
 
   if (signedError && !isCommunitySchemaError(signedError)) {
     throw signedError
   }
 
   return {
-    ...card,
+    ...safeCard,
     signedUrl: signed?.signedUrl ?? null,
   }
 }

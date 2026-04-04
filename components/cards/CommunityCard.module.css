@@ -109,7 +109,7 @@
 
 .meta {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   padding: 0 4px;
 }
@@ -132,6 +132,38 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+.signalRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.signalChip {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.signalChipWarning {
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 14%, var(--surface-2));
+}
+
+.signalChipInfo {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+}
+
+.signalChipCalm {
+  color: var(--text-secondary);
+  background: var(--surface-2);
 }
 
 .hint {
