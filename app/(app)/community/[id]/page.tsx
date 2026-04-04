@@ -2,8 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronLeft, Globe, User } from 'lucide-react'
 
+import { getCardClarifications } from '@/app/actions/clarifications'
 import { getCommunityCardByIdWithUrl, getViewerCommunityReactions, getViewerCommunityReports } from '@/app/actions/community'
 import ImagePreview from '@/components/cards/ImagePreview'
+import CardClarifications from '@/components/clarifications/CardClarifications'
 import CommunityDetailActions from '@/components/community/CommunityDetailActions'
 
 import shellStyles from '../../AppScreen.module.css'
@@ -21,9 +23,10 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
     notFound()
   }
 
-  const [viewerReactions, viewerReports] = await Promise.all([
+  const [viewerReactions, viewerReports, clarifications] = await Promise.all([
     getViewerCommunityReactions([id]),
     getViewerCommunityReports([id]),
+    getCardClarifications(id),
   ])
 
   const viewer = viewerReactions[id] ?? { liked: false, saved: false, reported: false }
@@ -131,6 +134,8 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
             <div className={styles.note}>
               Shared cards are references, not locked templates. Save what helps, then remix when you need your own pass.
             </div>
+
+            <CardClarifications cardId={card.card_id} data={clarifications} />
           </div>
         </section>
       </div>

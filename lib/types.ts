@@ -14,6 +14,9 @@ export type RenderCreditKind = 'support' | 'premium'
 export type CommunityVisibility = 'private' | 'published'
 export type CommunityReactionKind = 'like' | 'save'
 export type CommunitySort = 'recent' | 'trending'
+export type ClarificationKind = 'question' | 'clarification' | 'correction'
+export type ClarificationThreadStatus = 'open' | 'resolved' | 'removed'
+export type ClarificationItemStatus = 'active' | 'deleted' | 'reported'
 export type ReviewItemState = 'new' | 'learning' | 'review'
 export type ReviewScore = 'again' | 'good' | 'easy'
 export type ReviewSourceType = 'generated' | 'saved_community'
@@ -140,6 +143,81 @@ export interface CommunityViewerState {
   liked: boolean
   saved: boolean
   reported?: boolean
+}
+
+export interface CardClarificationThreadRecord {
+  id: string
+  card_id: string
+  created_by: string
+  kind: ClarificationKind
+  status: ClarificationThreadStatus
+  root_item_id: string | null
+  reply_count: number
+  last_activity_at: string
+  resolved_by: string | null
+  resolved_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CardClarificationItemRecord {
+  id: string
+  thread_id: string
+  card_id: string
+  user_id: string
+  parent_item_id: string | null
+  body: string
+  status: ClarificationItemStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface CardClarificationReportRecord {
+  id: string
+  item_id: string
+  user_id: string
+  created_at: string
+}
+
+export interface CardClarificationItemView {
+  id: string
+  thread_id: string
+  user_id: string
+  parent_item_id: string | null
+  body: string
+  status: ClarificationItemStatus
+  created_at: string
+  updated_at: string
+  author_name: string | null
+  author_avatar_url: string | null
+  author_is_card_owner: boolean
+  can_delete: boolean
+  can_report: boolean
+  has_reported: boolean
+}
+
+export interface CardClarificationThreadView {
+  id: string
+  card_id: string
+  created_by: string
+  kind: ClarificationKind
+  status: ClarificationThreadStatus
+  reply_count: number
+  last_activity_at: string
+  resolved_by: string | null
+  resolved_at: string | null
+  created_at: string
+  root: CardClarificationItemView | null
+  replies: CardClarificationItemView[]
+  can_reply: boolean
+  can_resolve: boolean
+}
+
+export interface CardClarificationListResult {
+  supported: boolean
+  open_count: number
+  resolved_count: number
+  threads: CardClarificationThreadView[]
 }
 
 export interface ReviewItemRecord {
