@@ -159,7 +159,8 @@
 
 .actionChip,
 .remixChip,
-.metricsChip {
+.metricsChip,
+.reviewChip {
   min-height: 36px;
   display: inline-flex;
   align-items: center;
@@ -185,9 +186,15 @@
 }
 
 .actionChip:hover,
-.remixChip:hover {
+.remixChip:hover,
+.reviewChip:hover {
   color: var(--text-primary);
   transform: translateY(-1px);
+}
+
+.reviewChip {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
 }
 
 @media (max-width: 767px) {

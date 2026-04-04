@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import ProfileClient from '@/components/profile/ProfileClient'
 
 import styles from '../AppScreen.module.css'
+import pageStyles from './ProfilePage.module.css'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -52,13 +53,13 @@ export default async function ProfilePage() {
 
   return (
     <div className={styles.screen}>
-      <header className={styles.header}>
-        <div className={styles.eyebrow}>
+      <header className={pageStyles.pageHeader}>
+        <div className={pageStyles.pageEyebrow}>
           <User size={14} aria-hidden="true" />
           <span>Profile</span>
         </div>
-        <h1 className={styles.title}>Account.</h1>
-        <p className={styles.copy}>Clinical identity & generation controls.</p>
+        <h1 className={pageStyles.pageTitle}>Account.</h1>
+        <p className={pageStyles.pageCopy}>Identity, access, and defaults.</p>
       </header>
 
       <ProfileClient

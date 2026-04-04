@@ -14,6 +14,9 @@ export type RenderCreditKind = 'support' | 'premium'
 export type CommunityVisibility = 'private' | 'published'
 export type CommunityReactionKind = 'like' | 'save'
 export type CommunitySort = 'recent' | 'trending'
+export type ReviewItemState = 'new' | 'learning' | 'review'
+export type ReviewScore = 'again' | 'good' | 'easy'
+export type ReviewSourceType = 'generated' | 'saved_community'
 
 export interface CommunityFilterMeta {
   templates: string[]
@@ -137,6 +140,51 @@ export interface CommunityViewerState {
   liked: boolean
   saved: boolean
   reported?: boolean
+}
+
+export interface ReviewItemRecord {
+  id: string
+  user_id: string
+  card_id: string
+  source_type: ReviewSourceType
+  state: ReviewItemState
+  last_score: ReviewScore | null
+  last_reviewed_at: string | null
+  next_review_at: string
+  review_count: number
+  lapse_count: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ReviewEventRecord {
+  id: string
+  user_id: string
+  review_item_id: string
+  score: ReviewScore
+  reviewed_at: string
+  created_at?: string
+}
+
+export interface ReviewQueueItem {
+  review_item_id: string
+  card_id: string
+  session_id: string
+  session_label: string | null
+  source_type: ReviewSourceType
+  title: string | null
+  image_url: string
+  signed_url: string | null
+  point_text: string
+  category: string | null
+  concept: string | null
+  note_role: NoteRole | null
+  state: ReviewItemState
+  last_score: ReviewScore | null
+  last_reviewed_at: string | null
+  next_review_at: string
+  review_count: number
+  lapse_count: number
 }
 
 export type GenerationRunStatus = 'queued' | 'running' | 'complete' | 'error' | 'cancelled'

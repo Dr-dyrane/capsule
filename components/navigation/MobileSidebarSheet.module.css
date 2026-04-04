@@ -1,0 +1,159 @@
+.profileBlock {
+  display: grid;
+}
+
+.profileCard,
+.navItem,
+.signOutButton,
+.utilityCard {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: none;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface-2) 94%, transparent);
+  box-shadow: var(--shadow-md);
+  color: var(--text-primary);
+  text-align: left;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple),
+    color 150ms var(--ease-apple);
+}
+
+.profileCard:hover,
+.profileCard:focus-visible,
+.navItem:hover,
+.navItem:focus-visible,
+.signOutButton:hover,
+.signOutButton:focus-visible,
+.utilityCard:hover,
+.utilityCard:focus-within {
+  transform: translateY(-1px);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-lg);
+}
+
+.profileIdentity {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profileAvatar {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-3) 88%, transparent);
+  color: var(--text-secondary);
+}
+
+.profileAvatar img {
+  object-fit: cover;
+}
+
+.profileCopy,
+.navCopy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.profileName,
+.navTitle {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.profileLabel {
+  color: var(--text-tertiary);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+}
+
+.navGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.navItem {
+  min-height: 84px;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  padding: 14px 10px;
+  gap: 10px;
+}
+
+.navItemActive {
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, var(--surface-3)), var(--surface-3));
+  box-shadow: var(--shadow-lg);
+}
+
+.utilitySection {
+  display: grid;
+  gap: 10px;
+}
+
+.utilityCard {
+  padding: 10px;
+}
+
+.themeToggle {
+  width: 100%;
+  justify-content: center;
+}
+
+.utilityLink,
+.signOutButton {
+  width: 100%;
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-radius: 999px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--surface-2) 94%, transparent);
+  box-shadow: var(--shadow-md);
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple),
+    color 150ms var(--ease-apple);
+}
+
+.utilityLink:hover,
+.utilityLink:focus-visible,
+.signOutButton:hover,
+.signOutButton:focus-visible {
+  transform: translateY(-1px);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-lg);
+}
+
+.signOutButton {
+  cursor: pointer;
+  border: none;
+  font: inherit;
+}

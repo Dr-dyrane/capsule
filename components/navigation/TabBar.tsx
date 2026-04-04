@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 
 import PendingLink from '@/components/ui/PendingLink'
-import { navigationItems } from './nav-items'
+import { mobilePrimaryNavigationItems } from './nav-items'
 import styles from './TabBar.module.css'
 
 export default function TabBar() {
@@ -11,7 +11,7 @@ export default function TabBar() {
 
   return (
     <nav className={styles.tabBar} aria-label="Primary">
-      {navigationItems.map((tab) => {
+      {mobilePrimaryNavigationItems.map((tab) => {
         const isActive = pathname.startsWith(tab.href)
         const Icon = tab.icon
 
@@ -21,6 +21,7 @@ export default function TabBar() {
             href={tab.href}
             className={`${styles.item} ${isActive ? styles.itemActive : ''}`}
             aria-current={isActive ? 'page' : undefined}
+            aria-label={tab.name}
           >
             <Icon size={22} strokeWidth={isActive ? 2.4 : 2} />
             <span className={styles.label}>{tab.name}</span>

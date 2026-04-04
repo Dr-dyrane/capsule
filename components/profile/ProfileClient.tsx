@@ -46,6 +46,13 @@ const SPECIALTIES = [
   'Pediatrics'
 ]
 
+function formatPlanLabel(plan: string) {
+  return plan
+    .split('_')
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(' ')
+}
+
 export default function ProfileClient({
   user,
   cardCount,
@@ -127,7 +134,16 @@ export default function ProfileClient({
         <div className={styles.userInfo}>
           <p className={styles.name}>{displayName}</p>
           <p className={styles.email}>{user.email}</p>
-          {isPending && <Loader2 size={12} className={styles.spinner} />}
+          <div className={styles.headerMeta}>
+            <span className={styles.metaPill}>{formatPlanLabel(entitlement.plan)}</span>
+            <span className={styles.metaPill}>{cardCount} cards</span>
+            {isPending ? (
+              <span className={`${styles.metaPill} ${styles.metaPillAccent}`}>
+                <Loader2 size={12} className={styles.spinner} />
+                <span>Saving</span>
+              </span>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -261,21 +277,21 @@ export default function ProfileClient({
       <div className={styles.actions}>
         <Link href="/community" className={styles.actionItem}>
           <Sparkles size={20} />
-          <span>Explore community</span>
+          <span>Community</span>
         </Link>
         <Link href="/community/reports" className={styles.actionItem}>
           <Flag size={20} />
-          <span>Review reports</span>
+          <span>Reports</span>
         </Link>
         {isAdmin ? (
           <Link href="/profile/admin" className={styles.actionItem}>
             <BadgeDollarSign size={20} />
-            <span>Admin tools</span>
+            <span>Admin</span>
           </Link>
         ) : null}
         <Link href="/donate" className={styles.actionItem}>
           <Globe size={20} />
-          <span>Support students</span>
+          <span>Support access</span>
         </Link>
         <form action={signOut}>
           <button 

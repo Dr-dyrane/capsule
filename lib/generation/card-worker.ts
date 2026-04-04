@@ -10,6 +10,7 @@ import { upsertRenderCache, findRenderCache } from '@/lib/ai/render-cache'
 import { resolveGenerationStrategy } from '@/lib/ai/strategy'
 import { getCurrentUserEntitlement, refundGenerationCredit } from '@/lib/billing/entitlements'
 import { chooseRenderProfile } from '@/lib/generation/render-policy'
+import { ensureReviewItemExists } from '@/lib/review/queue'
 import type { CardJobRecord, GenerationRunStatus, RenderCreditKind } from '@/lib/types'
 
 type ProcessCardJobOptions = {
@@ -305,6 +306,11 @@ export async function processCardJob(
 
       if (jobCompleteError) throw jobCompleteError
 
+      await ensureReviewItemExists(supabase, {
+        userId: session.user_id,
+        cardId: typedJob.card_id,
+      })
+
       await recordGenerationCosts(supabase, [
         {
           userId: session.user_id,
@@ -409,6 +415,11 @@ export async function processCardJob(
 
     if (cardCompleteError) throw cardCompleteError
     if (jobCompleteError) throw jobCompleteError
+
+    await ensureReviewItemExists(supabase, {
+      userId: session.user_id,
+      cardId: typedJob.card_id,
+    })
 
     await recordGenerationCosts(supabase, [
       {

@@ -5,7 +5,8 @@
 }
 
 .actionChip,
-.remixChip {
+.remixChip,
+.reviewChip {
   min-height: 40px;
   display: inline-flex;
   align-items: center;
@@ -26,8 +27,10 @@
 
 .actionChip:hover,
 .remixChip:hover,
+.reviewChip:hover,
 .actionChip:focus-visible,
-.remixChip:focus-visible {
+.remixChip:focus-visible,
+.reviewChip:focus-visible {
   color: var(--text-primary);
   transform: translateY(-1px);
 }
@@ -40,6 +43,11 @@
 .reportedChip {
   color: var(--destructive);
   background: color-mix(in srgb, var(--destructive) 12%, var(--surface-2));
+}
+
+.reviewChip {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
 }
 
 .spinner {

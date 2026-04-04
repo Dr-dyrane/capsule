@@ -1,6 +1,7 @@
 # Capsule — UI/UX Specification
 
 ## Design Language: Liquid Glass Dark
+Avoid visible borders. Use spacing, background contrast, and elevation to create separation instead.
 
 ### Absolute Rules
 

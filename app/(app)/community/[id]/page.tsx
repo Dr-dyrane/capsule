@@ -41,6 +41,7 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
   const authorName = card.author_name || 'Anonymous'
   const authorHref = card.published_by ? `/community/author/${card.published_by}` : null
   const remixHref = `/scan?remix=${card.card_id}`
+  const reviewHref = viewer.saved ? `/review?card=${card.card_id}&entry=card` : null
 
   return (
     <div className={shellStyles.screen}>
@@ -92,6 +93,7 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
               initialReported={reported}
               initialLikeCount={card.like_count}
               initialSaveCount={card.save_count}
+              reviewHref={reviewHref}
             />
 
             <div className={styles.section}>
@@ -123,7 +125,7 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
 
             <div className={styles.section}>
               <p className={styles.label}>Use it</p>
-              <p className={styles.value}>Browse first. Remix only when you want a version shaped to your own note.</p>
+              <p className={styles.value}>Save it to review later, or remix it when you want a version shaped to your own note.</p>
             </div>
 
             <div className={styles.note}>

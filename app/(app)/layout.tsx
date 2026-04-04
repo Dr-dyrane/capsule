@@ -1,11 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 
 import ThemeToggle from '@/components/marketing/ThemeToggle'
+import MobileFab from '@/components/navigation/MobileFab'
+import MobileSidebarSheet from '@/components/navigation/MobileSidebarSheet'
 import TabBar from '@/components/navigation/TabBar'
 import Sidebar from '@/components/navigation/Sidebar'
 import Logo from '@/components/ui/Logo'
 import PendingLink from '@/components/ui/PendingLink'
-import UserMenu from '@/components/profile/UserMenu'
 import styles from './AppShell.module.css'
 
 export default async function AppLayout({
@@ -39,15 +40,16 @@ export default async function AppLayout({
             <div className={styles.mobileActions}>
               {userData && (
                 <div className={styles.mobileUserMenu}>
-                  <UserMenu user={userData} compact />
+                  <MobileSidebarSheet user={userData} />
                 </div>
               )}
-              <ThemeToggle compact />
+              {!userData ? <ThemeToggle compact /> : null}
             </div>
           </header>
           <main className={styles.main}>{children}</main>
         </div>
       <TabBar />
+      <MobileFab />
       </div>
     </div>
   )

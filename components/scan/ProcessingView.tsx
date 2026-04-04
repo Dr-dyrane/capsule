@@ -402,6 +402,8 @@ export default function ProcessingView({
   const suggestionCount = nextPoints.filter((point) => cardsByPointId.get(point.id)?.generation_gate === 'community-first').length
   const manualCount = Math.max(0, nextPoints.length - suggestionCount)
   const progressWidth = status === 'complete' ? 100 : Math.max(8, Math.min(100, (completeCards.length / Math.max(activePipelineCards.length, 1)) * 100))
+  const reviewStartCard = [...completeCards].sort((left, right) => (left.card_order ?? 0) - (right.card_order ?? 0))[0] ?? null
+  const reviewHref = reviewStartCard ? `/review?card=${reviewStartCard.id}&entry=latest` : '/review'
   const supportCount = Number(Boolean(sourceImageUrl)) + Number(Boolean(remixSource))
   const isSessionPublished = session?.visibility === 'published'
   const activeRunCard = generationRun?.active_card_id ? cards.find((card) => card.id === generationRun.active_card_id) ?? null : null
@@ -615,6 +617,11 @@ export default function ProcessingView({
                 <button type="button" className={styles.primaryAction} onClick={handleRetrySession} disabled={isRetrying}>
                   {isRetrying ? 'Restarting...' : 'Restart session'}
                 </button>
+              ) : null}
+              {completeCards.length > 0 ? (
+                <Link href={reviewHref} className={styles.secondaryAction}>
+                  Start review
+                </Link>
               ) : null}
               <button type="button" className={styles.secondaryAction} onClick={() => setPublishPrompt(isSessionPublished ? 'unpublish' : 'publish')} disabled={isPublishing}>
                 {isPublishing ? (

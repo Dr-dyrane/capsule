@@ -1,0 +1,464 @@
+.root {
+  display: grid;
+  gap: 18px;
+}
+
+.statusPanel,
+.stage,
+.emptyState,
+.summary {
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 92%, transparent), var(--surface-1));
+  box-shadow: var(--shadow-xl);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+}
+
+.statusPanel,
+.emptyState,
+.summary {
+  padding: 22px;
+}
+
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.statusEyebrow,
+.statusChip,
+.cardChip,
+.answerTag {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.statusEyebrow {
+  width: fit-content;
+  color: var(--accent);
+}
+
+.statusTitle {
+  margin-top: 10px;
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  line-height: 0.95;
+  font-weight: 700;
+  letter-spacing: -0.06em;
+}
+
+.statusLedger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.statusChip {
+  color: var(--text-secondary);
+}
+
+.progressRail {
+  height: 8px;
+  margin-top: 18px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--text-tertiary) 24%, transparent);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  transition: width 180ms var(--ease-apple);
+}
+
+.stage {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.visualShell {
+  position: relative;
+  display: grid;
+  gap: 12px;
+}
+
+.cardMeta {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cardChip {
+  color: var(--image-overlay-text);
+  background: var(--image-overlay);
+}
+
+.imageFrame,
+.imageFallback {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--image-stage-bg);
+  box-shadow: var(--image-stage-shadow);
+}
+
+.image {
+  object-fit: cover;
+}
+
+.imageFallback {
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  font-size: 15px;
+  text-align: center;
+}
+
+.answerShell {
+  display: grid;
+  gap: 14px;
+}
+
+.sourceBlock,
+.promptBlock,
+.answerBlock,
+.coverBlock {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 22px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.sourceHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sourceIcon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-3));
+}
+
+.sourceCopy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sourceMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sourceLabel,
+.promptLabel,
+.answerLabel {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sourceChip {
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--surface-3) 74%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.sourceTitle {
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sourceText {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.sourceHandoff {
+  min-height: 36px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-3) 72%, transparent);
+}
+
+.sourceHandoffLabel {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sourceHandoffValue {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.promptMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.promptCue {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--surface-3) 74%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.promptTitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.promptText,
+.coverText {
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.coverTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.answerText {
+  color: var(--text-primary);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.answerTag {
+  width: fit-content;
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
+.actionRow,
+.secondaryRow,
+.emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.revealButton,
+.scoreButton,
+.primaryLink,
+.secondaryLink,
+.ghostLink {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  border-radius: var(--radius-full);
+  font-size: 15px;
+  font-weight: 600;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple),
+    opacity 150ms var(--ease-apple);
+}
+
+.revealButton,
+.primaryLink,
+.scoreGood {
+  color: var(--text-on-accent);
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: var(--shadow-md);
+}
+
+.scoreButton {
+  border: none;
+  cursor: pointer;
+}
+
+.scoreAgain {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--surface-3) 94%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+
+.scoreEasy {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--success) 18%, var(--surface-2));
+  box-shadow: var(--shadow-sm);
+}
+
+.secondaryLink,
+.ghostLink {
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.ghostLink {
+  color: var(--text-secondary);
+}
+
+.revealButton:hover,
+.revealButton:focus-visible,
+.scoreButton:hover,
+.scoreButton:focus-visible,
+.primaryLink:hover,
+.primaryLink:focus-visible,
+.secondaryLink:hover,
+.secondaryLink:focus-visible,
+.ghostLink:hover,
+.ghostLink:focus-visible {
+  transform: translateY(-1px);
+}
+
+.scoreButton:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.emptyState,
+.summary {
+  display: grid;
+  gap: 16px;
+  justify-items: start;
+}
+
+.emptyIcon,
+.summaryIcon {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  color: var(--accent);
+}
+
+.emptyCopy,
+.summaryCopy {
+  display: grid;
+  gap: 8px;
+}
+
+.emptyTitle,
+.summaryTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.emptyText,
+.summaryText {
+  max-width: 34rem;
+  color: var(--text-secondary);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.summaryStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.summaryStat {
+  min-width: 120px;
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.summaryLabel {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.summaryValue {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+@media (min-width: 960px) {
+  .stage {
+    grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.85fr);
+    align-items: start;
+    padding: 22px;
+  }
+
+  .answerShell {
+    position: sticky;
+    top: 18px;
+  }
+}

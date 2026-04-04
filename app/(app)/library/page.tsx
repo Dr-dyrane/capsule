@@ -1,7 +1,9 @@
 import { Archive } from 'lucide-react'
 
 import { getSavedCommunityCardsWithUrls } from '@/app/actions/community'
+import { getDueReviewCount } from '@/app/actions/review'
 import CommunityCard from '@/components/cards/CommunityCard'
+import { getSessionDisplayTitle } from '@/lib/sessions/display'
 import PendingLink from '@/components/ui/PendingLink'
 import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
@@ -11,117 +13,6 @@ import LibrarySessionList from './LibrarySessionList'
 
 import styles from '../AppScreen.module.css'
 import listStyles from './LibraryPage.module.css'
-
-function trimTitle(value: string, maxLength = 56) {
-  const normalized = value.replace(/\s+/g, ' ').trim()
-
-  if (normalized.length <= maxLength) {
-    return normalized
-  }
-
-  const truncated = normalized.slice(0, maxLength).trimEnd()
-  const safeBreak = truncated.lastIndexOf(' ')
-
-  return `${(safeBreak > 20 ? truncated.slice(0, safeBreak) : truncated).trimEnd()}...`
-}
-
-function toDisplayTitle(value: string) {
-  return value
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((word) => {
-      if (word === word.toUpperCase() && word.length <= 4) {
-        return word
-      }
-
-      return `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`
-    })
-    .join(' ')
-}
-
-function getSessionTags(context: string) {
-  const normalized = context.toLowerCase()
-  const tags: string[] = []
-
-  const addTag = (condition: boolean, tag: string) => {
-    if (condition && !tags.includes(tag)) {
-      tags.push(tag)
-    }
-  }
-
-  addTag(normalized.includes('celiac'), 'Celiac')
-  addTag(normalized.includes('vaccine') || normalized.includes('vaccination') || normalized.includes('immunization'), 'Vaccines')
-  addTag(
-    normalized.includes('immune system') ||
-      normalized.includes('immunology') ||
-      normalized.includes('mhc ') ||
-      normalized.includes('natural killer'),
-    'Immunology',
-  )
-  addTag(normalized.includes('autoimmune'), 'Autoimmune')
-  addTag(normalized.includes('rheumatoid arthritis'), 'Rheumatoid Arthritis')
-  addTag(normalized.includes('psoriasis'), 'Psoriasis')
-  addTag(normalized.includes('multiple sclerosis'), 'Multiple Sclerosis')
-  addTag(
-    normalized.includes('systemic lupus erythematosus') || /\bsle\b/.test(normalized) || normalized.includes(' lupus'),
-    'Lupus',
-  )
-  addTag(
-    normalized.includes('therapy') ||
-      normalized.includes('treatment') ||
-      normalized.includes('treatments') ||
-      normalized.includes('management'),
-    'Therapy',
-  )
-
-  return tags
-}
-
-function getSessionDisplayTitle(session: SessionRecord) {
-  const context = session.session_context?.replace(/\s+/g, ' ').trim() ?? ''
-
-  if (!context || context.toLowerCase() === 'medical learning session') {
-    return session.remix_source_card_id ? 'Remix Draft' : 'Fresh Capture'
-  }
-
-  const tags = getSessionTags(context)
-  const diseaseTags = tags.filter((tag) =>
-    ['Celiac', 'Rheumatoid Arthritis', 'Psoriasis', 'Multiple Sclerosis', 'Lupus'].includes(tag),
-  )
-  const topicTags = tags.filter((tag) =>
-    ['Vaccines', 'Immunology', 'Autoimmune', 'Therapy'].includes(tag),
-  )
-
-  if (tags.includes('Autoimmune') && tags.includes('Therapy')) {
-    return 'Autoimmune Therapy'
-  }
-
-  if (diseaseTags.length > 0 && topicTags.includes('Therapy')) {
-    return trimTitle(`${diseaseTags[0]} Therapy`, 34)
-  }
-
-  if (diseaseTags.length > 0 && topicTags.length > 0) {
-    const secondaryTag = topicTags.find((tag) => tag !== 'Therapy') ?? topicTags[0]
-    return trimTitle(`${diseaseTags[0]} + ${secondaryTag}`, 34)
-  }
-
-  if (diseaseTags.length >= 2) {
-    return trimTitle(`${diseaseTags[0]} + ${diseaseTags[1]}`, 34)
-  }
-
-  if (tags.length > 0) {
-    return trimTitle(tags.slice(0, 2).join(' + '), 34)
-  }
-
-  const firstSentence = context.split(/(?<=[.!?])\s+/)[0]?.replace(/[.!?]+$/, '') ?? context
-  const cleaned = firstSentence
-    .replace(/^(the|this|these)\s+(notes?|document|page|capture)\s+(cover|covers|focus on|focuses on)\s+/i, '')
-    .replace(/^(key aspects of|overview of|summary of|high-yield review of)\s+/i, '')
-    .replace(/^(including|focusing on)\s+/i, '')
-    .replace(/\b(and|their|specific details about|drug regimens|management strategies|administration)\b/gi, ' ')
-
-  return trimTitle(toDisplayTitle(cleaned), 34)
-}
 
 export default async function LibraryPage() {
   const supabase = await createClient()
@@ -133,9 +24,10 @@ export default async function LibraryPage() {
 
   const densityMode = getUiDensity(user)
 
-  const [{ data: sessions }, { cards: savedCards, signedUrls: savedCardUrls }] = await Promise.all([
+  const [{ data: sessions }, { cards: savedCards, signedUrls: savedCardUrls }, dueReviewCount] = await Promise.all([
     supabase.from('sessions').select('*').order('created_at', { ascending: false }),
     getSavedCommunityCardsWithUrls(12),
+    getDueReviewCount(),
   ])
 
   const signedNoteUrls = await createSignedObjectUrlsSafe(
@@ -160,6 +52,7 @@ export default async function LibraryPage() {
 
   const hasSessions = sessionItems.length > 0
   const hasSavedCards = savedCards.length > 0
+  const firstSavedCardId = savedCards[0]?.card_id ?? null
 
   return (
     <div className={styles.screen}>
@@ -189,6 +82,20 @@ export default async function LibraryPage() {
         </div>
       ) : (
         <div className={listStyles.sections}>
+          {dueReviewCount > 0 ? (
+            <section className={listStyles.reviewShortcut}>
+              <div>
+                <h2 className={listStyles.reviewShortcutTitle}>Review due</h2>
+                <p className={listStyles.reviewShortcutCopy}>
+                  {dueReviewCount} {dueReviewCount === 1 ? 'card is' : 'cards are'} ready for recall.
+                </p>
+              </div>
+              <PendingLink href="/review" className={styles.accentLink}>
+                Review now
+              </PendingLink>
+            </section>
+          ) : null}
+
           {hasSavedCards && densityMode === 'detailed' ? (
             <section className={listStyles.savedSection}>
               <div className={listStyles.savedHeader}>
@@ -207,6 +114,8 @@ export default async function LibraryPage() {
                     key={card.card_id}
                     card={card}
                     imageUrl={card.image_url ? savedCardUrls[card.image_url] : undefined}
+                    saved
+                    reviewHref={`/review?card=${card.card_id}&entry=card`}
                   />
                 ))}
               </div>
@@ -221,9 +130,16 @@ export default async function LibraryPage() {
                   Cards you kept from the community.
                 </p>
               </div>
-              <PendingLink href="/community?saved=1" className={listStyles.savedShortcutLink}>
-                Open saved
-              </PendingLink>
+              <div className={listStyles.savedShortcutActions}>
+                {firstSavedCardId ? (
+                  <PendingLink href={`/review?card=${firstSavedCardId}&entry=card`} className={styles.accentLink}>
+                    Review saved
+                  </PendingLink>
+                ) : null}
+                <PendingLink href="/community?saved=1" className={listStyles.savedShortcutLink}>
+                  Open saved
+                </PendingLink>
+              </div>
             </section>
           ) : null}
 

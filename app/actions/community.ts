@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 
 import { isCommunitySchemaError } from '@/lib/community/schema'
+import { ensureReviewItemExists } from '@/lib/review/queue'
+import { isReviewSchemaError } from '@/lib/review/schema'
 import { createDirectAssetUrlMap, isDirectAssetUrl } from '@/lib/storage/asset-paths'
 import { createPublicClient } from '@/lib/supabase/public'
 import { createClient } from '@/lib/supabase/server'
@@ -65,6 +67,7 @@ function revalidateCommunityPaths(sessionId?: string | null, cardId?: string | n
   revalidatePath('/cards')
   revalidatePath('/community')
   revalidatePath('/library')
+  revalidatePath('/review')
 
   if (sessionId) {
     revalidatePath(`/scan/${sessionId}`)
@@ -1006,6 +1009,20 @@ export async function toggleCommunityReaction(cardId: string, kind: CommunityRea
       .eq('id', existing.id)
 
     if (error) throw error
+
+    if (kind === 'save') {
+      const { error: reviewError } = await supabase
+        .from('review_items')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('card_id', cardId)
+        .eq('source_type', 'saved_community')
+
+      if (reviewError && !isReviewSchemaError(reviewError)) {
+        console.error('Could not remove saved community review item', reviewError)
+      }
+    }
+
     revalidateCommunityPaths()
     return { active: false }
   }
@@ -1024,6 +1041,18 @@ export async function toggleCommunityReaction(cardId: string, kind: CommunityRea
     }
 
     throw error
+  }
+
+  if (kind === 'save') {
+    try {
+      await ensureReviewItemExists(supabase, {
+        userId: user.id,
+        cardId,
+        sourceType: 'saved_community',
+      })
+    } catch (reviewError) {
+      console.error('Could not create saved community review item', reviewError)
+    }
   }
 
   revalidateCommunityPaths()

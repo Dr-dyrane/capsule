@@ -722,6 +722,7 @@ export default function CommunityFeed({
                 liked={viewerState.liked}
                 saved={viewerState.saved}
                 reported={viewerState.reported ?? false}
+                reviewHref={viewerState.saved ? `/review?card=${card.card_id}&entry=card` : null}
                 onToggleLike={() => handleToggleReaction(card.card_id, 'like')}
                 onToggleSave={() => handleToggleReaction(card.card_id, 'save')}
                 onReport={() => handleReport(card.card_id)}

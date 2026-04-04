@@ -5,8 +5,13 @@
   gap: 10px;
   width: 100%;
   padding: 8px 10px;
+  border: none;
   border-radius: 18px;
+  background: transparent;
   color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   box-shadow: var(--shadow-sm);
   transition:
     transform 150ms var(--ease-apple),

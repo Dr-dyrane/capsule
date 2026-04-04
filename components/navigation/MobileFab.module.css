@@ -1,0 +1,75 @@
+.fab {
+  position: fixed;
+  right: 14px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 51;
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 86%, white 14%), var(--accent));
+  color: var(--text-on-accent);
+  box-shadow: var(--shadow-xl);
+  cursor: pointer;
+  transition:
+    transform 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple),
+    filter 150ms var(--ease-apple);
+}
+
+.fab:hover,
+.fab:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.34);
+  filter: saturate(1.05);
+}
+
+.fab:active {
+  transform: scale(0.97);
+}
+
+.actionGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.action {
+  min-height: 88px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 16px 10px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--surface-2) 94%, transparent);
+  box-shadow: var(--shadow-md);
+  color: var(--text-primary);
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    box-shadow 150ms var(--ease-apple),
+    color 150ms var(--ease-apple);
+}
+
+.action:hover,
+.action:focus-visible {
+  transform: translateY(-1px);
+  background: var(--surface-3);
+  box-shadow: var(--shadow-lg);
+}
+
+.action span {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .fab {
+    display: none;
+  }
+}

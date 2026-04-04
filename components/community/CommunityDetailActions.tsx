@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Bookmark, Flag, Heart, Loader2, Repeat2 } from 'lucide-react'
+import { Bookmark, Brain, Flag, Heart, Loader2, Repeat2 } from 'lucide-react'
 
 import { reportCommunityCard, toggleCommunityReaction } from '@/app/actions/community'
 import { useFeedback } from '@/components/providers/FeedbackProvider'
@@ -16,6 +16,7 @@ type CommunityDetailActionsProps = {
   initialReported: boolean
   initialLikeCount: number
   initialSaveCount: number
+  reviewHref?: string | null
 }
 
 export default function CommunityDetailActions({
@@ -26,6 +27,7 @@ export default function CommunityDetailActions({
   initialReported,
   initialLikeCount,
   initialSaveCount,
+  reviewHref = null,
 }: CommunityDetailActionsProps) {
   const [liked, setLiked] = useState(initialLiked)
   const [saved, setSaved] = useState(initialSaved)
@@ -114,6 +116,13 @@ export default function CommunityDetailActions({
         {isPending ? <Loader2 size={14} className={styles.spinner} /> : <Bookmark size={14} />}
         <span>{saveCount}</span>
       </button>
+
+      {saved && reviewHref ? (
+        <PendingLink href={reviewHref} className={styles.reviewChip}>
+          <Brain size={14} />
+          <span>Review saved</span>
+        </PendingLink>
+      ) : null}
 
       <PendingLink href={remixHref} className={styles.remixChip}>
         <Repeat2 size={14} />

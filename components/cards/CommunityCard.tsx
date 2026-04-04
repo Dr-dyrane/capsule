@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { Bookmark, Flag, Globe, Heart, Repeat2, User } from 'lucide-react'
+import { Bookmark, Brain, Flag, Globe, Heart, Repeat2, User } from 'lucide-react'
 
 import type { CommunityCardRecord } from '@/app/actions/community'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
@@ -14,6 +14,7 @@ export default function CommunityCard({
   liked = false,
   saved = false,
   reported = false,
+  reviewHref,
   onToggleLike,
   onToggleSave,
   onReport,
@@ -25,6 +26,7 @@ export default function CommunityCard({
   liked?: boolean
   saved?: boolean
   reported?: boolean
+  reviewHref?: string | null
   onToggleLike?: () => void
   onToggleSave?: () => void
   onReport?: () => void
@@ -137,6 +139,12 @@ export default function CommunityCard({
             <span>{card.like_count} likes</span>
           </div>
         )}
+        {saved && reviewHref ? (
+          <PendingLink href={reviewHref} className={styles.reviewChip}>
+            <Brain size={14} />
+            <span>Review saved</span>
+          </PendingLink>
+        ) : null}
         <PendingLink href={remixHref} className={styles.remixChip}>
           <Repeat2 size={14} />
           <span>Remix</span>

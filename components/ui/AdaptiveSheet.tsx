@@ -15,6 +15,7 @@ type AdaptiveSheetProps = {
   footer?: ReactNode
   closeLabel?: string
   size?: 'compact' | 'regular' | 'wide'
+  placement?: 'bottom' | 'side'
 }
 
 const FOCUSABLE_SELECTOR =
@@ -38,6 +39,7 @@ export default function AdaptiveSheet({
   footer,
   closeLabel,
   size = 'regular',
+  placement = 'bottom',
 }: AdaptiveSheetProps) {
   const panelRef = useRef<HTMLDivElement | null>(null)
   const titleId = useId()
@@ -102,19 +104,23 @@ export default function AdaptiveSheet({
   }
 
   return (
-    <div className={styles.overlay} role="presentation" onClick={onClose}>
-      <div className={styles.viewport}>
+    <div
+      className={`${styles.overlay} ${placement === 'side' ? styles.overlaySide : ''}`}
+      role="presentation"
+      onClick={onClose}
+    >
+      <div className={`${styles.viewport} ${placement === 'side' ? styles.viewportSide : ''}`}>
         <div
           ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
           aria-describedby={description ? descriptionId : undefined}
-          className={`${styles.panel} ${styles[size]}`}
+          className={`${styles.panel} ${styles[size]} ${placement === 'side' ? styles.panelSide : ''}`}
           onClick={(event) => event.stopPropagation()}
           onKeyDown={handlePanelKeyDown}
         >
-          <div className={styles.handle} aria-hidden="true" />
+          {placement === 'bottom' ? <div className={styles.handle} aria-hidden="true" /> : null}
 
           <div className={styles.header}>
             <div className={styles.titleStack}>

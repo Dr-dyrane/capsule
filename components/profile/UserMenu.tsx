@@ -14,17 +14,14 @@ interface UserMenuProps {
     email?: string
   }
   compact?: boolean
+  onClick?: () => void
+  ariaLabel?: string
 }
 
-export default function UserMenu({ user, compact = false }: UserMenuProps) {
+export default function UserMenu({ user, compact = false, onClick, ariaLabel }: UserMenuProps) {
   const displayName = user.username || user.email?.split('@')[0] || 'User'
-
-  return (
-    <Link
-      href="/profile"
-      className={`${styles.trigger} ${compact ? styles.compact : ''}`}
-      aria-label={compact ? 'Open profile' : `${displayName} profile`}
-    >
+  const content = (
+    <>
       <div className={styles.avatar}>
         {user.avatar_url ? (
           <Image
@@ -47,6 +44,29 @@ export default function UserMenu({ user, compact = false }: UserMenuProps) {
           <span className={styles.caption}>Profile</span>
         </div>
       ) : null}
+    </>
+  )
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={`${styles.trigger} ${compact ? styles.compact : ''}`}
+        aria-label={ariaLabel ?? (compact ? 'Open profile menu' : `${displayName} menu`)}
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <Link
+      href="/profile"
+      className={`${styles.trigger} ${compact ? styles.compact : ''}`}
+      aria-label={ariaLabel ?? (compact ? 'Open profile' : `${displayName} profile`)}
+    >
+      {content}
     </Link>
   )
 }

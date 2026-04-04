@@ -15,6 +15,7 @@ import { isCommunitySchemaError } from '@/lib/community/schema'
 import { queueCardForRetry, syncGenerationRunState } from '@/lib/generation/card-worker'
 import { planNotePoints } from '@/lib/generation/note-planner'
 import { registerGenerationSession } from '@/lib/generation/run-manager'
+import { ensureReviewItemExists } from '@/lib/review/queue'
 import { createSignedObjectUrlsSafe } from '@/lib/storage/signed-urls'
 import { createPublicClient } from '@/lib/supabase/public'
 import { createClient } from '@/lib/supabase/server'
@@ -546,6 +547,11 @@ export async function useCommunityMatch(existingCardId: string, matchedCardId: s
 
   if (updateCardError) throw updateCardError
   if (updateJobsError) throw updateJobsError
+
+  await ensureReviewItemExists(supabase, {
+    userId: session.user_id,
+    cardId: existingCardId,
+  })
 
   await recordGenerationCosts(supabase, [
     {
