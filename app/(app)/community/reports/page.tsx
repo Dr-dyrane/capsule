@@ -25,14 +25,14 @@ export default async function CommunityReportsPage() {
           <span>Moderation</span>
         </div>
         <h1 className={styles.title}>Reported activity.</h1>
-        <p className={styles.copy}>Review flagged cards and clarifications from your public learning feed.</p>
+        <p className={styles.copy}>Review flagged items.</p>
       </header>
 
       {!hasAnything ? (
         <div className={styles.panel}>
           <div className={`${styles.panelInner} ${styles.emptyState}`}>
             <p className={styles.emptyTitle}>Nothing flagged right now</p>
-            <p className={styles.emptyCopy}>If a published card or clarification gets flagged, it appears here for review.</p>
+            <p className={styles.emptyCopy}>Flagged items show up here.</p>
             <Link href="/community" className={styles.accentLink}>
               Open community
             </Link>
@@ -100,7 +100,7 @@ export default async function CommunityReportsPage() {
               <div className={reportStyles.sectionHead}>
                 <div>
                   <p className={reportStyles.sectionEyebrow}>Clarifications</p>
-                  <h2 className={reportStyles.sectionTitle}>Reported clarification items</h2>
+                  <h2 className={reportStyles.sectionTitle}>Reported clarifications</h2>
                 </div>
               </div>
 

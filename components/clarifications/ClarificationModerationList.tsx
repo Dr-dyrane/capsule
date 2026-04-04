@@ -72,7 +72,7 @@ export default function ClarificationModerationList({ items }: ClarificationMode
         showFeedback({
           tone: 'success',
           title: 'Reports cleared',
-          message: 'The clarification stays live on the card.',
+          message: 'Item stays live.',
         })
         router.refresh()
       } catch (error) {
@@ -96,7 +96,7 @@ export default function ClarificationModerationList({ items }: ClarificationMode
         showFeedback({
           tone: 'success',
           title: 'Clarification removed',
-          message: 'It is no longer visible on the card.',
+          message: 'No longer visible.',
         })
         setRemovingItem(null)
         router.refresh()
@@ -149,7 +149,7 @@ export default function ClarificationModerationList({ items }: ClarificationMode
 
             <div className={styles.actions}>
               <PendingLink href={`/community/${item.card_id}`} className={styles.linkAction}>
-                Open card
+                Open
               </PendingLink>
               <button
                 type="button"
@@ -158,7 +158,7 @@ export default function ClarificationModerationList({ items }: ClarificationMode
                 disabled={isPending}
               >
                 {isPending ? <Loader2 size={14} className={styles.spinner} /> : <ShieldCheck size={14} aria-hidden="true" />}
-                <span>Keep live</span>
+                <span>Keep</span>
               </button>
               <button
                 type="button"
@@ -167,7 +167,7 @@ export default function ClarificationModerationList({ items }: ClarificationMode
                 disabled={isPending}
               >
                 <ShieldX size={14} aria-hidden="true" />
-                <span>Remove item</span>
+                <span>Remove</span>
               </button>
             </div>
           </article>
@@ -181,8 +181,8 @@ export default function ClarificationModerationList({ items }: ClarificationMode
             setRemovingItem(null)
           }
         }}
-        title="Remove reported clarification?"
-        description="This takes the clarification off the card and clears the current reports."
+        title="Remove clarification?"
+        description="This removes it from the card and clears current reports."
         size="compact"
         footer={
           <div className={styles.sheetFooter}>
@@ -195,7 +195,7 @@ export default function ClarificationModerationList({ items }: ClarificationMode
               Cancel
             </button>
             <button type="button" className={styles.sheetPrimary} onClick={handleRemove} disabled={isPending}>
-              {isPending ? 'Removing...' : 'Remove item'}
+              {isPending ? 'Removing...' : 'Remove'}
             </button>
           </div>
         }
@@ -203,7 +203,7 @@ export default function ClarificationModerationList({ items }: ClarificationMode
         {removingItem ? (
           <div className={styles.sheetBody}>
             <p className={styles.sheetLead}>
-              {removingItem.parent_item_id ? 'This reply will disappear from the thread.' : 'This thread entry will disappear from the card.'}
+              {removingItem.parent_item_id ? 'This reply will disappear.' : 'This item will disappear.'}
             </p>
             <p className={styles.sheetCopy}>{removingItem.item_body}</p>
           </div>

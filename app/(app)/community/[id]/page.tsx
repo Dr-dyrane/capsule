@@ -59,24 +59,28 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
           <span>Published card</span>
         </div>
 
-        <h1 className={shellStyles.title}>{card.title || 'Untitled card'}</h1>
-        <p className={shellStyles.copy}>Open it, save it, or remix it into your next note.</p>
+        <h1 className={styles.pageTitle}>{card.title || 'Untitled card'}</h1>
+        <p className={styles.pageCopy}>Save, review, remix.</p>
       </header>
 
       <div className={styles.layout}>
-        <section className={shellStyles.panel}>
-          <div className={`${shellStyles.panelInner} ${styles.imagePanel}`}>
-            <div className={styles.imageWrap}>
-              {card.signedUrl ? (
-                <ImagePreview src={card.signedUrl} alt={card.title || 'Published card'} />
-              ) : (
-                <div className={styles.placeholder}>Preview unavailable.</div>
-              )}
+        <div className={styles.mainColumn}>
+          <section className={shellStyles.panel}>
+            <div className={`${shellStyles.panelInner} ${styles.imagePanel}`}>
+              <div className={styles.imageWrap}>
+                {card.signedUrl ? (
+                  <ImagePreview src={card.signedUrl} alt={card.title || 'Published card'} />
+                ) : (
+                  <div className={styles.placeholder}>Preview unavailable.</div>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section className={shellStyles.panel}>
+          <CardClarifications cardId={card.card_id} data={clarifications} />
+        </div>
+
+        <section className={`${shellStyles.panel} ${styles.sidePanel}`}>
           <div className={`${shellStyles.panelInner} ${styles.metaPanel}`}>
             <div className={styles.metaRow}>
               <div className={styles.chip}>
@@ -126,16 +130,7 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
               </div>
             </div>
 
-            <div className={styles.section}>
-              <p className={styles.label}>Use it</p>
-              <p className={styles.value}>Save it to review later, or remix it when you want a version shaped to your own note.</p>
-            </div>
-
-            <div className={styles.note}>
-              Shared cards are references, not locked templates. Save what helps, then remix when you need your own pass.
-            </div>
-
-            <CardClarifications cardId={card.card_id} data={clarifications} />
+            <div className={styles.note}>Save to review or remix.</div>
           </div>
         </section>
       </div>

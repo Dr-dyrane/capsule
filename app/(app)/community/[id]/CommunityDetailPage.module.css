@@ -1,3 +1,21 @@
+.pageTitle {
+  max-width: 18ch;
+  color: var(--text-primary);
+  font-size: clamp(2rem, 4.4vw, 4rem);
+  line-height: 0.96;
+  font-weight: 700;
+  letter-spacing: -0.075em;
+  text-wrap: balance;
+}
+
+.pageCopy {
+  max-width: 42rem;
+  color: var(--text-secondary);
+  font-size: 17px;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
 .backLink {
   width: fit-content;
   min-height: 44px;
@@ -23,6 +41,13 @@
 .layout {
   display: grid;
   gap: 32px;
+}
+
+.mainColumn {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  min-width: 0;
 }
 
 .imagePanel {
@@ -54,6 +79,10 @@
 .metaPanel {
   display: grid;
   gap: 24px;
+}
+
+.sidePanel {
+  align-self: start;
 }
 
 .metaRow {
@@ -152,6 +181,18 @@
 }
 
 @media (max-width: 767px) {
+  .pageTitle {
+    max-width: 100%;
+    font-size: clamp(1.95rem, 10vw, 3rem);
+    line-height: 0.94;
+  }
+
+  .pageCopy {
+    max-width: 22rem;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
   .stats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
@@ -179,5 +220,10 @@
     grid-template-columns: minmax(0, 1fr) 360px;
     align-items: start;
     gap: 48px;
+  }
+
+  .sidePanel {
+    position: sticky;
+    top: 24px;
   }
 }

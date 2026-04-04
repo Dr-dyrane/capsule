@@ -167,7 +167,7 @@ function ClarificationThread({
             {root.can_report ? (
               <button type="button" className={styles.actionButton} onClick={() => onReport(root.id)} disabled={disabled}>
                 <Flag size={14} aria-hidden="true" />
-                <span>{root.has_reported ? 'Reported' : 'Report'}</span>
+                <span>{root.has_reported ? 'Flagged' : 'Flag'}</span>
               </button>
             ) : null}
           </div>
@@ -196,7 +196,7 @@ function ClarificationThread({
                       {reply.can_report ? (
                         <button type="button" className={styles.actionButton} onClick={() => onReport(reply.id)} disabled={disabled}>
                           <Flag size={14} aria-hidden="true" />
-                          <span>{reply.has_reported ? 'Reported' : 'Report'}</span>
+                          <span>{reply.has_reported ? 'Flagged' : 'Flag'}</span>
                         </button>
                       ) : null}
                     </div>
@@ -228,7 +228,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
     [data.threads],
   )
   const activeCreateKind = composerState?.mode === 'create' ? composerState.kind : 'question'
-  const composerTitle = composerState?.mode === 'reply' ? 'Reply' : 'Clarify this card'
+  const composerTitle = composerState?.mode === 'reply' ? 'Reply' : 'Clarify'
 
   function closeComposer() {
     if (isPending) return
@@ -250,14 +250,14 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
           showFeedback({
             tone: 'success',
             title: 'Reply added',
-            message: 'Your reply is now on this card.',
+            message: 'Now live on this card.',
           })
         } else {
           await createClarification(cardId, activeCreateKind, body)
           showFeedback({
             tone: 'success',
             title: 'Clarification posted',
-            message: 'It is now attached to this card.',
+            message: 'Now live on this card.',
           })
         }
 
@@ -281,7 +281,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
         showFeedback({
           tone: 'success',
           title: 'Marked resolved',
-          message: 'The thread moved out of the open queue.',
+          message: 'Moved out of open.',
         })
         router.refresh()
       } catch (error) {
@@ -301,7 +301,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
         showFeedback({
           tone: 'success',
           title: 'Removed',
-          message: 'The clarification was removed from this card.',
+          message: 'Removed from this card.',
         })
         router.refresh()
       } catch (error) {
@@ -320,8 +320,8 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
         await reportClarificationItem(itemId)
         showFeedback({
           tone: 'success',
-          title: 'Report sent',
-          message: 'Thanks for flagging this clarification.',
+          title: 'Flag sent',
+          message: 'Flag received.',
         })
         router.refresh()
       } catch (error) {
@@ -339,8 +339,8 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
       <div className={styles.summary}>
         <div className={styles.summaryCopy}>
           <p className={styles.eyebrow}>Card clarifications</p>
-          <h2 className={styles.title}>Clarify in place</h2>
-          <p className={styles.copy}>Questions, fixes, and context for this card.</p>
+          <h2 className={styles.title}>Clarify</h2>
+          <p className={styles.copy}>Questions, fixes, context.</p>
         </div>
 
         {data.supported ? (
@@ -370,12 +370,12 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
       {!data.supported ? (
         <div className={styles.empty}>
           <ShieldAlert size={16} aria-hidden="true" />
-          <span>Clarifications will appear here once this card is ready.</span>
+          <span>Not available yet.</span>
         </div>
       ) : openThreads.length === 0 && resolvedThreads.length === 0 ? (
         <div className={styles.empty}>
           <MessageCirclePlus size={16} aria-hidden="true" />
-          <span>No clarifications yet. Start the first one.</span>
+          <span>No clarifications yet.</span>
         </div>
       ) : (
         <div className={styles.stack}>
@@ -438,7 +438,7 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
         open={composerState !== null}
         onClose={closeComposer}
         title={composerTitle}
-        description={composerState?.mode === 'reply' ? 'Reply without leaving this card.' : 'Attach a question, clarification, or correction to this card.'}
+        description={composerState?.mode === 'reply' ? 'Reply here.' : 'Add a question, clarification, or correction.'}
         size="compact"
         footer={
           <div className={styles.sheetFooter}>
