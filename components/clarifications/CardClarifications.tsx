@@ -419,6 +419,12 @@ export default function CardClarifications({ cardId, data }: CardClarificationsP
           <span className={styles.summaryValue}>{data.resolved_count}</span>
           <span className={styles.summaryLabel}>Resolved</span>
         </div>
+        {data.evidence_count > 0 ? (
+          <div className={styles.summarySignal}>
+            <ImagePlus size={14} aria-hidden="true" />
+            <span>{data.evidence_count === 1 ? '1 image' : `${data.evidence_count} images`}</span>
+          </div>
+        ) : null}
       </div>
 
       {!data.supported ? (

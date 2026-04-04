@@ -222,6 +222,7 @@ export interface CardClarificationListResult {
   supported: boolean
   open_count: number
   resolved_count: number
+  evidence_count: number
   threads: CardClarificationThreadView[]
 }
 

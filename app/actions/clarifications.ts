@@ -267,6 +267,7 @@ export async function getCardClarifications(cardId: string): Promise<CardClarifi
       supported: false,
       open_count: 0,
       resolved_count: 0,
+      evidence_count: 0,
       threads: [],
     }
   }
@@ -286,6 +287,7 @@ export async function getCardClarifications(cardId: string): Promise<CardClarifi
         supported: false,
         open_count: 0,
         resolved_count: 0,
+        evidence_count: 0,
         threads: [],
       }
     }
@@ -301,6 +303,7 @@ export async function getCardClarifications(cardId: string): Promise<CardClarifi
       supported: true,
       open_count: 0,
       resolved_count: 0,
+      evidence_count: 0,
       threads: [],
     }
   }
@@ -317,6 +320,7 @@ export async function getCardClarifications(cardId: string): Promise<CardClarifi
         supported: false,
         open_count: 0,
         resolved_count: 0,
+        evidence_count: 0,
         threads: [],
       }
     }
@@ -397,6 +401,11 @@ export async function getCardClarifications(cardId: string): Promise<CardClarifi
     supported: true,
     open_count: threads.filter((thread) => thread.status === 'open').length,
     resolved_count: threads.filter((thread) => thread.status === 'resolved').length,
+    evidence_count: threads.reduce((count, thread) => {
+      const rootCount = thread.root?.evidence_image_url ? 1 : 0
+      const replyCount = thread.replies.filter((reply) => Boolean(reply.evidence_image_url)).length
+      return count + rootCount + replyCount
+    }, 0),
     threads,
   }
 }

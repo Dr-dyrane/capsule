@@ -85,6 +85,7 @@
 
 .summaryMeta {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -110,6 +111,19 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.summarySignal {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-3) 82%, transparent);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .empty,
