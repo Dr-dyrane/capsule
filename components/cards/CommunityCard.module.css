@@ -207,6 +207,10 @@
   transition: all 180ms var(--ease-apple);
 }
 
+.secondaryAction {
+  color: var(--text-secondary);
+}
+
 .actionChipActive {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
@@ -233,5 +237,16 @@
   .list,
   .list .cardLink {
     grid-template-columns: 1fr;
+  }
+
+  .secondaryAction {
+    width: 36px;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+  }
+
+  .secondaryAction span {
+    display: none;
   }
 }

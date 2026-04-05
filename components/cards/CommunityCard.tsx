@@ -3,8 +3,10 @@ import { Bookmark, Brain, Flag, Globe, Heart, Repeat2, User } from 'lucide-react
 
 import type { CommunityCardRecord } from '@/app/actions/community'
 import { getCommunityClarificationSignal } from '@/lib/community/clarification-signal'
+import { getCommunityCardShareUrl } from '@/lib/site'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import PendingLink from '@/components/ui/PendingLink'
+import ShareLinkButton from '@/components/ui/ShareLinkButton'
 import styles from './CommunityCard.module.css'
 
 export default function CommunityCard({
@@ -39,6 +41,7 @@ export default function CommunityCard({
   const topic = card.concept || card.category
   const showInteractiveActions = Boolean(onToggleLike || onToggleSave || onReport)
   const clarificationSignal = getCommunityClarificationSignal(card)
+  const shareUrl = getCommunityCardShareUrl(card.card_id)
 
   return (
     <article className={`${styles.root} ${layout === 'list' ? styles.list : ''}`}>
@@ -162,14 +165,20 @@ export default function CommunityCard({
             <span>Review saved</span>
           </PendingLink>
         ) : null}
-        <PendingLink href={remixHref} className={styles.remixChip}>
+        <ShareLinkButton
+          url={shareUrl}
+          title={card.title || 'Published card'}
+          label="Share"
+          className={`${styles.actionChip} ${styles.secondaryAction}`}
+        />
+        <PendingLink href={remixHref} className={`${styles.remixChip} ${styles.secondaryAction}`}>
           <Repeat2 size={14} />
           <span>Remix</span>
         </PendingLink>
         {showInteractiveActions ? (
           <button
             type="button"
-            className={`${styles.actionChip} ${reported ? styles.reportedChip : ''}`}
+            className={`${styles.actionChip} ${styles.secondaryAction} ${reported ? styles.reportedChip : ''}`}
             onClick={onReport}
             disabled={reported}
           >

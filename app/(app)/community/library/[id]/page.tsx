@@ -3,10 +3,14 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Archive, ChevronLeft, Globe, User } from 'lucide-react'
 
-import { getCommunityLibraryById } from '@/app/actions/community'
+import {
+  getCommunityLibraryById,
+  getViewerCommunityLibraryReactions,
+  getViewerCommunityLibraryReports,
+} from '@/app/actions/community'
 import CommunityCard from '@/components/cards/CommunityCard'
 import ImagePreview from '@/components/cards/ImagePreview'
-import ShareLinkButton from '@/components/ui/ShareLinkButton'
+import CommunityLibraryActions from '@/components/community/CommunityLibraryActions'
 import { getCommunityLibraryShareImageUrl, getCommunityLibraryShareUrl } from '@/lib/site'
 
 import shellStyles from '../../../AppScreen.module.css'
@@ -84,6 +88,11 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
   const authorHref = library.published_by ? `/community/author/${library.published_by}` : null
   const topic = library.concept || library.category || 'Shared collection'
   const shareUrl = getCommunityLibraryShareUrl(library.session_id)
+  const [viewerReactions, viewerReports] = await Promise.all([
+    getViewerCommunityLibraryReactions([library.session_id]),
+    getViewerCommunityLibraryReports([library.session_id]),
+  ])
+  const viewerState = viewerReactions[library.session_id] ?? { liked: false, saved: false, reported: false }
 
   return (
     <div className={shellStyles.screen}>
@@ -146,14 +155,16 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
               <div className={styles.chip}>Saves {library.save_count}</div>
             </div>
 
-            <div className={styles.actionRow}>
-              <ShareLinkButton
-                url={shareUrl}
-                title={library.title || 'Published library'}
-                label="Share library"
-                className={styles.shareButton}
-              />
-            </div>
+            <CommunityLibraryActions
+              sessionId={library.session_id}
+              shareUrl={shareUrl}
+              shareTitle={library.title || 'Published library'}
+              initialLiked={viewerState.liked}
+              initialSaved={viewerState.saved}
+              initialReported={viewerReports[library.session_id] ?? false}
+              initialLikeCount={library.like_count}
+              initialSaveCount={library.save_count}
+            />
           </div>
         </div>
       </section>

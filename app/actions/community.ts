@@ -96,6 +96,19 @@ function revalidateCommunityPaths(sessionId?: string | null, cardId?: string | n
   }
 }
 
+function createEmptyViewerStateMap(ids: string[]) {
+  return Object.fromEntries(
+    ids.map((id) => [
+      id,
+      {
+        liked: false,
+        saved: false,
+        reported: false,
+      } satisfies CommunityViewerState,
+    ]),
+  ) as Record<string, CommunityViewerState>
+}
+
 async function updateSessionVisibility(
   sessionId: string,
   visibility: CommunityVisibility,
@@ -896,6 +909,83 @@ export async function getViewerCommunityReports(cardIds: string[]) {
   }, {})
 }
 
+export async function getViewerCommunityLibraryReactions(sessionIds: string[]) {
+  const ids = [...new Set(sessionIds.filter(Boolean))]
+  if (ids.length === 0) {
+    return {} as Record<string, CommunityViewerState>
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return createEmptyViewerStateMap(ids)
+  }
+
+  const { data, error } = await supabase
+    .from('community_library_reactions')
+    .select('session_id, kind')
+    .in('session_id', ids)
+    .eq('user_id', user.id)
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      return createEmptyViewerStateMap(ids)
+    }
+
+    throw error
+  }
+
+  return (data ?? []).reduce<Record<string, CommunityViewerState>>((acc, reaction) => {
+    const existing = acc[reaction.session_id] ?? { liked: false, saved: false, reported: false }
+    if (reaction.kind === 'like') {
+      existing.liked = true
+    }
+    if (reaction.kind === 'save') {
+      existing.saved = true
+    }
+    acc[reaction.session_id] = existing
+    return acc
+  }, createEmptyViewerStateMap(ids))
+}
+
+export async function getViewerCommunityLibraryReports(sessionIds: string[]) {
+  const ids = [...new Set(sessionIds.filter(Boolean))]
+  if (ids.length === 0) {
+    return {} as Record<string, boolean>
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return {} as Record<string, boolean>
+  }
+
+  const { data, error } = await supabase
+    .from('community_library_reports')
+    .select('session_id')
+    .in('session_id', ids)
+    .eq('user_id', user.id)
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      return {} as Record<string, boolean>
+    }
+
+    throw error
+  }
+
+  return (data ?? []).reduce<Record<string, boolean>>((acc, report) => {
+    acc[report.session_id] = true
+    return acc
+  }, {})
+}
+
 export async function getCommunityCardByIdWithUrl(cardId: string) {
   const supabase = createPublicClient()
   const { data, error } = await supabase
@@ -1194,6 +1284,104 @@ export async function reportCommunityCard(cardId: string) {
   }
 
   revalidateCommunityPaths()
+  return { reported: true }
+}
+
+export async function toggleCommunityLibraryReaction(sessionId: string, kind: CommunityReactionKind) {
+  const { supabase, user } = await ensureCurrentUserProfile()
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('community_library_reactions')
+    .select('id')
+    .eq('session_id', sessionId)
+    .eq('user_id', user.id)
+    .eq('kind', kind)
+    .maybeSingle()
+
+  if (fetchError) {
+    if (isCommunitySchemaError(fetchError)) {
+      throw new Error('Community library reactions are not available yet.')
+    }
+
+    throw fetchError
+  }
+
+  if (existing?.id) {
+    const { error } = await supabase
+      .from('community_library_reactions')
+      .delete()
+      .eq('id', existing.id)
+
+    if (error) {
+      if (isCommunitySchemaError(error)) {
+        throw new Error('Community library reactions are not available yet.')
+      }
+
+      throw error
+    }
+
+    revalidateCommunityPaths(sessionId)
+    return { active: false }
+  }
+
+  const { error } = await supabase
+    .from('community_library_reactions')
+    .insert({
+      session_id: sessionId,
+      user_id: user.id,
+      kind,
+    })
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      throw new Error('Community library reactions are not available yet.')
+    }
+
+    throw error
+  }
+
+  revalidateCommunityPaths(sessionId)
+  return { active: true }
+}
+
+export async function reportCommunityLibrary(sessionId: string) {
+  const { supabase, user } = await ensureCurrentUserProfile()
+
+  const { data: existing, error: existingError } = await supabase
+    .from('community_library_reports')
+    .select('id')
+    .eq('session_id', sessionId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (existingError) {
+    if (isCommunitySchemaError(existingError)) {
+      throw new Error('Community library reports are not available yet.')
+    }
+
+    throw existingError
+  }
+
+  if (existing?.id) {
+    return { reported: true }
+  }
+
+  const { error } = await supabase
+    .from('community_library_reports')
+    .insert({
+      session_id: sessionId,
+      user_id: user.id,
+    })
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      throw new Error('Community library reports are not available yet.')
+    }
+
+    throw error
+  }
+
+  revalidateCommunityPaths(sessionId)
   return { reported: true }
 }
 

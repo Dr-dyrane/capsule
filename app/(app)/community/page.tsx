@@ -5,6 +5,8 @@ import {
   getCommunityLibraryCount,
   getCommunityLibrariesWithUrls,
   getCommunityFilters,
+  getViewerCommunityLibraryReactions,
+  getViewerCommunityLibraryReports,
   getViewerCommunityReactions,
   getViewerCommunityReports,
 } from '@/app/actions/community'
@@ -51,9 +53,12 @@ export default async function CommunityPage({
   ])
   const filterMeta = await getCommunityFilters()
   const cardIds = cards.map((card) => card.card_id)
-  const [viewerReactions, viewerReports] = await Promise.all([
+  const libraryIds = libraries.map((library) => library.session_id)
+  const [viewerReactions, viewerReports, libraryViewerReactions, libraryViewerReports] = await Promise.all([
     getViewerCommunityReactions(cardIds),
     getViewerCommunityReports(cardIds),
+    getViewerCommunityLibraryReactions(libraryIds),
+    getViewerCommunityLibraryReports(libraryIds),
   ])
 
   const initialViewerState = Object.fromEntries(
@@ -63,6 +68,17 @@ export default async function CommunityPage({
         liked: viewerReactions[cardId]?.liked ?? false,
         saved: viewerReactions[cardId]?.saved ?? false,
         reported: viewerReports[cardId] ?? false,
+      },
+    ]),
+  )
+
+  const initialLibraryViewerState = Object.fromEntries(
+    libraryIds.map((sessionId) => [
+      sessionId,
+      {
+        liked: libraryViewerReactions[sessionId]?.liked ?? false,
+        saved: libraryViewerReactions[sessionId]?.saved ?? false,
+        reported: libraryViewerReports[sessionId] ?? false,
       },
     ]),
   )
@@ -90,6 +106,7 @@ export default async function CommunityPage({
         initialFilters={initialFilters}
         libraries={libraries}
         libraryUrls={libraryUrls}
+        initialLibraryViewerState={initialLibraryViewerState}
         densityMode={densityMode}
       />
     </div>

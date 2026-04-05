@@ -1,4 +1,9 @@
-.card {
+.root {
+  display: grid;
+  gap: 12px;
+}
+
+.cardLink {
   display: grid;
   gap: 14px;
   text-decoration: none;
@@ -16,8 +21,8 @@
     box-shadow 180ms var(--ease-apple);
 }
 
-.card:hover .cover,
-.card:focus-visible .cover {
+.cardLink:hover .cover,
+.cardLink:focus-visible .cover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-xl);
 }
@@ -112,6 +117,32 @@
   font-size: 12px;
 }
 
-.trailing {
-  display: none;
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 4px;
+}
+
+.openChip {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    transform 180ms var(--ease-apple),
+    background-color 180ms var(--ease-apple);
+}
+
+.openChip:hover,
+.openChip:focus-visible {
+  transform: translateY(-1px);
+  background: var(--surface-3);
 }

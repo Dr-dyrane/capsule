@@ -34,6 +34,7 @@ type CommunityBrowserProps = {
   }
   libraries: CommunityLibraryRecord[]
   libraryUrls: Record<string, string>
+  initialLibraryViewerState: Record<string, CommunityViewerState>
   densityMode: UiDensityMode
   lockedAuthor?: {
     id: string
@@ -51,6 +52,7 @@ export default function CommunityBrowser({
   initialFilters,
   libraries,
   libraryUrls,
+  initialLibraryViewerState,
   densityMode,
   lockedAuthor = null,
 }: CommunityBrowserProps) {
@@ -111,6 +113,9 @@ export default function CommunityBrowser({
                 key={library.session_id}
                 library={library}
                 imageUrl={library.cover_image_url ? libraryUrls[library.cover_image_url] : undefined}
+                liked={initialLibraryViewerState[library.session_id]?.liked ?? false}
+                saved={initialLibraryViewerState[library.session_id]?.saved ?? false}
+                reported={initialLibraryViewerState[library.session_id]?.reported ?? false}
               />
             ))}
           </div>

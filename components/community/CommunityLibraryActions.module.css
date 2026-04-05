@@ -1,0 +1,52 @@
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.actionChip {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    transform 180ms var(--ease-apple),
+    color 180ms var(--ease-apple),
+    background-color 180ms var(--ease-apple);
+}
+
+.actionChip:hover,
+.actionChip:focus-visible {
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.activeChip {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+}
+
+.reportedChip {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 12%, var(--surface-2));
+}
+
+@media (max-width: 767px) {
+  .compact .secondaryAction {
+    width: 36px;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+  }
+
+  .compact .secondaryAction span {
+    display: none;
+  }
+}
