@@ -5,6 +5,7 @@ import { ChevronLeft, Globe, User } from 'lucide-react'
 
 import { getCardClarifications } from '@/app/actions/clarifications'
 import { getCommunityCardByIdWithUrl, getViewerCommunityReactions, getViewerCommunityReports } from '@/app/actions/community'
+import { getCardImagePath } from '@/lib/assets/stable-image-paths'
 import { getCommunityClarificationSignal } from '@/lib/community/clarification-signal'
 import { getCommunityCardShareImageUrl, getCommunityCardShareUrl } from '@/lib/site'
 import ImagePreview from '@/components/cards/ImagePreview'
@@ -116,8 +117,8 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
           <section className={shellStyles.panel}>
             <div className={`${shellStyles.panelInner} ${styles.imagePanel}`}>
               <div className={styles.imageWrap}>
-                {card.signedUrl ? (
-                  <ImagePreview src={card.signedUrl} alt={card.title || 'Published card'} />
+                {card.image_url ? (
+                  <ImagePreview src={getCardImagePath(card.card_id)} alt={card.title || 'Published card'} />
                 ) : (
                   <div className={styles.placeholder}>Preview unavailable.</div>
                 )}

@@ -1,18 +1,15 @@
 'use client'
-
-import Image from 'next/image'
 import { Archive, ChevronRight, User } from 'lucide-react'
 
 import type { CommunityLibraryRecord } from '@/app/actions/community'
 import { getCommunityLibraryShareUrl } from '@/lib/site'
-import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import CommunityLibraryActions from '@/components/community/CommunityLibraryActions'
 import PendingLink from '@/components/ui/PendingLink'
+import StableDbImage from '@/components/ui/StableDbImage'
 import styles from './CommunityLibraryCard.module.css'
 
 export default function CommunityLibraryCard({
   library,
-  imageUrl,
   liked = false,
   saved = false,
   reported = false,
@@ -33,15 +30,14 @@ export default function CommunityLibraryCard({
       <PendingLink href={libraryHref} className={styles.cardLink}>
         <div className={styles.cover}>
           <div className={styles.coverFrame}>
-            {imageUrl ? (
-              <Image
-                src={imageUrl}
+            {library.cover_image_url ? (
+              <StableDbImage
+                kind="library"
+                id={library.session_id}
                 alt={library.title || 'Published library'}
                 fill
                 sizes="(max-width: 767px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 quality={66}
-                placeholder="blur"
-                blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                 className={styles.image}
               />
             ) : (

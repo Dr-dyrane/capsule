@@ -7,11 +7,11 @@ import { getCommunityCardShareUrl } from '@/lib/site'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import PendingLink from '@/components/ui/PendingLink'
 import ShareLinkButton from '@/components/ui/ShareLinkButton'
+import StableDbImage from '@/components/ui/StableDbImage'
 import styles from './CommunityCard.module.css'
 
 export default function CommunityCard({
   card,
-  imageUrl,
   layout = 'grid',
   showImageMeta = true,
   liked = false,
@@ -77,15 +77,14 @@ export default function CommunityCard({
               </>
             ) : null}
 
-            {imageUrl ? (
-              <Image
-                src={imageUrl}
+            {card.image_url ? (
+              <StableDbImage
+                kind="card"
+                id={card.card_id}
                 alt={card.title || 'Community card'}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 quality={68}
-                placeholder="blur"
-                blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                 className={styles.image}
               />
             ) : (

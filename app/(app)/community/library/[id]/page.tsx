@@ -11,6 +11,7 @@ import {
 import CommunityCard from '@/components/cards/CommunityCard'
 import ImagePreview from '@/components/cards/ImagePreview'
 import CommunityLibraryActions from '@/components/community/CommunityLibraryActions'
+import { getLibraryImagePath } from '@/lib/assets/stable-image-paths'
 import { getCommunityLibraryShareImageUrl, getCommunityLibraryShareUrl } from '@/lib/site'
 
 import shellStyles from '../../../AppScreen.module.css'
@@ -75,7 +76,7 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
     notFound()
   }
 
-  const { library, cards, signedUrls } = data
+  const { library, cards } = data
   const publishedAt = library.published_at
     ? new Date(library.published_at).toLocaleDateString(undefined, {
         month: 'long',
@@ -115,9 +116,9 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
         <div className={`${shellStyles.panel} ${styles.coverPanel}`}>
           <div className={`${shellStyles.panelInner} ${styles.coverPanel}`}>
             <div className={styles.coverWrap}>
-              {library.cover_image_url && signedUrls[library.cover_image_url] ? (
+              {library.cover_image_url ? (
                 <ImagePreview
-                  src={signedUrls[library.cover_image_url]}
+                  src={getLibraryImagePath(library.session_id)}
                   alt={library.title || 'Published library'}
                 />
               ) : (
@@ -180,7 +181,6 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
             <CommunityCard
               key={card.card_id}
               card={card}
-              imageUrl={card.image_url ? signedUrls[card.image_url] : undefined}
               showImageMeta={false}
             />
           ))}

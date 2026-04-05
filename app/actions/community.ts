@@ -1149,7 +1149,7 @@ export async function getCommunityLibraryById(sessionId: string) {
   }
 
   const typedLibrary = library as CommunityLibraryRecord
-  const { cards, signedUrls } = await fetchCommunityCardsWithUrls(
+  const cards = await getCommunityCards(
     0,
     Math.max(typedLibrary.card_count || 1, 1),
     { sessionId },
@@ -1158,7 +1158,6 @@ export async function getCommunityLibraryById(sessionId: string) {
   return {
     library: typedLibrary,
     cards,
-    signedUrls,
   }
 }
 

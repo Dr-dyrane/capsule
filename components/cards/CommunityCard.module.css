@@ -1,10 +1,14 @@
 .root {
+  position: relative;
+  isolation: isolate;
   display: grid;
   gap: 12px;
   min-width: 0;
 }
 
 .cardLink {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 12px;
   min-width: 0;
@@ -53,6 +57,7 @@
 .status {
   position: absolute;
   z-index: 1;
+  pointer-events: none;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -183,6 +188,8 @@
 }
 
 .footer {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -231,6 +238,15 @@
 .reviewChip {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, var(--surface-2));
+}
+
+.actionChip,
+.remixChip,
+.metricsChip,
+.reviewChip {
+  position: relative;
+  z-index: 1;
+  touch-action: manipulation;
 }
 
 @media (max-width: 767px) {

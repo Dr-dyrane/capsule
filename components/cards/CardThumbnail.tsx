@@ -1,17 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { Check } from 'lucide-react'
 
-import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import type { CardRecord } from '@/lib/types'
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
+import StableDbImage from '@/components/ui/StableDbImage'
 import styles from './CardThumbnail.module.css'
 
 export default function CardThumbnail({ 
   card, 
-  imageUrl,
   selectionMode = false,
   selected = false,
   onToggleSelect,
@@ -66,16 +64,15 @@ export default function CardThumbnail({
             </button>
           ) : null}
 
-          {imageUrl ? (
+          {card.image_url ? (
             <div className={styles.imageFrame}>
-              <Image
-                src={imageUrl}
+              <StableDbImage
+                kind="card"
+                id={card.id}
                 alt={card.title || 'Generated card'}
                 fill
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 quality={68}
-                placeholder="blur"
-                blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                 className={styles.image}
               />
             </div>

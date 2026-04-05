@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { ChevronLeft, Images, Repeat2, ScanText, Sparkles } from 'lucide-react'
 
 import { getCommunityCardByIdWithUrl } from '@/app/actions/community'
+import { getCardImagePath } from '@/lib/assets/stable-image-paths'
 import { getSafeCommunityVisibility, isCommunitySchemaError } from '@/lib/community/schema'
 import { getCommunityCardShareUrl } from '@/lib/site'
 import { createSignedObjectUrlSafe } from '@/lib/storage/signed-urls'
@@ -61,7 +62,6 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
     redirect('/cards')
   }
 
-  const signedUrl = card.status === 'complete' ? await createSignedObjectUrlSafe('cards', card.image_url) : null
   const { data: session } = await supabase
     .from('sessions')
     .select('id, source_url, remix_source_card_id')
@@ -111,9 +111,9 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
         <section className={`${shellStyles.panel} ${styles.imageShell}`}>
           <div className={styles.imagePanel}>
             <div className={styles.imageWrap}>
-              {signedUrl ? (
+              {card.status === 'complete' && card.image_url ? (
                 <ImagePreview
-                  src={signedUrl}
+                  src={getCardImagePath(card.id)}
                   alt={card.title || 'Generated card'}
                 />
               ) : (

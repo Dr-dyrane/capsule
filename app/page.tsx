@@ -2,7 +2,8 @@ import ShowcaseCarousel from '@/components/marketing/ShowcaseCarousel'
 import ThemeToggle from '@/components/marketing/ThemeToggle'
 import Logo from '@/components/ui/Logo'
 import PendingLink from '@/components/ui/PendingLink'
-import { fetchCommunityCardsWithUrls } from '@/app/actions/community'
+import { getCommunityCards } from '@/app/actions/community'
+import { getCardImagePath } from '@/lib/assets/stable-image-paths'
 import { signOut } from '@/app/actions/user'
 import { curateShowcaseCards } from '@/lib/community/curation'
 import { createClient } from '@/lib/supabase/server'
@@ -65,10 +66,10 @@ export default async function MarketingPage() {
     fallbackSrc: card.src,
   }))
   try {
-    const { cards, signedUrls } = await fetchCommunityCardsWithUrls(0, 18, { sort: 'trending' })
+    const cards = await getCommunityCards(0, 18, { sort: 'trending' })
     const dynamicCards = curateShowcaseCards(
       cards.flatMap((card) => {
-        const src = card.image_url ? signedUrls[card.image_url] : ''
+        const src = card.image_url ? getCardImagePath(card.card_id) : ''
         if (!src) return []
 
         return [

@@ -67,7 +67,16 @@ export default function ShareLinkButton({
   }
 
   return (
-    <button type="button" className={className} onClick={handleShare} disabled={isSharing}>
+    <button
+      type="button"
+      className={className}
+      onClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        void handleShare()
+      }}
+      disabled={isSharing}
+    >
       <Share2 size={14} aria-hidden="true" />
       <span>{isSharing ? 'Sharing...' : label}</span>
     </button>

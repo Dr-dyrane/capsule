@@ -57,6 +57,7 @@ a {
 }
 
 .pending-link {
+  touch-action: manipulation;
   transition:
     transform var(--duration-micro) var(--ease-apple),
     opacity var(--duration-micro) var(--ease-standard),

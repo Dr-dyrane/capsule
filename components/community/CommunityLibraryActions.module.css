@@ -1,10 +1,15 @@
 .actions {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
 .actionChip {
+  position: relative;
+  z-index: 1;
+  touch-action: manipulation;
   min-height: 36px;
   display: inline-flex;
   align-items: center;
