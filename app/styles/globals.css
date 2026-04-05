@@ -22,6 +22,10 @@ body {
               color var(--duration-standard) var(--ease-standard);
 }
 
+body[data-route-pending='true'] {
+  cursor: progress;
+}
+
 html,
 body {
   scrollbar-width: thin;
@@ -72,9 +76,9 @@ a {
 }
 
 .pending-link[data-pending='true'] {
-  opacity: 0.72;
-  transform: scale(0.985);
-  filter: saturate(0.94);
+  opacity: 0.78;
+  transform: scale(0.988);
+  filter: saturate(0.94) brightness(0.98);
   pointer-events: none;
 }
 

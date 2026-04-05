@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 
 import FeedbackProvider from '@/components/providers/FeedbackProvider';
+import NavigationFeedbackProvider from '@/components/providers/NavigationFeedbackProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -61,7 +62,9 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
-        <FeedbackProvider>{children}</FeedbackProvider>
+        <FeedbackProvider>
+          <NavigationFeedbackProvider>{children}</NavigationFeedbackProvider>
+        </FeedbackProvider>
       </body>
     </html>
   );

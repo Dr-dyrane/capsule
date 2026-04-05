@@ -1,13 +1,28 @@
 'use client'
 
 import Link, { type LinkProps } from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
-import { forwardRef, useEffect, useRef, useState, type ComponentPropsWithoutRef, type MouseEvent } from 'react'
+import { usePathname } from 'next/navigation'
+import { forwardRef, type ComponentPropsWithoutRef, type MouseEvent } from 'react'
+
+import { useNavigationFeedback } from '@/components/providers/NavigationFeedbackProvider'
 
 type PendingLinkProps = LinkProps &
   Omit<ComponentPropsWithoutRef<'a'>, 'href'> & {
     pendingClassName?: string
   }
+
+function normalizeHref(href: LinkProps['href'], fallbackPathname: string) {
+  if (typeof href === 'string') {
+    try {
+      return new URL(href, 'http://localhost').pathname
+    } catch {
+      return href
+    }
+  }
+
+  const pathname = href.pathname ?? fallbackPathname
+  return pathname
+}
 
 function isModifiedEvent(event: MouseEvent<HTMLAnchorElement>) {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0
@@ -18,19 +33,10 @@ const PendingLink = forwardRef<HTMLAnchorElement, PendingLinkProps>(function Pen
   ref,
 ) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const [pendingSourceKey, setPendingSourceKey] = useState<string | null>(null)
-  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const currentLocationKey = `${pathname}?${searchParams.toString()}`
-  const isPending = pendingSourceKey === currentLocationKey
-
-  useEffect(() => {
-    return () => {
-      if (resetTimeoutRef.current) {
-        clearTimeout(resetTimeoutRef.current)
-      }
-    }
-  }, [])
+  const { beginNavigation, pendingHref } = useNavigationFeedback()
+  const currentLocationKey = pathname
+  const resolvedHref = normalizeHref(props.href, pathname)
+  const isPending = pendingHref === resolvedHref
 
   return (
     <Link
@@ -47,14 +53,14 @@ const PendingLink = forwardRef<HTMLAnchorElement, PendingLinkProps>(function Pen
           return
         }
 
-        if (resetTimeoutRef.current) {
-          clearTimeout(resetTimeoutRef.current)
+        const targetUrl = new URL(event.currentTarget.href)
+        const targetLocationKey = targetUrl.pathname
+
+        if (targetLocationKey === currentLocationKey) {
+          return
         }
 
-        setPendingSourceKey(currentLocationKey)
-        resetTimeoutRef.current = setTimeout(() => {
-          setPendingSourceKey(null)
-        }, 1800)
+        beginNavigation(targetLocationKey)
       }}
     >
       {children}
