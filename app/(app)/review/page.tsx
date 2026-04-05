@@ -48,7 +48,7 @@ function getReviewCopy({
       : 'You are starting from saved community cards first.'
   }
 
-  return 'Recall the concept first. Reveal the wording second.'
+  return 'Recall the rule, mechanism, formula, or treatment logic first. Reveal the wording second.'
 }
 
 function getFocusChipLabel(entryMode: ReviewEntryMode) {
@@ -87,7 +87,7 @@ export default async function ReviewPage({
           <Brain size={14} aria-hidden="true" />
           <span>Review</span>
         </div>
-        <h1 className={styles.title}>Bring it back.</h1>
+        <h1 className={styles.title}>Study what sticks.</h1>
         <p className={styles.copy}>
           {getReviewCopy({
             entryMode,

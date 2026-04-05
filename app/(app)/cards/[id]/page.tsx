@@ -149,7 +149,7 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
             <div className={styles.actionRow}>
               {card.status === 'complete' ? (
                 <Link href={`/review?card=${card.id}&entry=card`} className={styles.reviewAction}>
-                  Review now
+                  Study this
                 </Link>
               ) : null}
               {shareUrl ? (

@@ -332,6 +332,79 @@
   background: var(--surface-3);
 }
 
+.recapTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.recapTag {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.recapList {
+  display: grid;
+  gap: 10px;
+}
+
+.recapItem {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 22px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.recapBullet {
+  width: 10px;
+  height: 10px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.recapBody {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.recapText {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.recapMeta {
+  width: fit-content;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--surface-3) 74%, transparent);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 .panelTitle {
   font-size: 16px;
   font-weight: 700;
@@ -840,4 +913,23 @@
 
 .contentComplete {
   grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 767px) {
+  .recapItem {
+    grid-template-columns: 8px minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 20px;
+  }
+
+  .recapBullet {
+    width: 8px;
+    height: 8px;
+    margin-top: 8px;
+  }
+
+  .recapText {
+    font-size: 13.5px;
+  }
 }

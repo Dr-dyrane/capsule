@@ -109,7 +109,7 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
         </div>
 
         <h1 className={shellStyles.title}>{library.title || 'Published library'}</h1>
-        <p className={shellStyles.copy}>A full shared collection of published cards.</p>
+        <p className={shellStyles.copy}>A full shared collection. Save what helps, then study it in your own queue.</p>
       </header>
 
       <section className={styles.hero}>
@@ -173,7 +173,7 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
       <section className={styles.cardsSection}>
         <div className={styles.cardsHeader}>
           <h2 className={styles.cardsTitle}>Cards in this library</h2>
-          <p className={styles.cardsCopy}>Open any card, save what helps, or remix it into your own note.</p>
+          <p className={styles.cardsCopy}>Open any card, save what helps, then study or remix it when you need your own pass.</p>
         </div>
 
         <div className={styles.cardsGrid}>

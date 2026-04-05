@@ -7,10 +7,13 @@ import { Brain, CheckCircle2, Globe, Sparkles } from 'lucide-react'
 import { submitReviewResult } from '@/app/actions/review'
 import { useFeedback } from '@/components/providers/FeedbackProvider'
 import PendingLink from '@/components/ui/PendingLink'
+import { getStudyCue } from '@/lib/review/study-cues'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import type { ReviewQueueItem, ReviewScore } from '@/lib/types'
 
 import styles from './ReviewQueue.module.css'
+
+const WEAK_POINT_RESURFACE_GAP = 2
 
 function normalizeReviewText(value: string | null | undefined) {
   return value?.replace(/\s+/g, ' ').trim().toLowerCase() ?? ''
@@ -151,6 +154,7 @@ export default function ReviewQueue({
   const [items, setItems] = useState(initialItems)
   const [liveDueCount, setLiveDueCount] = useState(dueCount)
   const [revealed, setRevealed] = useState(false)
+  const [hideLabels, setHideLabels] = useState(true)
   const [completedCount, setCompletedCount] = useState(0)
   const [againCount, setAgainCount] = useState(0)
   const [activeScore, setActiveScore] = useState<ReviewScore | null>(null)
@@ -178,8 +182,23 @@ export default function ReviewQueue({
   const sourceLabel = currentItem ? formatReviewSource(currentItem.source_type) : null
   const nextSourceLabel = nextStretch[0] ? formatReviewSource(nextStretch[0].source_type) : null
   const promptTitle = currentItem ? formatPromptTitle(currentItem, titleLeaksAnswer) : 'Learning card'
-  const promptText = currentItem ? formatPromptText(currentItem, titleLeaksAnswer) : ''
+  const studyCue = currentItem ? getStudyCue(currentItem) : null
+  const promptText = currentItem
+    ? studyCue?.promptText ?? formatPromptText(currentItem, titleLeaksAnswer)
+    : ''
   const imageAlt = currentItem ? formatImageAlt(currentItem) : 'Review illustration'
+  const shouldMaskImage = Boolean(currentItem && hideLabels && !revealed)
+
+  function getResurfacedQueue(queue: ReviewQueueItem[], item: ReviewQueueItem) {
+    const remaining = queue.slice(1).filter((candidate) => candidate.review_item_id !== item.review_item_id)
+    const insertIndex = Math.min(WEAK_POINT_RESURFACE_GAP, remaining.length)
+
+    return [
+      ...remaining.slice(0, insertIndex),
+      item,
+      ...remaining.slice(insertIndex),
+    ]
+  }
 
   function handleScore(score: ReviewScore) {
     if (!currentItem || isPending) {
@@ -190,10 +209,11 @@ export default function ReviewQueue({
     const nextCompletedCount = completedCount + 1
     const nextAgainCount = againCount + (score === 'again' ? 1 : 0)
     const wasDue = new Date(currentItem.next_review_at).getTime() <= Date.now()
+    const shouldResurface = score === 'again'
 
     setActiveScore(score)
-    setItems((current) => current.slice(1))
-    if (wasDue) {
+    setItems((current) => (shouldResurface ? getResurfacedQueue(current, currentItem) : current.slice(1)))
+    if (wasDue && !shouldResurface) {
       setLiveDueCount((current) => Math.max(0, current - 1))
     }
     setCompletedCount(nextCompletedCount)
@@ -205,7 +225,7 @@ export default function ReviewQueue({
         await submitReviewResult(currentItem.review_item_id, score)
       } catch (error) {
         setItems(snapshot)
-        if (wasDue) {
+        if (wasDue && !shouldResurface) {
           setLiveDueCount((current) => current + 1)
         }
         setCompletedCount(completedCount)
@@ -303,7 +323,7 @@ export default function ReviewQueue({
       </section>
 
       <section className={styles.stage}>
-        <div className={styles.visualShell}>
+          <div className={styles.visualShell}>
           <div className={styles.cardMeta}>
             <div className={styles.cardChip}>{currentItem.note_role ?? 'support'}</div>
             {currentItem.category ? <div className={styles.cardChip}>{currentItem.category}</div> : null}
@@ -319,12 +339,32 @@ export default function ReviewQueue({
                 quality={80}
                 placeholder="blur"
                 blurDataURL={APP_IMAGE_BLUR_DATA_URL}
-                className={styles.image}
+                className={`${styles.image} ${shouldMaskImage ? styles.imageMasked : ''}`}
               />
+              {shouldMaskImage ? (
+                <div className={styles.imageMask}>
+                  <div className={styles.imageMaskBadge}>Labels hidden</div>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className={styles.imageFallback}>Preview unavailable</div>
           )}
+
+          {!revealed ? (
+            <div className={styles.visualTools}>
+              <button
+                type="button"
+                className={styles.visualToggle}
+                onClick={() => setHideLabels((current) => !current)}
+              >
+                {hideLabels ? 'Show labels' : 'Hide labels'}
+              </button>
+              <span className={styles.visualHint}>
+                Keep the image as a cue without letting the text give the answer away.
+              </span>
+            </div>
+          ) : null}
         </div>
 
         <div className={styles.answerShell}>
@@ -358,8 +398,9 @@ export default function ReviewQueue({
           </div>
 
           <div className={styles.promptBlock}>
-            <p className={styles.promptLabel}>Prompt</p>
+            <p className={styles.promptLabel}>Study cue</p>
             <div className={styles.promptMeta}>
+              {studyCue ? <div className={styles.promptCue}>{studyCue.label}</div> : null}
               {sourceLabel ? <div className={styles.promptCue}>{sourceLabel}</div> : null}
               {currentItem.concept && currentItem.concept !== promptTitle ? (
                 <div className={styles.promptCue}>{currentItem.concept}</div>
@@ -377,12 +418,14 @@ export default function ReviewQueue({
             </div>
           ) : (
             <div className={styles.coverBlock}>
-              <p className={styles.coverTitle}>Pause first.</p>
-              <p className={styles.coverText}>Use the image as your cue, then reveal the wording only after you have tried recall.</p>
+              <p className={styles.coverTitle}>{studyCue?.coverTitle ?? 'Pause first.'}</p>
+              <p className={styles.coverText}>
+                {studyCue?.coverText ?? 'Use the image as your cue, then reveal the wording only after you have tried recall.'}
+              </p>
             </div>
           )}
 
-          <div className={styles.actionRow}>
+            <div className={styles.actionRow}>
             {revealed ? (
               <>
                 <button
@@ -412,7 +455,7 @@ export default function ReviewQueue({
               </>
             ) : (
               <button type="button" className={styles.revealButton} onClick={() => setRevealed(true)}>
-                Reveal point
+                {studyCue?.revealLabel ?? 'Reveal answer'}
               </button>
             )}
           </div>

@@ -158,7 +158,7 @@ export default function CommunityCard({
         {saved && reviewHref ? (
           <PendingLink href={reviewHref} className={styles.reviewChip}>
             <Brain size={14} />
-            <span>Review saved</span>
+            <span>Study saved</span>
           </PendingLink>
         ) : null}
         <ShareLinkButton

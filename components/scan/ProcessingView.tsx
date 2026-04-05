@@ -76,6 +76,10 @@ function getRoleLabel(role?: NoteRole) {
   return 'Later'
 }
 
+function getPointGroupLabel(point: PointRecord) {
+  return point.concept || point.category || null
+}
+
 function getCardStatusLabel(card?: CardRecord, role?: NoteRole, recommendation?: SessionRecommendationRecord | null) {
   if (!card) return role === 'hero' ? 'Queued' : 'Draft'
   if (card.status === 'complete') return card.generation_gate === 'reused' ? 'Reused' : 'Ready'
@@ -399,6 +403,16 @@ export default function ProcessingView({
     () => orderedPoints.filter((point) => point.note_role !== 'hero' && cardsByPointId.get(point.id)?.status !== 'complete'),
     [cardsByPointId, orderedPoints],
   )
+  const recapLabels = useMemo(
+    () =>
+      [...new Set(orderedPoints.map(getPointGroupLabel).filter(Boolean))]
+        .slice(0, 4) as string[],
+    [orderedPoints],
+  )
+  const recapPoints = useMemo(
+    () => orderedPoints.slice(0, Math.min(4, orderedPoints.length)),
+    [orderedPoints],
+  )
 
   const activePipelineCards = cards.filter((card) => card.status === 'generating' || ((card.generation_gate === 'automatic' || card.generation_gate === 'premium') && card.status === 'queued'))
   const suggestionCount = nextPoints.filter((point) => cardsByPointId.get(point.id)?.generation_gate === 'community-first').length
@@ -626,7 +640,7 @@ export default function ProcessingView({
               ) : null}
               {completeCards.length > 0 ? (
                 <Link href={reviewHref} className={styles.secondaryAction}>
-                  Start review
+                  Study session
                 </Link>
               ) : null}
               {sessionShareUrl ? (
@@ -711,6 +725,48 @@ export default function ProcessingView({
               </div>
             </section>
           ) : null}
+        </section>
+      ) : null}
+
+      {points.length > 0 ? (
+        <section className={styles.panel}>
+          <div className={styles.panelInner}>
+            <div className={styles.panelHeader}>
+              <div>
+                <div className={styles.panelEyebrow}>
+                  <Sparkles size={14} />
+                  <span>Key ideas in this note</span>
+                </div>
+                <h3 className={styles.panelTitle}>Quick recap</h3>
+                <p className={styles.panelCopy}>A short read on what this session is really covering before you dive into the cards.</p>
+              </div>
+              <div className={styles.panelCount}>{points.length}</div>
+            </div>
+
+            {recapLabels.length > 0 ? (
+              <div className={styles.recapTags}>
+                {recapLabels.map((label) => (
+                  <div key={label} className={styles.recapTag}>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className={styles.recapList}>
+              {recapPoints.map((point) => (
+                <div key={point.id} className={styles.recapItem}>
+                  <div className={styles.recapBullet} />
+                  <div className={styles.recapBody}>
+                    <p className={styles.recapText}>{getPointPreview(point.text)}</p>
+                    {getPointGroupLabel(point) ? (
+                      <span className={styles.recapMeta}>{getPointGroupLabel(point)}</span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
       ) : null}
 

@@ -49,6 +49,18 @@ The feature should remain:
 - Product stance: [discussion-plan.md](./discussion-plan.md)
 - Full roadmap: [card-clarifications-roadmap.md](./card-clarifications-roadmap.md)
 - Current build spec: [card-clarifications-v1.md](./card-clarifications-v1.md)
+- Current checkpoint: [current-product-status.md](./current-product-status.md)
+
+## Current Status
+
+Current phase state:
+
+- Phase 1: shipped
+- Phase 2: shipped
+- Phase 3: partially shipped
+- Phase 4: not started
+
+See [current-product-status.md](./current-product-status.md) for the implementation checkpoint and next-step decision point.
 
 ## Phase Overview
 
