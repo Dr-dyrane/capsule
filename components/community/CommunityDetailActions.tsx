@@ -6,6 +6,7 @@ import { Bookmark, Brain, Flag, Heart, Loader2, Repeat2 } from 'lucide-react'
 import { reportCommunityCard, toggleCommunityReaction } from '@/app/actions/community'
 import { useFeedback } from '@/components/providers/FeedbackProvider'
 import PendingLink from '@/components/ui/PendingLink'
+import ShareLinkButton from '@/components/ui/ShareLinkButton'
 import styles from './CommunityDetailActions.module.css'
 
 type CommunityDetailActionsProps = {
@@ -17,6 +18,8 @@ type CommunityDetailActionsProps = {
   initialLikeCount: number
   initialSaveCount: number
   reviewHref?: string | null
+  shareUrl: string
+  shareTitle?: string | null
 }
 
 export default function CommunityDetailActions({
@@ -28,6 +31,8 @@ export default function CommunityDetailActions({
   initialLikeCount,
   initialSaveCount,
   reviewHref = null,
+  shareUrl,
+  shareTitle = null,
 }: CommunityDetailActionsProps) {
   const [liked, setLiked] = useState(initialLiked)
   const [saved, setSaved] = useState(initialSaved)
@@ -128,6 +133,13 @@ export default function CommunityDetailActions({
         <Repeat2 size={14} />
         <span>Remix</span>
       </PendingLink>
+
+      <ShareLinkButton
+        url={shareUrl}
+        title={shareTitle ?? undefined}
+        label="Share"
+        className={styles.actionChip}
+      />
 
       <button
         type="button"

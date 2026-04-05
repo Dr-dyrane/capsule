@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronLeft, Globe, User } from 'lucide-react'
@@ -5,6 +6,7 @@ import { ChevronLeft, Globe, User } from 'lucide-react'
 import { getCardClarifications } from '@/app/actions/clarifications'
 import { getCommunityCardByIdWithUrl, getViewerCommunityReactions, getViewerCommunityReports } from '@/app/actions/community'
 import { getCommunityClarificationSignal } from '@/lib/community/clarification-signal'
+import { getCommunityCardShareImageUrl, getCommunityCardShareUrl } from '@/lib/site'
 import ImagePreview from '@/components/cards/ImagePreview'
 import CardClarifications from '@/components/clarifications/CardClarifications'
 import CommunityDetailActions from '@/components/community/CommunityDetailActions'
@@ -14,6 +16,50 @@ import styles from './CommunityDetailPage.module.css'
 
 type CommunityDetailPageProps = {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: CommunityDetailPageProps): Promise<Metadata> {
+  const { id } = await params
+  const card = await getCommunityCardByIdWithUrl(id)
+
+  if (!card) {
+    return {
+      title: 'Published card | Capsule',
+    }
+  }
+
+  const title = card.title || 'Published card'
+  const topic = card.concept || card.category || 'Shared clinical concept'
+  const author = card.author_name || 'the community'
+  const shareUrl = getCommunityCardShareUrl(card.card_id)
+  const shareImageUrl = getCommunityCardShareImageUrl(card.card_id)
+  const description = `${topic} by ${author} on Capsule.`
+
+  return {
+    title: `${title} | Capsule`,
+    description,
+    alternates: {
+      canonical: shareUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: shareUrl,
+      type: 'article',
+      images: [
+        {
+          url: shareImageUrl,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [shareImageUrl],
+    },
+  }
 }
 
 export default async function CommunityDetailPage({ params }: CommunityDetailPageProps) {
@@ -47,6 +93,7 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
   const remixHref = `/scan?remix=${card.card_id}`
   const reviewHref = viewer.saved ? `/review?card=${card.card_id}&entry=card` : null
   const clarificationSignal = getCommunityClarificationSignal(card)
+  const shareUrl = getCommunityCardShareUrl(card.card_id)
 
   return (
     <div className={shellStyles.screen}>
@@ -115,6 +162,8 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
               initialLikeCount={card.like_count}
               initialSaveCount={card.save_count}
               reviewHref={reviewHref}
+              shareUrl={shareUrl}
+              shareTitle={card.title}
             />
 
             <div className={styles.section}>

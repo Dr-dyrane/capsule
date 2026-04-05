@@ -5,6 +5,7 @@ import { ChevronLeft, Images, Repeat2, ScanText, Sparkles } from 'lucide-react'
 
 import { getCommunityCardByIdWithUrl } from '@/app/actions/community'
 import { getSafeCommunityVisibility, isCommunitySchemaError } from '@/lib/community/schema'
+import { getCommunityCardShareUrl } from '@/lib/site'
 import { createSignedObjectUrlSafe } from '@/lib/storage/signed-urls'
 import { createClient } from '@/lib/supabase/server'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
@@ -14,6 +15,7 @@ import styles from './CardDetailPage.module.css'
 import ImagePreview from '@/components/cards/ImagePreview'
 import PublishToggle from '@/components/cards/PublishToggle'
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
+import ShareLinkButton from '@/components/ui/ShareLinkButton'
 
 
 type CardDetailPageProps = {
@@ -87,6 +89,7 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
         year: 'numeric',
       })
     : null
+  const shareUrl = card.visibility === 'published' ? getCommunityCardShareUrl(card.id) : null
 
   return (
     <div className={shellStyles.screen}>
@@ -148,6 +151,14 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
                 <Link href={`/review?card=${card.id}&entry=card`} className={styles.reviewAction}>
                   Review now
                 </Link>
+              ) : null}
+              {shareUrl ? (
+                <ShareLinkButton
+                  url={shareUrl}
+                  title={card.title || 'Published card'}
+                  label="Share"
+                  className={styles.reviewAction}
+                />
               ) : null}
               <DeleteActionButton targetId={card.id} targetType="card" redirectTo="/cards" compactOnMobile />
             </div>

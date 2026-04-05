@@ -52,6 +52,12 @@
   gap: 18px;
 }
 
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .metaRow {
   display: flex;
   flex-wrap: wrap;
@@ -71,6 +77,31 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+.shareButton {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition:
+    transform 180ms var(--ease-apple),
+    background-color 180ms var(--ease-apple),
+    color 180ms var(--ease-apple);
+}
+
+.shareButton:hover,
+.shareButton:focus-visible {
+  transform: translateY(-1px);
+  background: var(--surface-3);
 }
 
 .cardsSection {

@@ -33,6 +33,7 @@ import ActivitySteps, { type ActivityStepItem } from '@/components/ui/ActivitySt
 import AdaptiveSheet from '@/components/ui/AdaptiveSheet'
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
+import { getCommunityLibraryShareUrl } from '@/lib/site'
 import { createClient } from '@/lib/supabase/client'
 import type {
   CardRecord,
@@ -43,6 +44,7 @@ import type {
   SessionRecord,
   SessionStatus,
 } from '@/lib/types'
+import ShareLinkButton from '@/components/ui/ShareLinkButton'
 
 import styles from './ProcessingView.module.css'
 
@@ -406,6 +408,10 @@ export default function ProcessingView({
   const reviewHref = reviewStartCard ? `/review?card=${reviewStartCard.id}&entry=latest` : '/review'
   const supportCount = Number(Boolean(sourceImageUrl)) + Number(Boolean(remixSource))
   const isSessionPublished = session?.visibility === 'published'
+  const sessionShareUrl = isSessionPublished ? getCommunityLibraryShareUrl(sessionId) : null
+  const sessionShareTitle =
+    reviewStartCard?.title ||
+    (completeCards.length > 0 ? 'Published library' : 'Shared Capsule session')
   const activeRunCard = generationRun?.active_card_id ? cards.find((card) => card.id === generationRun.active_card_id) ?? null : null
   const firstErroredCard = cards.find((card) => card.status === 'error') ?? null
   const shouldShowActivity = status === 'loading' || status === 'processing' || status === 'generating' || isPlaceholderSyncing || isRecommendationLoading || isPreviewLoading || activePipelineCards.length > 0
@@ -622,6 +628,14 @@ export default function ProcessingView({
                 <Link href={reviewHref} className={styles.secondaryAction}>
                   Start review
                 </Link>
+              ) : null}
+              {sessionShareUrl ? (
+                <ShareLinkButton
+                  url={sessionShareUrl}
+                  title={sessionShareTitle}
+                  label="Share library"
+                  className={styles.secondaryAction}
+                />
               ) : null}
               <button type="button" className={styles.secondaryAction} onClick={() => setPublishPrompt(isSessionPublished ? 'unpublish' : 'publish')} disabled={isPublishing}>
                 {isPublishing ? (

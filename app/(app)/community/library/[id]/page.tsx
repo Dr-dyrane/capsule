@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Archive, ChevronLeft, Globe, User } from 'lucide-react'
@@ -5,12 +6,61 @@ import { Archive, ChevronLeft, Globe, User } from 'lucide-react'
 import { getCommunityLibraryById } from '@/app/actions/community'
 import CommunityCard from '@/components/cards/CommunityCard'
 import ImagePreview from '@/components/cards/ImagePreview'
+import ShareLinkButton from '@/components/ui/ShareLinkButton'
+import { getCommunityLibraryShareImageUrl, getCommunityLibraryShareUrl } from '@/lib/site'
 
 import shellStyles from '../../../AppScreen.module.css'
 import styles from './LibraryDetailPage.module.css'
 
 type CommunityLibraryDetailPageProps = {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({
+  params,
+}: CommunityLibraryDetailPageProps): Promise<Metadata> {
+  const { id } = await params
+  const data = await getCommunityLibraryById(id)
+
+  if (!data) {
+    return {
+      title: 'Published library | Capsule',
+    }
+  }
+
+  const { library } = data
+  const title = library.title || 'Published library'
+  const topic = library.concept || library.category || 'Shared collection'
+  const author = library.author_name || 'the community'
+  const shareUrl = getCommunityLibraryShareUrl(library.session_id)
+  const shareImageUrl = getCommunityLibraryShareImageUrl(library.session_id)
+  const description = `${topic} with ${library.card_count} cards by ${author} on Capsule.`
+
+  return {
+    title: `${title} | Capsule`,
+    description,
+    alternates: {
+      canonical: shareUrl,
+    },
+    openGraph: {
+      title,
+      description,
+      url: shareUrl,
+      type: 'article',
+      images: [
+        {
+          url: shareImageUrl,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [shareImageUrl],
+    },
+  }
 }
 
 export default async function CommunityLibraryDetailPage({ params }: CommunityLibraryDetailPageProps) {
@@ -33,6 +83,7 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
   const authorName = library.author_name || 'Anonymous'
   const authorHref = library.published_by ? `/community/author/${library.published_by}` : null
   const topic = library.concept || library.category || 'Shared collection'
+  const shareUrl = getCommunityLibraryShareUrl(library.session_id)
 
   return (
     <div className={shellStyles.screen}>
@@ -93,6 +144,15 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
               )}
               <div className={styles.chip}>Likes {library.like_count}</div>
               <div className={styles.chip}>Saves {library.save_count}</div>
+            </div>
+
+            <div className={styles.actionRow}>
+              <ShareLinkButton
+                url={shareUrl}
+                title={library.title || 'Published library'}
+                label="Share library"
+                className={styles.shareButton}
+              />
             </div>
           </div>
         </div>
