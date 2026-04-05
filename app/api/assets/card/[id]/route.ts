@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 
+import { proxyImageResponse } from '@/lib/assets/proxy-image'
 import { resolveCardImageUrl } from '@/lib/assets/resolve-db-image'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
@@ -20,7 +21,5 @@ export async function GET(
     })
   }
 
-  const response = NextResponse.redirect(imageUrl, 307)
-  response.headers.set('Cache-Control', 'no-store, max-age=0')
-  return response
+  return proxyImageResponse(imageUrl, request.url)
 }

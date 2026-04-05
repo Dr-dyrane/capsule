@@ -4,7 +4,6 @@ import { Bookmark, Brain, Flag, Globe, Heart, Repeat2, User } from 'lucide-react
 import type { CommunityCardRecord } from '@/app/actions/community'
 import { getCommunityClarificationSignal } from '@/lib/community/clarification-signal'
 import { getCommunityCardShareUrl } from '@/lib/site'
-import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import PendingLink from '@/components/ui/PendingLink'
 import ShareLinkButton from '@/components/ui/ShareLinkButton'
 import StableDbImage from '@/components/ui/StableDbImage'
@@ -58,8 +57,6 @@ export default function CommunityCard({
                       width={18}
                       height={18}
                       quality={60}
-                      placeholder="blur"
-                      blurDataURL={APP_IMAGE_BLUR_DATA_URL}
                       className={styles.avatar}
                     />
                   ) : (
