@@ -94,11 +94,6 @@ export default function CommunityLibraryFeed({
       <div className={styles.sectionHeader}>
         <div>
           <h2 className={styles.sectionTitle}>{isFocused ? 'Shared libraries' : 'Published libraries'}</h2>
-          <p className={styles.sectionCopy}>
-            {lockedAuthor
-              ? `Browse ${lockedAuthor.name}'s shared collections with search and filters.`
-              : 'Search and refine full shared collections built from published cards.'}
-          </p>
         </div>
         {!isFocused ? <div className={styles.sectionStat}>{totalLibraryCount} total</div> : null}
       </div>
