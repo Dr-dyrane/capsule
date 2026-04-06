@@ -112,31 +112,44 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
       </header>
 
       <div className={styles.layout}>
-        <section className={`${shellStyles.panel} ${styles.imageShell}`}>
-          <div className={styles.imagePanel}>
-            <div className={styles.imageWrap}>
-              {card.status === 'complete' && card.image_url ? (
-                <ImagePreview
-                  src={getCardImagePath(card.id)}
-                  alt={card.title || 'Generated card'}
-                />
-              ) : (
-                <div className={styles.placeholder}>
-                  {card.status === 'generating'
-                    ? 'Image is generating.'
-                    : card.status === 'queued'
-                      ? 'This card is waiting its turn.'
-                      : card.status === 'error'
-                        ? 'This card stopped before it finished.'
-                        : 'Preview unavailable'}
-                </div>
-              )}
+        <div className={styles.mainColumn}>
+          <section className={`${shellStyles.panel} ${styles.imageShell}`}>
+            <div className={styles.imagePanel}>
+              <div className={styles.imageWrap}>
+                {card.status === 'complete' && card.image_url ? (
+                  <ImagePreview
+                    src={getCardImagePath(card.id)}
+                    alt={card.title || 'Generated card'}
+                  />
+                ) : (
+                  <div className={styles.placeholder}>
+                    {card.status === 'generating'
+                      ? 'Image is generating.'
+                      : card.status === 'queued'
+                        ? 'This card is waiting its turn.'
+                        : card.status === 'error'
+                          ? 'This card stopped before it finished.'
+                          : 'Preview unavailable'}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
+          {relatedCards.length > 0 ? (
+            <section className={`${shellStyles.panel} ${styles.relatedPanel}`}>
+              <div className={`${shellStyles.panelInner} ${styles.relatedPanelInner}`}>
+                <RelatedCommunityCards
+                  cards={relatedCards}
+                  title="Related public cards"
+                  description="Keep this concept connected to the rest of the public story."
+                />
+              </div>
+            </section>
+          ) : null}
+        </div>
 
-        <section className={shellStyles.panel}>
+        <section className={`${shellStyles.panel} ${styles.sidePanel}`}>
           <div className={`${shellStyles.panelInner} ${styles.infoPanel}`}>
             <div className={styles.metaRow}>
               {communityEnabled ? (
@@ -171,16 +184,6 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
               <p className={styles.label}>Source point</p>
               <p className={styles.pointText}>{point?.text ?? 'Original point unavailable.'}</p>
             </div>
-
-            {relatedCards.length > 0 ? (
-              <div className={styles.relatedSection}>
-                <RelatedCommunityCards
-                  cards={relatedCards}
-                  title="Related public cards"
-                  description="Keep this concept connected to the rest of the public story."
-                />
-              </div>
-            ) : null}
 
             {card.session_id ? (
               <div className={styles.section}>

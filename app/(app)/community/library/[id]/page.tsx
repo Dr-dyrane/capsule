@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Archive, ChevronLeft, Globe, User } from 'lucide-react'
+import { Archive, ChevronLeft, Globe, ScanText, Sparkles, User } from 'lucide-react'
 
 import {
   getCommunityLibraryById,
@@ -19,6 +19,11 @@ import styles from './LibraryDetailPage.module.css'
 
 type CommunityLibraryDetailPageProps = {
   params: Promise<{ id: string }>
+}
+
+function getPointPreview(text: string) {
+  const compact = text.replace(/\s+/g, ' ').trim()
+  return compact.length <= 140 ? compact : `${compact.slice(0, 137).trimEnd()}...`
 }
 
 export async function generateMetadata({
@@ -76,7 +81,7 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
     notFound()
   }
 
-  const { library, cards } = data
+  const { library, cards, session, points, sourceSignedUrl } = data
   const publishedAt = library.published_at
     ? new Date(library.published_at).toLocaleDateString(undefined, {
         month: 'long',
@@ -89,6 +94,8 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
   const authorHref = library.published_by ? `/community/author/${library.published_by}` : null
   const topic = library.concept || library.category || 'Shared collection'
   const shareUrl = getCommunityLibraryShareUrl(library.session_id)
+  const recapLabels = [...new Set(points.map((point) => point.concept || point.category).filter(Boolean))].slice(0, 4) as string[]
+  const recapPoints = points.slice(0, Math.min(4, points.length))
   const [viewerReactions, viewerReports] = await Promise.all([
     getViewerCommunityLibraryReactions([library.session_id]),
     getViewerCommunityLibraryReports([library.session_id]),
@@ -109,7 +116,9 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
         </div>
 
         <h1 className={shellStyles.title}>{library.title || 'Published library'}</h1>
-        <p className={shellStyles.copy}>A full shared collection. Save what helps, then study it in your own queue.</p>
+        <p className={shellStyles.copy}>
+          {session?.session_context || 'The full published session, including the session story and every public card.'}
+        </p>
       </header>
 
       <section className={styles.hero}>
@@ -170,10 +179,97 @@ export default async function CommunityLibraryDetailPage({ params }: CommunityLi
         </div>
       </section>
 
+      {session?.session_context || sourceSignedUrl ? (
+        <section className={styles.storyGrid}>
+          {session?.session_context ? (
+            <section className={`${shellStyles.panel} ${styles.storyPanel}`}>
+              <div className={`${shellStyles.panelInner} ${styles.storyInner}`}>
+                <div className={styles.storyHeader}>
+                  <div className={styles.storyEyebrow}>
+                    <Archive size={14} />
+                    <span>Session story</span>
+                  </div>
+                  <div className={styles.storyCount}>{points.length || library.card_count}</div>
+                </div>
+
+                <p className={styles.storyCopy}>{session.session_context}</p>
+
+                <div className={styles.storyMeta}>
+                  <div className={styles.storyChip}>{points.length || library.card_count} ideas</div>
+                  <div className={styles.storyChip}>{library.card_count} cards</div>
+                  <div className={styles.storyChip}>{topic}</div>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {sourceSignedUrl ? (
+            <section className={`${shellStyles.panel} ${styles.sourcePanel}`}>
+              <div className={`${shellStyles.panelInner} ${styles.sourceInner}`}>
+                <div className={styles.sourceCopy}>
+                  <div className={styles.storyEyebrow}>
+                    <ScanText size={14} />
+                    <span>Source note</span>
+                  </div>
+                  <h2 className={styles.subTitle}>Original page</h2>
+                  <p className={styles.subCopy}>Community can follow the session all the way back to the note that produced it.</p>
+                </div>
+
+                <div className={styles.sourcePreview}>
+                  <ImagePreview src={sourceSignedUrl} alt={library.title || 'Published source note'} variant="document" />
+                </div>
+              </div>
+            </section>
+          ) : null}
+        </section>
+      ) : null}
+
+      {points.length > 0 ? (
+        <section className={`${shellStyles.panel} ${styles.recapPanel}`}>
+          <div className={`${shellStyles.panelInner} ${styles.recapInner}`}>
+            <div className={styles.recapHeader}>
+              <div>
+                <div className={styles.storyEyebrow}>
+                  <Sparkles size={14} />
+                  <span>Key ideas in this note</span>
+                </div>
+                <h2 className={styles.subTitle}>Quick recap</h2>
+                <p className={styles.subCopy}>The same session-level orientation a user sees privately, now visible in community too.</p>
+              </div>
+              <div className={styles.storyCount}>{points.length}</div>
+            </div>
+
+            {recapLabels.length > 0 ? (
+              <div className={styles.recapTags}>
+                {recapLabels.map((label) => (
+                  <div key={label} className={styles.storyChip}>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className={styles.recapList}>
+              {recapPoints.map((point) => (
+                <div key={point.id} className={styles.recapItem}>
+                  <div className={styles.recapBullet} />
+                  <div className={styles.recapBody}>
+                    <p className={styles.recapText}>{getPointPreview(point.text)}</p>
+                    {point.concept || point.category ? (
+                      <span className={styles.recapMeta}>{point.concept || point.category}</span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className={styles.cardsSection}>
         <div className={styles.cardsHeader}>
           <h2 className={styles.cardsTitle}>Cards in this library</h2>
-          <p className={styles.cardsCopy}>Open any card, save what helps, then study or remix it when you need your own pass.</p>
+          <p className={styles.cardsCopy}>The full card set from this published session, not just a cover-level preview.</p>
         </div>
 
         <div className={styles.cardsGrid}>

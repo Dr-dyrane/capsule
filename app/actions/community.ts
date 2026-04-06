@@ -20,7 +20,9 @@ import type {
   CommunitySort,
   CommunityViewerState,
   CommunityVisibility,
+  PointRecord,
   ProfileRecord,
+  SessionRecord,
 } from '@/lib/types'
 
 export type CommunityCardRecord = CommunityIndexRecord
@@ -1265,15 +1267,78 @@ export async function getCommunityLibraryById(sessionId: string) {
   }
 
   const typedLibrary = library as CommunityLibraryRecord
-  const cards = await getCommunityCards(
-    0,
-    Math.max(typedLibrary.card_count || 1, 1),
-    { sessionId },
-  )
+  const [cards, sessionResult, pointsResult] = await Promise.all([
+    getCommunityCards(
+      0,
+      Math.max(typedLibrary.card_count || 1, 1),
+      { sessionId },
+    ),
+    publicClient
+      .from('community_session_detail_index')
+      .select('session_id, source_url, session_context, point_count, card_count, created_at, updated_at')
+      .eq('session_id', sessionId)
+      .maybeSingle(),
+    publicClient
+      .from('community_session_point_index')
+      .select('id, session_id, text, category, concept, note_role, sort_order, card_count')
+      .eq('session_id', sessionId)
+      .order('sort_order', { ascending: true }),
+  ])
+
+  let session: Pick<
+    SessionRecord,
+    'id' | 'source_url' | 'session_context' | 'point_count' | 'card_count' | 'created_at' | 'updated_at'
+  > | null = null
+  let points: PointRecord[] = []
+
+  if (!sessionResult.error && sessionResult.data) {
+    const rawSession = sessionResult.data as {
+      session_id: string
+      source_url: string | null
+      session_context: string | null
+      point_count: number | null
+      card_count: number | null
+      created_at?: string
+      updated_at?: string
+    }
+    session = {
+      id: rawSession.session_id,
+      source_url: rawSession.source_url ?? '',
+      session_context: rawSession.session_context,
+      point_count: rawSession.point_count,
+      card_count: rawSession.card_count,
+      created_at: rawSession.created_at,
+      updated_at: rawSession.updated_at,
+    }
+  }
+
+  if (!pointsResult.error && pointsResult.data) {
+    points = pointsResult.data as PointRecord[]
+  }
+
+  let sourceSignedUrl: string | null = null
+  const sourcePath = session?.source_url ?? null
+
+  if (sourcePath) {
+    if (isDirectAssetUrl(sourcePath)) {
+      sourceSignedUrl = sourcePath
+    } else {
+      const { data: signedSource, error: signedSourceError } = await publicClient.storage
+        .from('notes')
+        .createSignedUrl(sourcePath, 60 * 60)
+
+      if (!signedSourceError) {
+        sourceSignedUrl = signedSource?.signedUrl ?? null
+      }
+    }
+  }
 
   return {
     library: typedLibrary,
     cards,
+    session,
+    points,
+    sourceSignedUrl,
   }
 }
 

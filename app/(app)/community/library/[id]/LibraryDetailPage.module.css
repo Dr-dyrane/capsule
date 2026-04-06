@@ -109,6 +109,155 @@
   gap: 18px;
 }
 
+.storyGrid {
+  display: grid;
+  gap: 18px;
+}
+
+.storyPanel,
+.sourcePanel,
+.recapPanel {
+  overflow: hidden;
+}
+
+.storyInner,
+.sourceInner,
+.recapInner {
+  display: grid;
+  gap: 16px;
+}
+
+.storyHeader,
+.recapHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.storyEyebrow {
+  width: fit-content;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.storyCount {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.storyCopy {
+  max-width: 46rem;
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.storyMeta,
+.recapTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.storyChip,
+.recapMeta {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.sourceCopy {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.subTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.subCopy {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.sourcePreview {
+  min-width: 0;
+}
+
+.recapList {
+  display: grid;
+  gap: 10px;
+}
+
+.recapItem {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border-radius: 22px;
+  background: var(--surface-1);
+  box-shadow: var(--shadow-sm);
+}
+
+.recapBullet {
+  width: 10px;
+  height: 10px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.recapBody {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.recapText {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .cardsHeader {
   display: grid;
   gap: 4px;
@@ -143,5 +292,29 @@
   .hero {
     grid-template-columns: minmax(0, 1fr) 360px;
     align-items: start;
+  }
+
+  .storyGrid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+    align-items: start;
+  }
+}
+
+@media (max-width: 767px) {
+  .recapItem {
+    grid-template-columns: 8px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .recapBullet {
+    width: 8px;
+    height: 8px;
+    margin-top: 8px;
+  }
+
+  .storyCopy {
+    font-size: 15px;
   }
 }

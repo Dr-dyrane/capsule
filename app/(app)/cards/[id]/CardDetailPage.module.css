@@ -25,6 +25,13 @@
   gap: 32px;
 }
 
+.mainColumn {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  min-width: 0;
+}
+
 .imageShell {
   overflow: hidden;
 }
@@ -38,6 +45,10 @@
 .infoPanel {
   display: grid;
   gap: 24px;
+}
+
+.sidePanel {
+  align-self: start;
 }
 
 
@@ -140,7 +151,11 @@
   gap: 14px;
 }
 
-.relatedSection {
+.relatedPanel {
+  overflow: hidden;
+}
+
+.relatedPanelInner {
   display: grid;
   gap: 0;
 }
@@ -216,8 +231,13 @@
 
 @media (min-width: 1024px) {
   .layout {
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: minmax(0, 1fr) 340px;
     align-items: start;
     gap: 48px;
+  }
+
+  .sidePanel {
+    position: sticky;
+    top: 24px;
   }
 }
