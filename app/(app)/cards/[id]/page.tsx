@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import { ChevronLeft, Images, Repeat2, ScanText, Sparkles } from 'lucide-react'
 
-import { getCommunityCardByIdWithUrl } from '@/app/actions/community'
+import { getCommunityCardByIdWithUrl, getRelatedCommunityCards } from '@/app/actions/community'
 import { getCardImagePath } from '@/lib/assets/stable-image-paths'
 import { getSafeCommunityVisibility, isCommunitySchemaError } from '@/lib/community/schema'
 import { getCommunityCardShareUrl } from '@/lib/site'
@@ -15,6 +15,7 @@ import shellStyles from '../../AppScreen.module.css'
 import styles from './CardDetailPage.module.css'
 import ImagePreview from '@/components/cards/ImagePreview'
 import PublishToggle from '@/components/cards/PublishToggle'
+import RelatedCommunityCards from '@/components/community/RelatedCommunityCards'
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
 import ShareLinkButton from '@/components/ui/ShareLinkButton'
 
@@ -69,9 +70,12 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
     .single()
 
   const sourceNoteUrl = session?.source_url ? await createSignedObjectUrlSafe('notes', session.source_url) : null
-  const remixSource = session?.remix_source_card_id
-    ? await getCommunityCardByIdWithUrl(session.remix_source_card_id)
-    : null
+  const [remixSource, relatedCards] = await Promise.all([
+    session?.remix_source_card_id ? getCommunityCardByIdWithUrl(session.remix_source_card_id) : Promise.resolve(null),
+    card.visibility === 'published' && card.status === 'complete'
+      ? getRelatedCommunityCards(card.id, 3)
+      : Promise.resolve([]),
+  ])
   const point = Array.isArray(card.points) ? card.points[0] : card.points
   const category = point?.category ?? 'Learning card'
   const statusLabel =
@@ -167,6 +171,16 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
               <p className={styles.label}>Source point</p>
               <p className={styles.pointText}>{point?.text ?? 'Original point unavailable.'}</p>
             </div>
+
+            {relatedCards.length > 0 ? (
+              <div className={styles.relatedSection}>
+                <RelatedCommunityCards
+                  cards={relatedCards}
+                  title="Related public cards"
+                  description="Keep this concept connected to the rest of the public story."
+                />
+              </div>
+            ) : null}
 
             {card.session_id ? (
               <div className={styles.section}>

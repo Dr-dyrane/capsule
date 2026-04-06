@@ -26,6 +26,11 @@ const COMMUNITY_SCHEMA_PATTERNS = [
   'trend_score',
   'community_reports',
   'remix_source_card_id',
+  'card_relationships',
+  'community_card_relationship_index',
+  'relationship_type',
+  'relationship_reason',
+  'relationship_strength',
 ]
 
 function toSupabaseLikeError(error: unknown): SupabaseLikeError | null {

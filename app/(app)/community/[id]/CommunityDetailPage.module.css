@@ -42,6 +42,15 @@
   min-width: 0;
 }
 
+.relatedPanel {
+  overflow: hidden;
+}
+
+.relatedPanelInner {
+  display: grid;
+  gap: 0;
+}
+
 .imagePanel {
   padding: 0;
   gap: 0;

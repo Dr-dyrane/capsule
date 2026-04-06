@@ -140,6 +140,11 @@
   gap: 14px;
 }
 
+.relatedSection {
+  display: grid;
+  gap: 0;
+}
+
 .label {
   color: var(--text-tertiary);
   font-size: 11px;

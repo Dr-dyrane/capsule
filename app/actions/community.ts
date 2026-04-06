@@ -12,6 +12,7 @@ import { createPublicClient } from '@/lib/supabase/public'
 import { createClient } from '@/lib/supabase/server'
 import type {
   CardRecord,
+  CommunityCardRelationshipRecord,
   CommunityFilterMeta,
   CommunityIndexRecord,
   CommunityLibraryIndexRecord,
@@ -24,6 +25,28 @@ import type {
 
 export type CommunityCardRecord = CommunityIndexRecord
 export type CommunityLibraryRecord = CommunityLibraryIndexRecord
+
+type CommunityCardRelationshipIndexRow = {
+  card_id: string
+  related_card_id: string
+  relationship_type: CommunityCardRelationshipRecord['relationship_type']
+  relationship_reason: string
+  relationship_strength: number
+  related_session_id: string
+  related_image_url: string
+  related_title: string | null
+  related_published_at: string | null
+  related_published_by: string | null
+  related_community_template: string | null
+  related_category: string | null
+  related_concept: string | null
+  related_author_name: string | null
+  related_author_avatar_url: string | null
+  related_like_count: number | null
+  related_save_count: number | null
+  related_report_count: number | null
+  related_trend_score: number | null
+}
 
 export type CommunityQueryOptions = {
   search?: string
@@ -118,6 +141,19 @@ async function updateSessionVisibility(
     .from('sessions')
     .update({ visibility })
     .eq('id', sessionId)
+
+  if (error && !isCommunitySchemaError(error)) {
+    throw error
+  }
+}
+
+async function refreshPublicCardRelationships(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  sessionId?: string | null,
+) {
+  const { error } = await supabase.rpc('refresh_public_card_relationships', {
+    p_session_id: sessionId ?? null,
+  })
 
   if (error && !isCommunitySchemaError(error)) {
     throw error
@@ -311,6 +347,11 @@ async function getCommunityCardsFallback(page: number, limit: number) {
 
 export async function publishCard(cardId: string) {
   const { supabase, user } = await ensureCurrentUserProfile()
+  const { data: card } = await supabase
+    .from('cards')
+    .select('session_id')
+    .eq('id', cardId)
+    .maybeSingle()
 
   const { error } = await supabase
     .from('cards')
@@ -329,7 +370,8 @@ export async function publishCard(cardId: string) {
     throw error
   }
 
-  revalidateCommunityPaths(null, cardId)
+  await refreshPublicCardRelationships(supabase, card?.session_id ?? null)
+  revalidateCommunityPaths(card?.session_id ?? null, cardId)
 }
 
 export async function unpublishCard(cardId: string) {
@@ -358,6 +400,7 @@ export async function unpublishCard(cardId: string) {
     throw error
   }
 
+  await refreshPublicCardRelationships(supabase, card?.session_id ?? null)
   revalidateCommunityPaths(card?.session_id ?? null, cardId)
 }
 
@@ -391,6 +434,9 @@ export async function publishCards(cardIds: string[]) {
   }
 
   const sessionIds = [...new Set((sessions ?? []).map((entry) => entry.session_id).filter(Boolean))]
+  for (const sessionId of sessionIds) {
+    await refreshPublicCardRelationships(supabase, sessionId)
+  }
   sessionIds.forEach((sessionId) => revalidateCommunityPaths(sessionId))
 }
 
@@ -423,6 +469,9 @@ export async function unpublishCards(cardIds: string[]) {
   }
 
   const sessionIds = [...new Set((sessions ?? []).map((entry) => entry.session_id).filter(Boolean))]
+  for (const sessionId of sessionIds) {
+    await refreshPublicCardRelationships(supabase, sessionId)
+  }
   sessionIds.forEach((sessionId) => revalidateCommunityPaths(sessionId))
 }
 
@@ -448,6 +497,7 @@ export async function publishSession(sessionId: string) {
     throw cardsError
   }
 
+  await refreshPublicCardRelationships(supabase, sessionId)
   revalidateCommunityPaths(sessionId)
 }
 
@@ -473,6 +523,7 @@ export async function unpublishSession(sessionId: string) {
     throw cardsError
   }
 
+  await refreshPublicCardRelationships(supabase, sessionId)
   revalidateCommunityPaths(sessionId)
 }
 
@@ -1032,6 +1083,71 @@ export async function getCommunityCardByIdWithUrl(cardId: string) {
     ...safeCard,
     signedUrl: signed?.signedUrl ?? null,
   }
+}
+
+function mapRelationshipRowToCommunityCard(
+  row: CommunityCardRelationshipIndexRow,
+): CommunityCardRelationshipRecord {
+  return {
+    card_id: row.related_card_id,
+    session_id: row.related_session_id,
+    image_url: row.related_image_url,
+    title: row.related_title,
+    published_at: row.related_published_at,
+    published_by: row.related_published_by,
+    community_template: row.related_community_template,
+    category: row.related_category,
+    concept: row.related_concept,
+    author_name: row.related_author_name,
+    author_avatar_url: row.related_author_avatar_url,
+    like_count: row.related_like_count ?? 0,
+    save_count: row.related_save_count ?? 0,
+    report_count: row.related_report_count ?? 0,
+    trend_score: row.related_trend_score ?? 0,
+    clarification_open_count: 0,
+    clarification_resolved_count: 0,
+    has_unresolved_correction: false,
+    relationship_type: row.relationship_type,
+    relationship_reason: row.relationship_reason,
+    relationship_strength: row.relationship_strength,
+  }
+}
+
+export async function getRelatedCommunityCards(cardId: string, limit: number = 4) {
+  const safeLimit = Math.max(1, Math.min(limit, 8))
+  const supabase = createPublicClient()
+  const { data, error } = await supabase
+    .from('community_card_relationship_index')
+    .select(
+      'card_id, related_card_id, relationship_type, relationship_reason, relationship_strength, related_session_id, related_image_url, related_title, related_published_at, related_published_by, related_community_template, related_category, related_concept, related_author_name, related_author_avatar_url, related_like_count, related_save_count, related_report_count, related_trend_score',
+    )
+    .eq('card_id', cardId)
+    .order('relationship_strength', { ascending: false })
+    .order('related_trend_score', { ascending: false })
+    .limit(safeLimit * 3)
+
+  if (error) {
+    if (isCommunitySchemaError(error)) {
+      return [] as CommunityCardRelationshipRecord[]
+    }
+
+    throw error
+  }
+
+  const deduped = new Map<string, CommunityCardRelationshipRecord>()
+  for (const row of (data ?? []) as CommunityCardRelationshipIndexRow[]) {
+    if (deduped.has(row.related_card_id)) {
+      continue
+    }
+
+    deduped.set(row.related_card_id, mapRelationshipRowToCommunityCard(row))
+
+    if (deduped.size >= safeLimit) {
+      break
+    }
+  }
+
+  return [...deduped.values()]
 }
 
 export async function getCommunityLibraries(limit: number = 6, authorId?: string | null) {

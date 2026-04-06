@@ -4,13 +4,19 @@ import { notFound } from 'next/navigation'
 import { ChevronLeft, Globe, User } from 'lucide-react'
 
 import { getCardClarifications } from '@/app/actions/clarifications'
-import { getCommunityCardByIdWithUrl, getViewerCommunityReactions, getViewerCommunityReports } from '@/app/actions/community'
+import {
+  getCommunityCardByIdWithUrl,
+  getRelatedCommunityCards,
+  getViewerCommunityReactions,
+  getViewerCommunityReports,
+} from '@/app/actions/community'
 import { getCardImagePath } from '@/lib/assets/stable-image-paths'
 import { getCommunityClarificationSignal } from '@/lib/community/clarification-signal'
 import { getCommunityCardShareImageUrl, getCommunityCardShareUrl } from '@/lib/site'
 import ImagePreview from '@/components/cards/ImagePreview'
 import CardClarifications from '@/components/clarifications/CardClarifications'
 import CommunityDetailActions from '@/components/community/CommunityDetailActions'
+import RelatedCommunityCards from '@/components/community/RelatedCommunityCards'
 
 import shellStyles from '../../AppScreen.module.css'
 import styles from './CommunityDetailPage.module.css'
@@ -71,10 +77,11 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
     notFound()
   }
 
-  const [viewerReactions, viewerReports, clarifications] = await Promise.all([
+  const [viewerReactions, viewerReports, clarifications, relatedCards] = await Promise.all([
     getViewerCommunityReactions([id]),
     getViewerCommunityReports([id]),
     getCardClarifications(id),
+    getRelatedCommunityCards(id, 4),
   ])
 
   const viewer = viewerReactions[id] ?? { liked: false, saved: false, reported: false }
@@ -125,6 +132,17 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
               </div>
             </div>
           </section>
+
+          {relatedCards.length > 0 ? (
+            <section className={`${shellStyles.panel} ${styles.relatedPanel}`}>
+              <div className={`${shellStyles.panelInner} ${styles.relatedPanelInner}`}>
+                <RelatedCommunityCards
+                  cards={relatedCards}
+                  description="Continue with the cards that carry the same disease story, ruleset, or mechanism thread."
+                />
+              </div>
+            </section>
+          ) : null}
 
           <CardClarifications cardId={card.card_id} data={clarifications} />
         </div>

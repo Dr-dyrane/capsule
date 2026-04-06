@@ -14,6 +14,11 @@ export type RenderCreditKind = 'support' | 'premium'
 export type CommunityVisibility = 'private' | 'published'
 export type CommunityReactionKind = 'like' | 'save'
 export type CommunitySort = 'recent' | 'trending'
+export type CardRelationshipType =
+  | 'same_story'
+  | 'same_pathophysiology'
+  | 'same_natural_history'
+  | 'same_ruleset'
 export type ClarificationKind = 'question' | 'clarification' | 'correction'
 export type ClarificationThreadStatus = 'open' | 'resolved' | 'removed'
 export type ClarificationItemStatus = 'active' | 'deleted' | 'reported'
@@ -140,6 +145,12 @@ export interface CommunityLibraryIndexRecord {
   trend_score: number
   category: string | null
   concept: string | null
+}
+
+export interface CommunityCardRelationshipRecord extends CommunityIndexRecord {
+  relationship_type: CardRelationshipType
+  relationship_reason: string
+  relationship_strength: number
 }
 
 export interface CommunityViewerState {
