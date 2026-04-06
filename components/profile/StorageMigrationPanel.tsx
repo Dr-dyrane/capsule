@@ -38,12 +38,12 @@ export default function StorageMigrationPanel({
   return (
     <div className={styles.card}>
       <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>Legacy Seed Assets</h3>
+        <h3 className={styles.sectionTitle}>Seed Asset Backfill</h3>
         <div className={styles.settingGroup}>
           <div className={styles.settingItem}>
             <div className={styles.settingLabel}>
               <DatabaseZap size={18} />
-              <span>Pending note images</span>
+              <span>Pending note files</span>
             </div>
             <span className={styles.countText}>{status.noteCount}</span>
           </div>
@@ -61,12 +61,12 @@ export default function StorageMigrationPanel({
         {status.isPending ? (
           <button type="button" className={styles.actionItem} onClick={handleMigrate} disabled={isPending}>
             {isPending ? <Loader2 size={20} className={styles.spinner} /> : <MoveRight size={20} />}
-            <span>{isPending ? 'Migrating...' : 'Move seeded assets to storage'}</span>
+            <span>{isPending ? 'Migrating...' : 'Backfill seeded assets to storage'}</span>
           </button>
         ) : (
           <div className={styles.actionItem}>
             <CheckCircle2 size={20} />
-            <span>Legacy demo assets are already storage-backed.</span>
+            <span>Seeded assets are already storage-backed.</span>
           </div>
         )}
 

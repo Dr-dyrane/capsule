@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/server'
 import type { EntitlementGrantRecord, FundingSource, EntitlementPlan, UserDirectoryRecord, UserEntitlementRecord } from '@/lib/types'
 
 const DEMO_PREFIX = '/demo/community-seed/'
+const REPO_SEED_PREFIXES = [DEMO_PREFIX, '/seed/'] as const
 const ANALYTICS_WINDOW_DAYS = 14
 const PRODUCT_EVENT_ORDER = [
   'clarification_panel_viewed',
@@ -88,6 +89,64 @@ function toStoragePath(userId: string, assetPath: string) {
   const normalized = assetPath.replace(/^\/+/, '')
   const scoped = normalized.replace(/^demo\/community-seed\//, 'community-seed/')
   return `${userId}/${scoped}`
+}
+
+function isRepoSeedAssetPath(assetPath: string | null | undefined) {
+  if (!assetPath) {
+    return false
+  }
+
+  return REPO_SEED_PREFIXES.some((prefix) => assetPath.startsWith(prefix))
+}
+
+async function fetchSeedBackfillRows(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const sessionResponses = await Promise.all(
+    REPO_SEED_PREFIXES.map((prefix) =>
+      supabase.from('sessions').select('id, source_url').like('source_url', `${prefix}%`),
+    ),
+  )
+  const cardResponses = await Promise.all(
+    REPO_SEED_PREFIXES.map((prefix) =>
+      supabase.from('cards').select('id, image_url').like('image_url', `${prefix}%`),
+    ),
+  )
+
+  for (const response of sessionResponses) {
+    if (response.error) throw response.error
+  }
+
+  for (const response of cardResponses) {
+    if (response.error) throw response.error
+  }
+
+  const sessionRows = sessionResponses.flatMap((response) => response.data ?? []) as Array<{
+    id: string
+    source_url: string
+  }>
+  const cardRows = cardResponses.flatMap((response) => response.data ?? []) as Array<{
+    id: string
+    image_url: string
+  }>
+
+  const dedupedSessionRows = [
+    ...new Map(
+      sessionRows
+        .filter((row) => isRepoSeedAssetPath(row.source_url))
+        .map((row) => [row.id, row] as const),
+    ).values(),
+  ]
+  const dedupedCardRows = [
+    ...new Map(
+      cardRows
+        .filter((row) => isRepoSeedAssetPath(row.image_url))
+        .map((row) => [row.id, row] as const),
+    ).values(),
+  ]
+
+  return {
+    sessionRows: dedupedSessionRows,
+    cardRows: dedupedCardRows,
+  }
 }
 
 async function ensureAuthenticatedUser() {
@@ -172,22 +231,9 @@ function getRecentEventDetail(row: ProductEventRow) {
 export async function getLegacySeedMigrationStatus() {
   const { supabase } = await ensureAdminUser()
 
-  const [{ data: sessions, error: sessionsError }, { data: cards, error: cardsError }] = await Promise.all([
-    supabase
-      .from('sessions')
-      .select('source_url')
-      .like('source_url', `${DEMO_PREFIX}%`),
-    supabase
-      .from('cards')
-      .select('image_url')
-      .like('image_url', `${DEMO_PREFIX}%`),
-  ])
-
-  if (sessionsError) throw sessionsError
-  if (cardsError) throw cardsError
-
-  const notePaths = [...new Set((sessions ?? []).map((row) => row.source_url).filter(Boolean))]
-  const cardPaths = [...new Set((cards ?? []).map((row) => row.image_url).filter(Boolean))]
+  const { sessionRows, cardRows } = await fetchSeedBackfillRows(supabase)
+  const notePaths = [...new Set(sessionRows.map((row) => row.source_url).filter(Boolean))]
+  const cardPaths = [...new Set(cardRows.map((row) => row.image_url).filter(Boolean))]
 
   return {
     noteCount: notePaths.length,
@@ -198,23 +244,7 @@ export async function getLegacySeedMigrationStatus() {
 
 export async function migrateLegacySeedAssetsToStorage() {
   const { supabase, user } = await ensureAdminUser()
-
-  const [{ data: sessionRows, error: sessionsError }, { data: cardRows, error: cardsError }] = await Promise.all([
-    supabase
-      .from('sessions')
-      .select('id, source_url')
-      .like('source_url', `${DEMO_PREFIX}%`),
-    supabase
-      .from('cards')
-      .select('id, image_url')
-      .like('image_url', `${DEMO_PREFIX}%`),
-  ])
-
-  if (sessionsError) throw sessionsError
-  if (cardsError) throw cardsError
-
-  const noteRows = (sessionRows ?? []) as Array<{ id: string; source_url: string }>
-  const imageRows = (cardRows ?? []) as Array<{ id: string; image_url: string }>
+  const { sessionRows: noteRows, cardRows: imageRows } = await fetchSeedBackfillRows(supabase)
 
   const notePaths = [...new Set(noteRows.map((row) => row.source_url).filter(Boolean))]
   const cardPaths = [...new Set(imageRows.map((row) => row.image_url).filter(Boolean))]
@@ -273,6 +303,8 @@ export async function migrateLegacySeedAssetsToStorage() {
   revalidatePath('/community')
   revalidatePath('/library')
   revalidatePath('/profile')
+  revalidatePath('/profile/admin')
+  revalidatePath('/profile/admin/storage')
 
   return {
     migratedNotes: notePaths.length,

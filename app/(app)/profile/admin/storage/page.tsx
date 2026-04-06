@@ -34,8 +34,10 @@ export default async function StorageAdminPage() {
           <DatabaseZap size={14} aria-hidden="true" />
           <span>Storage</span>
         </div>
-        <h1 className={shellStyles.title}>Migrate legacy demo assets.</h1>
-        <p className={shellStyles.copy}>Move seeded community images out of the repo and into Supabase storage.</p>
+        <h1 className={shellStyles.title}>Backfill seeded assets to storage.</h1>
+        <p className={shellStyles.copy}>
+          Move repo-hosted workshop and legacy seed assets out of the app bundle and into Supabase storage.
+        </p>
         <Link href="/profile/admin" className={shellStyles.accentLink}>
           Back to admin
         </Link>
