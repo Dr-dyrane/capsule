@@ -127,7 +127,17 @@ export default function CommunityDetailActions({
           <Brain size={14} />
           <span>Study saved</span>
         </PendingLink>
-      ) : null}
+      ) : (
+        <button
+          type="button"
+          className={styles.reviewChip}
+          onClick={() => handleToggle('save')}
+          disabled={isPending}
+        >
+          {isPending ? <Loader2 size={14} className={styles.spinner} /> : <Brain size={14} />}
+          <span>Save to study</span>
+        </button>
+      )}
 
       <PendingLink href={remixHref} className={styles.remixChip}>
         <Repeat2 size={14} />

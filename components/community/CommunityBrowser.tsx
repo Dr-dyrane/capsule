@@ -13,7 +13,7 @@ import type {
 } from '@/lib/types'
 import type { UiDensityMode } from '@/lib/ui/density'
 import CommunityFeed from '@/components/community/CommunityFeed'
-import CommunityLibraryCard from '@/components/community/CommunityLibraryCard'
+import CommunityLibraryFeed from '@/components/community/CommunityLibraryFeed'
 import styles from './CommunityBrowser.module.css'
 
 type CommunityBrowserProps = {
@@ -33,7 +33,6 @@ type CommunityBrowserProps = {
     view?: 'cards' | 'libraries'
   }
   libraries: CommunityLibraryRecord[]
-  libraryUrls: Record<string, string>
   initialLibraryViewerState: Record<string, CommunityViewerState>
   densityMode: UiDensityMode
   lockedAuthor?: {
@@ -51,7 +50,6 @@ export default function CommunityBrowser({
   filterMeta,
   initialFilters,
   libraries,
-  libraryUrls,
   initialLibraryViewerState,
   densityMode,
   lockedAuthor = null,
@@ -95,31 +93,14 @@ export default function CommunityBrowser({
           densityMode={densityMode}
         />
       ) : libraries.length > 0 ? (
-        <section className={styles.section}>
-          <div className={styles.sectionHeader}>
-            <div>
-              <h2 className={styles.sectionTitle}>{isFocused ? 'Shared libraries' : 'Published libraries'}</h2>
-              {!isFocused ? (
-                <p className={styles.sectionCopy}>
-                  Full shared collections built from published cards.
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <div className={styles.grid}>
-            {libraries.map((library) => (
-              <CommunityLibraryCard
-                key={library.session_id}
-                library={library}
-                imageUrl={library.cover_image_url ? libraryUrls[library.cover_image_url] : undefined}
-                liked={initialLibraryViewerState[library.session_id]?.liked ?? false}
-                saved={initialLibraryViewerState[library.session_id]?.saved ?? false}
-                reported={initialLibraryViewerState[library.session_id]?.reported ?? false}
-              />
-            ))}
-          </div>
-        </section>
+        <CommunityLibraryFeed
+          libraries={libraries}
+          initialViewerState={initialLibraryViewerState}
+          totalLibraryCount={totalLibraryCount}
+          filterMeta={filterMeta}
+          densityMode={densityMode}
+          lockedAuthor={lockedAuthor}
+        />
       ) : (
         <div className={styles.empty}>
           <p className={styles.emptyTitle}>No published libraries yet</p>

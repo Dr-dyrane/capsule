@@ -45,13 +45,13 @@ export default async function CommunityPage({
     view: params?.view === 'libraries' ? 'libraries' : 'cards',
   } as const
 
-  const [{ cards, signedUrls }, { libraries, signedUrls: libraryUrls }, totalCardCount, totalLibraryCount] = await Promise.all([
+  const [{ cards, signedUrls }, totalCardCount, totalLibraryCount, filterMeta] = await Promise.all([
     fetchCommunityCardsWithUrls(0, 20, initialFilters),
-    getCommunityLibrariesWithUrls(24),
     getCommunityCardCount(),
     getCommunityLibraryCount(),
+    getCommunityFilters(),
   ])
-  const filterMeta = await getCommunityFilters()
+  const { libraries } = await getCommunityLibrariesWithUrls(Math.max(totalLibraryCount, 24))
   const cardIds = cards.map((card) => card.card_id)
   const libraryIds = libraries.map((library) => library.session_id)
   const [viewerReactions, viewerReports, libraryViewerReactions, libraryViewerReports] = await Promise.all([
@@ -105,7 +105,6 @@ export default async function CommunityPage({
         filterMeta={filterMeta}
         initialFilters={initialFilters}
         libraries={libraries}
-        libraryUrls={libraryUrls}
         initialLibraryViewerState={initialLibraryViewerState}
         densityMode={densityMode}
       />

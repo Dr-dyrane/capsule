@@ -34,15 +34,15 @@ export default async function CommunityAuthorPage({
     notFound()
   }
 
-  const [{ cards, signedUrls }, { libraries, signedUrls: libraryUrls }, totalLibraryCount] = await Promise.all([
+  const [{ cards, signedUrls }, totalLibraryCount, filterMeta] = await Promise.all([
     fetchCommunityCardsWithUrls(0, 20, {
       authorId: id,
       sort: 'recent',
     }),
-    getCommunityLibrariesWithUrls(24, id),
     getCommunityLibraryCount(id),
+    getCommunityFilters(),
   ])
-  const filterMeta = await getCommunityFilters()
+  const { libraries } = await getCommunityLibrariesWithUrls(Math.max(totalLibraryCount, 24), id)
   const cardIds = cards.map((card) => card.card_id)
   const libraryIds = libraries.map((library) => library.session_id)
   const [viewerReactions, viewerReports, libraryViewerReactions, libraryViewerReports] = await Promise.all([
@@ -97,7 +97,6 @@ export default async function CommunityAuthorPage({
         filterMeta={filterMeta}
         initialFilters={{ sort: 'recent', view: 'cards' }}
         libraries={libraries}
-        libraryUrls={libraryUrls}
         initialLibraryViewerState={initialLibraryViewerState}
         densityMode={densityMode}
         lockedAuthor={{ id, name: author.username }}

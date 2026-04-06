@@ -99,7 +99,7 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
   const authorName = card.author_name || 'Anonymous'
   const authorHref = card.published_by ? `/community/author/${card.published_by}` : null
   const remixHref = `/scan?remix=${card.card_id}`
-  const reviewHref = viewer.saved ? `/review?card=${card.card_id}&entry=card` : null
+  const reviewHref = `/review?card=${card.card_id}&entry=card`
   const clarificationSignal = getCommunityClarificationSignal(card)
   const shareUrl = getCommunityCardShareUrl(card.card_id)
 

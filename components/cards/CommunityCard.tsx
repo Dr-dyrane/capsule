@@ -160,6 +160,11 @@ export default function CommunityCard({
             <Brain size={14} />
             <span>Study saved</span>
           </PendingLink>
+        ) : onToggleSave ? (
+          <button type="button" className={styles.reviewChip} onClick={onToggleSave}>
+            <Brain size={14} />
+            <span>Save to study</span>
+          </button>
         ) : null}
         <ShareLinkButton
           url={shareUrl}
