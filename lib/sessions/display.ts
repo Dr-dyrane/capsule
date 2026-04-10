@@ -65,7 +65,15 @@ function getSessionTags(context: string) {
   return tags
 }
 
-export function getSessionDisplayTitle(session: Pick<SessionRecord, 'session_context' | 'remix_source_card_id'>) {
+export function getSessionDisplayTitle(
+  session: Pick<SessionRecord, 'session_context' | 'remix_source_card_id' | 'custom_title'>,
+) {
+  const customTitle = session.custom_title?.replace(/\s+/g, ' ').trim() ?? ''
+
+  if (customTitle) {
+    return trimTitle(customTitle, 56)
+  }
+
   const context = session.session_context?.replace(/\s+/g, ' ').trim() ?? ''
 
   if (!context || context.toLowerCase() === 'medical learning session') {

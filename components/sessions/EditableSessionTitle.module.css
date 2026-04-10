@@ -1,0 +1,120 @@
+.root {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.inlineRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  min-width: 0;
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  overflow-wrap: anywhere;
+}
+
+.panelTitle {
+  font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+}
+
+.listTitle {
+  font-size: 16px;
+}
+
+.trigger,
+.ghostButton,
+.saveButton {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    transform 150ms var(--ease-apple),
+    background-color 150ms var(--ease-apple),
+    opacity 150ms var(--ease-apple);
+}
+
+.trigger,
+.ghostButton {
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.saveButton {
+  color: var(--text-on-accent);
+  background: linear-gradient(180deg, var(--accent-hover), var(--accent));
+  box-shadow: var(--shadow-md);
+}
+
+.trigger:hover,
+.trigger:focus-visible,
+.ghostButton:hover,
+.ghostButton:focus-visible,
+.saveButton:hover,
+.saveButton:focus-visible {
+  transform: translateY(-1px);
+}
+
+.form {
+  display: grid;
+  gap: 10px;
+}
+
+.field {
+  min-height: 46px;
+  width: 100%;
+  padding: 0 16px;
+  border: none;
+  border-radius: 18px;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-sm);
+  font: inherit;
+  font-size: 15px;
+}
+
+.field:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.helper {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+@media (max-width: 767px) {
+  .triggerLabel {
+    display: none;
+  }
+
+  .trigger,
+  .ghostButton,
+  .saveButton {
+    padding-inline: 12px;
+  }
+
+  .inlineRow {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}

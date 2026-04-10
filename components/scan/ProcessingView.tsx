@@ -29,10 +29,12 @@ import {
 import { processNote, restartSession } from '@/app/actions/process'
 import ImagePreview from '@/components/cards/ImagePreview'
 import { useFeedback } from '@/components/providers/FeedbackProvider'
+import EditableSessionTitle from '@/components/sessions/EditableSessionTitle'
 import ActivitySteps, { type ActivityStepItem } from '@/components/ui/ActivitySteps'
 import AdaptiveSheet from '@/components/ui/AdaptiveSheet'
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
+import { getSessionDisplayTitle } from '@/lib/sessions/display'
 import { getCommunityLibraryShareUrl } from '@/lib/site'
 import { createClient } from '@/lib/supabase/client'
 import type {
@@ -423,7 +425,15 @@ export default function ProcessingView({
   const supportCount = Number(Boolean(sourceImageUrl)) + Number(Boolean(remixSource))
   const isSessionPublished = session?.visibility === 'published'
   const sessionShareUrl = isSessionPublished ? getCommunityLibraryShareUrl(sessionId) : null
+  const sessionDisplayTitle = session
+    ? getSessionDisplayTitle({
+        custom_title: session.custom_title ?? null,
+        session_context: session.session_context ?? null,
+        remix_source_card_id: session.remix_source_card_id ?? null,
+      })
+    : 'Library'
   const sessionShareTitle =
+    sessionDisplayTitle ||
     reviewStartCard?.title ||
     (completeCards.length > 0 ? 'Published library' : 'Shared Capsule session')
   const activeRunCard = generationRun?.active_card_id ? cards.find((card) => card.id === generationRun.active_card_id) ?? null : null
@@ -615,6 +625,16 @@ export default function ProcessingView({
         <div className={styles.statusInner}>
           <div className={styles.statusMeta}>
             <div className={styles.statusCopyBlock}>
+              {session ? (
+                <EditableSessionTitle
+                  sessionId={sessionId}
+                  title={sessionDisplayTitle}
+                  variant="panel"
+                  onSaved={({ customTitle }) => {
+                    setSession((current) => (current ? { ...current, custom_title: customTitle } : current))
+                  }}
+                />
+              ) : null}
               <div className={styles.statusEyebrow}>
                 <Sparkles size={14} aria-hidden="true" />
                 <span>{status === 'loading' ? 'Loading' : status}</span>

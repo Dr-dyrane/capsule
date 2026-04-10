@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import DeleteActionButton from '@/components/ui/DeleteActionButton'
+import EditableSessionTitle from '@/components/sessions/EditableSessionTitle'
 import PendingLink from '@/components/ui/PendingLink'
 import { APP_IMAGE_BLUR_DATA_URL } from '@/lib/ui/image-loading'
 import type { SessionRecord } from '@/lib/types'
@@ -44,6 +45,36 @@ export default function LibrarySessionList({ items }: { items: LibrarySessionLis
           <div className={styles.list}>
             {groupItems.map(({ session, title, imageUrl }) => (
               <div key={session.id} className={styles.item}>
+                <div className={styles.itemTopRow}>
+                  <EditableSessionTitle
+                    sessionId={session.id}
+                    title={title}
+                    onSaved={({ displayTitle, customTitle }) => {
+                      setSessions((current) =>
+                        current.map((item) =>
+                          item.session.id === session.id
+                            ? {
+                                ...item,
+                                title: displayTitle,
+                                session: {
+                                  ...item.session,
+                                  custom_title: customTitle,
+                                },
+                              }
+                            : item,
+                        ),
+                      )
+                    }}
+                  />
+                  <DeleteActionButton
+                    targetId={session.id}
+                    targetType="session"
+                    compactOnMobile
+                    className={styles.deleteActionSlot}
+                    onDeleted={() => setSessions((current) => current.filter((item) => item.session.id !== session.id))}
+                  />
+                </div>
+
                 <PendingLink href={`/scan/${session.id}`} className={styles.itemLink}>
                   <div className={styles.thumb}>
                     <div className={styles.thumbFrame}>
@@ -64,7 +95,6 @@ export default function LibrarySessionList({ items }: { items: LibrarySessionLis
                     <div className={styles.thumbLabel}>Original note</div>
                   </div>
                   <div className={styles.info}>
-                    <p className={styles.name}>{title}</p>
                     <p className={styles.meta}>
                       {session.card_count} cards <span aria-hidden="true">&middot;</span> {session.status}
                       {session.remix_source_card_id ? (
@@ -76,14 +106,6 @@ export default function LibrarySessionList({ items }: { items: LibrarySessionLis
                   </div>
                   <ChevronRight size={18} className={styles.chevron} />
                 </PendingLink>
-
-                <DeleteActionButton
-                  targetId={session.id}
-                  targetType="session"
-                  compactOnMobile
-                  className={styles.deleteActionSlot}
-                  onDeleted={() => setSessions((current) => current.filter((item) => item.session.id !== session.id))}
-                />
               </div>
             ))}
           </div>

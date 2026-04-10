@@ -141,7 +141,7 @@ function normalizeCommunityLibraryRecord<T extends CommunityLibraryRecord>(
   return {
     ...library,
     page_label: pageLabel,
-    title: pageLabel ?? library.title,
+    title: library.title ?? pageLabel,
   }
 }
 

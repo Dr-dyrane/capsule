@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
 import { registerGenerationSession } from '@/lib/generation/run-manager'
+import { getSessionDisplayTitle } from '@/lib/sessions/display'
 import { createClient } from '@/lib/supabase/server'
 import { extractPointsFromImage } from '@/lib/ai/ocr'
 import { findCommunityMatchesForPoints } from '@/lib/community/match'
@@ -14,6 +15,18 @@ import { createSignedObjectUrl } from '@/lib/storage/signed-urls'
 function getCardTitle(text: string) {
   const title = text.split(':')[0]?.trim()
   return title || 'Learning card'
+}
+
+function revalidateSessionPaths(sessionId: string) {
+  revalidatePath('/library')
+  revalidatePath('/community')
+  revalidatePath('/review')
+  revalidatePath(`/scan/${sessionId}`)
+  revalidatePath(`/community/library/${sessionId}`)
+}
+
+function normalizeCustomTitle(value: string) {
+  return value.replace(/\s+/g, ' ').trim().slice(0, 80)
 }
 
 export async function processNote(sessionId: string) {
@@ -224,6 +237,44 @@ export async function restartSession(sessionId: string) {
   }
 
   return { success: true }
+}
+
+export async function updateSessionTitle(sessionId: string, nextTitle: string) {
+  const supabase = await createClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Unauthorized')
+  }
+
+  const normalizedTitle = normalizeCustomTitle(nextTitle)
+  const customTitle = normalizedTitle.length > 0 ? normalizedTitle : null
+
+  const { data: session, error } = await supabase
+    .from('sessions')
+    .update({ custom_title: customTitle })
+    .eq('id', sessionId)
+    .eq('user_id', user.id)
+    .select('id, custom_title, session_context, remix_source_card_id')
+    .single()
+
+  if (error || !session) {
+    throw error ?? new Error('Session not found')
+  }
+
+  revalidateSessionPaths(sessionId)
+
+  return {
+    customTitle: (session.custom_title as string | null) ?? null,
+    displayTitle: getSessionDisplayTitle({
+      custom_title: (session.custom_title as string | null) ?? null,
+      session_context: (session.session_context as string | null) ?? null,
+      remix_source_card_id: (session.remix_source_card_id as string | null) ?? null,
+    }),
+  }
 }
 
 export async function deleteSession(sessionId: string) {

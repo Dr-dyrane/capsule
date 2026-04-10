@@ -480,7 +480,7 @@ async function fetchGeneratedSessionLabels(sessionIds: string[]) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('sessions')
-    .select('id, session_context, remix_source_card_id')
+    .select('id, custom_title, session_context, remix_source_card_id')
     .in('id', sessionIds)
 
   if (error) {
@@ -491,6 +491,7 @@ async function fetchGeneratedSessionLabels(sessionIds: string[]) {
     (data ?? []).map((session) => [
       session.id as string,
       getSessionDisplayTitle({
+        custom_title: (session.custom_title as string | null) ?? null,
         session_context: (session.session_context as string | null) ?? null,
         remix_source_card_id: (session.remix_source_card_id as string | null) ?? null,
       }),

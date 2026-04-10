@@ -37,6 +37,7 @@ export interface SessionRecord {
   user_id: string
   source_url: string
   status: SessionStatus
+  custom_title?: string | null
   point_count: number | null
   card_count: number | null
   session_context: string | null
