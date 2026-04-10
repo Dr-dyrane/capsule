@@ -38,6 +38,7 @@ export default function CommunityCard({
   const remixHref = `/scan?remix=${card.card_id}`
   const authorHref = card.published_by ? `/community/author/${card.published_by}` : null
   const topic = card.concept || card.category
+  const pageLabel = card.page_label
   const showInteractiveActions = Boolean(onToggleLike || onToggleSave || onReport)
   const clarificationSignal = getCommunityClarificationSignal(card)
   const shareUrl = getCommunityCardShareUrl(card.card_id)
@@ -101,6 +102,12 @@ export default function CommunityCard({
             <>
               <span className={styles.dot}>&middot;</span>
               <span className={styles.hint}>{topic}</span>
+            </>
+          ) : null}
+          {pageLabel ? (
+            <>
+              <span className={styles.dot}>&middot;</span>
+              <span className={styles.pageHint}>{pageLabel}</span>
             </>
           ) : null}
           <span className={styles.dot}>&middot;</span>

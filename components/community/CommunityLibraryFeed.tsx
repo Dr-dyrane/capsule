@@ -58,6 +58,8 @@ export default function CommunityLibraryFeed({
 
       const haystack = [
         library.title,
+        library.page_label,
+        library.page_label?.replace(/^page\s+/i, ''),
         library.author_name,
         library.category,
         library.concept,

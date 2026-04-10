@@ -156,6 +156,7 @@ export default async function CommunityDetailPage({ params }: CommunityDetailPag
               </div>
               <div className={styles.chip}>{template}</div>
               <div className={styles.chip}>{topic}</div>
+              {card.page_label ? <div className={styles.chip}>{card.page_label}</div> : null}
               {publishedAt ? <div className={styles.chip}>{publishedAt}</div> : null}
               {clarificationSignal ? (
                 <div

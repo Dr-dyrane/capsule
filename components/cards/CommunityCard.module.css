@@ -176,6 +176,12 @@
   font-size: 13px;
 }
 
+.pageHint {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .authorLink {
   color: var(--accent);
   font-size: 13px;

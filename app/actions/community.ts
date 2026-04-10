@@ -100,6 +100,51 @@ function normalizeSort(sort?: CommunitySort) {
   return sort === 'trending' ? 'trending' : 'recent'
 }
 
+function normalizePageLabel(value?: string | null) {
+  if (!value) {
+    return null
+  }
+
+  const match = value.match(/page(?:\s+|[_-])?0*(\d+)/i)
+
+  if (!match) {
+    return null
+  }
+
+  return `Page ${Number.parseInt(match[1] ?? '', 10)}`
+}
+
+function resolvePageLabel(...values: Array<string | null | undefined>) {
+  for (const value of values) {
+    const pageLabel = normalizePageLabel(value)
+    if (pageLabel) {
+      return pageLabel
+    }
+  }
+
+  return null
+}
+
+function normalizeCommunityCardRecord<T extends CommunityCardRecord>(card: T): T {
+  return {
+    ...card,
+    page_label: resolvePageLabel(card.page_label),
+  }
+}
+
+function normalizeCommunityLibraryRecord<T extends CommunityLibraryRecord>(
+  library: T,
+  session?: Pick<SessionRecord, 'session_context' | 'source_url'> | null,
+): T {
+  const pageLabel = resolvePageLabel(library.page_label, session?.session_context, session?.source_url)
+
+  return {
+    ...library,
+    page_label: pageLabel,
+    title: pageLabel ?? library.title,
+  }
+}
+
 function revalidateCommunityPaths(sessionId?: string | null, cardId?: string | null) {
   revalidatePath('/')
   revalidatePath('/cards')
@@ -330,6 +375,7 @@ async function getCommunityCardsFallback(page: number, limit: number) {
       session_id: card.session_id,
       image_url: card.image_url,
       title: card.title,
+      page_label: null,
       published_at: card.published_at ?? null,
       published_by: card.published_by ?? null,
       community_template: card.community_template ?? 'mechanism-board',
@@ -580,7 +626,7 @@ export async function getCommunityCards(
   let query = supabase
     .from('community_index')
     .select(
-      'card_id, session_id, image_url, title, published_at, published_by, community_template, category, concept, author_name, author_avatar_url, like_count, save_count, report_count, trend_score',
+      'card_id, session_id, image_url, title, page_label, published_at, published_by, community_template, category, concept, author_name, author_avatar_url, like_count, save_count, report_count, trend_score',
     )
     .range(page * limit, (page + 1) * limit - 1)
 
@@ -612,7 +658,7 @@ export async function getCommunityCards(
     const escaped = search.replace(/[%_,]/g, '').trim()
     if (escaped) {
       query = query.or(
-        `title.ilike.%${escaped}%,author_name.ilike.%${escaped}%,category.ilike.%${escaped}%,concept.ilike.%${escaped}%`,
+        `title.ilike.%${escaped}%,page_label.ilike.%${escaped}%,author_name.ilike.%${escaped}%,category.ilike.%${escaped}%,concept.ilike.%${escaped}%`,
       )
     }
   }
@@ -635,7 +681,8 @@ export async function getCommunityCards(
     throw error
   }
 
-  return enrichCommunityCardsWithClarifications((data ?? []) as CommunityCardRecord[])
+  const cards = await enrichCommunityCardsWithClarifications((data ?? []) as CommunityCardRecord[])
+  return cards.map((card) => normalizeCommunityCardRecord(card))
 }
 
 export async function getCommunityCardCount(options: Omit<CommunityQueryOptions, 'sort'> = {}) {
@@ -713,7 +760,7 @@ export async function getCommunityCardCount(options: Omit<CommunityQueryOptions,
     const escaped = search.replace(/[%_,]/g, '').trim()
     if (escaped) {
       query = query.or(
-        `title.ilike.%${escaped}%,author_name.ilike.%${escaped}%,category.ilike.%${escaped}%,concept.ilike.%${escaped}%`,
+        `title.ilike.%${escaped}%,page_label.ilike.%${escaped}%,author_name.ilike.%${escaped}%,category.ilike.%${escaped}%,concept.ilike.%${escaped}%`,
       )
     }
   }
@@ -845,7 +892,7 @@ export async function getCreatorModerationCardsWithUrls(limit: number = 20) {
   const { data, error } = await publicClient
     .from('community_index')
     .select(
-      'card_id, session_id, image_url, title, published_at, published_by, community_template, category, concept, author_name, author_avatar_url, like_count, save_count, report_count, trend_score',
+      'card_id, session_id, image_url, title, page_label, published_at, published_by, community_template, category, concept, author_name, author_avatar_url, like_count, save_count, report_count, trend_score',
     )
     .eq('published_by', user.id)
     .gt('report_count', 0)
@@ -861,7 +908,9 @@ export async function getCreatorModerationCardsWithUrls(limit: number = 20) {
     throw error
   }
 
-  const cards = await enrichCommunityCardsWithClarifications((data ?? []) as CommunityCardRecord[])
+  const cards = (await enrichCommunityCardsWithClarifications((data ?? []) as CommunityCardRecord[])).map((card) =>
+    normalizeCommunityCardRecord(card),
+  )
   const uniquePaths = [...new Set(cards.map((card) => card.image_url).filter(Boolean))]
   let signedUrls: Record<string, string> = createDirectAssetUrlMap(uniquePaths)
   const storagePaths = uniquePaths.filter((path) => !isDirectAssetUrl(path))
@@ -1044,7 +1093,7 @@ export async function getCommunityCardByIdWithUrl(cardId: string) {
   const { data, error } = await supabase
     .from('community_index')
     .select(
-      'card_id, session_id, image_url, title, published_at, published_by, community_template, category, concept, author_name, author_avatar_url, like_count, save_count, report_count, trend_score',
+      'card_id, session_id, image_url, title, page_label, published_at, published_by, community_template, category, concept, author_name, author_avatar_url, like_count, save_count, report_count, trend_score',
     )
     .eq('card_id', cardId)
     .maybeSingle()
@@ -1057,14 +1106,14 @@ export async function getCommunityCardByIdWithUrl(cardId: string) {
     throw error
   }
 
-  const card = (data ?? null) as CommunityCardRecord | null
+  const card = data ? normalizeCommunityCardRecord(data as CommunityCardRecord) : null
 
   if (!card?.image_url) {
     return null
   }
 
   const [enrichedCard] = await enrichCommunityCardsWithClarifications([card])
-  const safeCard = enrichedCard ?? mergeCommunityClarificationSummary(card)
+  const safeCard = normalizeCommunityCardRecord(enrichedCard ?? mergeCommunityClarificationSummary(card))
 
   if (isDirectAssetUrl(safeCard.image_url)) {
     return {
@@ -1095,6 +1144,7 @@ function mapRelationshipRowToCommunityCard(
     session_id: row.related_session_id,
     image_url: row.related_image_url,
     title: row.related_title,
+    page_label: null,
     published_at: row.related_published_at,
     published_by: row.related_published_by,
     community_template: row.related_community_template,
@@ -1157,7 +1207,7 @@ export async function getCommunityLibraries(limit: number = 6, authorId?: string
   let query = supabase
     .from('community_library_index')
     .select(
-      'session_id, cover_image_url, title, published_at, published_by, author_name, author_avatar_url, card_count, like_count, save_count, report_count, trend_score, category, concept',
+      'session_id, cover_image_url, title, page_label, published_at, published_by, author_name, author_avatar_url, card_count, like_count, save_count, report_count, trend_score, category, concept',
     )
     .order('published_at', { ascending: false })
     .limit(limit)
@@ -1178,7 +1228,7 @@ export async function getCommunityLibraries(limit: number = 6, authorId?: string
     throw error
   }
 
-  return (data ?? []) as CommunityLibraryRecord[]
+  return ((data ?? []) as CommunityLibraryRecord[]).map((library) => normalizeCommunityLibraryRecord(library))
 }
 
 export async function getCommunityLibraryCount(authorId?: string | null) {
@@ -1249,7 +1299,7 @@ export async function getCommunityLibraryById(sessionId: string) {
   const { data: library, error } = await publicClient
     .from('community_library_index')
     .select(
-      'session_id, cover_image_url, title, published_at, published_by, author_name, author_avatar_url, card_count, like_count, save_count, report_count, trend_score, category, concept',
+      'session_id, cover_image_url, title, page_label, published_at, published_by, author_name, author_avatar_url, card_count, like_count, save_count, report_count, trend_score, category, concept',
     )
     .eq('session_id', sessionId)
     .maybeSingle()
@@ -1275,7 +1325,7 @@ export async function getCommunityLibraryById(sessionId: string) {
     ),
     publicClient
       .from('community_session_detail_index')
-      .select('session_id, source_url, session_context, point_count, card_count, created_at, updated_at')
+      .select('session_id, source_url, session_context, point_count, card_count, created_at, updated_at, page_label')
       .eq('session_id', sessionId)
       .maybeSingle(),
     publicClient
@@ -1298,6 +1348,7 @@ export async function getCommunityLibraryById(sessionId: string) {
       session_context: string | null
       point_count: number | null
       card_count: number | null
+      page_label?: string | null
       created_at?: string
       updated_at?: string
     }
@@ -1334,7 +1385,7 @@ export async function getCommunityLibraryById(sessionId: string) {
   }
 
   return {
-    library: typedLibrary,
+    library: normalizeCommunityLibraryRecord(typedLibrary, session),
     cards,
     session,
     points,

@@ -114,6 +114,7 @@ export interface CommunityIndexRecord {
   session_id: string
   image_url: string
   title: string | null
+  page_label: string | null
   published_at: string | null
   published_by: string | null
   community_template: string | null
@@ -134,6 +135,7 @@ export interface CommunityLibraryIndexRecord {
   session_id: string
   cover_image_url: string
   title: string | null
+  page_label: string | null
   published_at: string | null
   published_by: string | null
   author_name: string | null
