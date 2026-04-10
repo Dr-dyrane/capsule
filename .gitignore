@@ -44,4 +44,5 @@ next-env.d.ts
 tmp
 public/.well-known/
 public/demo/community-seed/
+public/seed/
 supabase/.temp/
