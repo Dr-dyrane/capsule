@@ -35,24 +35,14 @@ async function signCardAssetPath(path: string, isPublic: boolean) {
   return data.signedUrl
 }
 
-export async function resolveCardImageUrl(cardId: string) {
-  const supabase = await createClient()
-  const { data: ownedCard } = await supabase
+async function resolvePublicCardImagePath(cardId: string) {
+  const publicClient = createPublicClient()
+  const { data, error } = await publicClient
     .from('cards')
-    .select('id, image_url, status')
+    .select('image_url')
     .eq('id', cardId)
     .eq('status', 'complete')
-    .maybeSingle()
-
-  if (ownedCard?.image_url) {
-    return signCardAssetPath(ownedCard.image_url, false)
-  }
-
-  const publicClient = createPublicClient()
-  const { data: publicCard, error } = await publicClient
-    .from('community_index')
-    .select('image_url')
-    .eq('card_id', cardId)
+    .eq('visibility', 'published')
     .maybeSingle()
 
   if (error) {
@@ -63,13 +53,58 @@ export async function resolveCardImageUrl(cardId: string) {
     throw error
   }
 
+  return ((data as { image_url: string | null } | null)?.image_url ?? null)
+}
+
+export async function resolveCardImageUrl(cardId: string) {
+  const supabase = await createClient()
+  const { data: ownedCard } = await supabase
+    .from('cards')
+    .select('id, image_url, status')
+    .eq('id', cardId)
+    .eq('status', 'complete')
+    .maybeSingle()
+
+  if (ownedCard?.image_url) {
+    const signedOwnedCardUrl = await signCardAssetPath(ownedCard.image_url, false)
+    if (signedOwnedCardUrl) {
+      return signedOwnedCardUrl
+    }
+  }
+
+  const publicClient = createPublicClient()
+  const { data: publicCard, error } = await publicClient
+    .from('community_index')
+    .select('image_url')
+    .eq('card_id', cardId)
+    .maybeSingle()
+
+  if (error && !isCommunitySchemaError(error)) {
+    throw error
+  }
+
   const typedPublicCard = publicCard as { image_url: string | null } | null
 
   if (!typedPublicCard?.image_url) {
+    const directPublicCardPath = await resolvePublicCardImagePath(cardId)
+    if (!directPublicCardPath) {
+      return null
+    }
+
+    return signCardAssetPath(directPublicCardPath, true)
+  }
+
+  const signedPublicCardUrl = await signCardAssetPath(typedPublicCard.image_url, true)
+  if (signedPublicCardUrl) {
+    return signedPublicCardUrl
+  }
+
+  const directPublicCardPath = await resolvePublicCardImagePath(cardId)
+  if (!directPublicCardPath) {
     return null
   }
 
-  return signCardAssetPath(typedPublicCard.image_url, true)
+  return signCardAssetPath(directPublicCardPath, true)
 }
 
 async function resolveOwnedLibraryCoverPath(sessionId: string) {
@@ -97,18 +132,17 @@ async function resolveOwnedLibraryCoverPath(sessionId: string) {
   return firstCard?.image_url ?? null
 }
 
-export async function resolveLibraryImageUrl(sessionId: string) {
-  const ownedCoverPath = await resolveOwnedLibraryCoverPath(sessionId)
-
-  if (ownedCoverPath) {
-    return signCardAssetPath(ownedCoverPath, false)
-  }
-
+async function resolvePublicLibraryCoverPath(sessionId: string) {
   const publicClient = createPublicClient()
-  const { data: library, error } = await publicClient
-    .from('community_library_index')
-    .select('cover_image_url')
+  const { data, error } = await publicClient
+    .from('cards')
+    .select('image_url')
     .eq('session_id', sessionId)
+    .eq('status', 'complete')
+    .eq('visibility', 'published')
+    .order('card_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .limit(1)
     .maybeSingle()
 
   if (error) {
@@ -119,11 +153,50 @@ export async function resolveLibraryImageUrl(sessionId: string) {
     throw error
   }
 
+  return ((data as { image_url: string | null } | null)?.image_url ?? null)
+}
+
+export async function resolveLibraryImageUrl(sessionId: string) {
+  const ownedCoverPath = await resolveOwnedLibraryCoverPath(sessionId)
+
+  if (ownedCoverPath) {
+    const signedOwnedCoverUrl = await signCardAssetPath(ownedCoverPath, false)
+    if (signedOwnedCoverUrl) {
+      return signedOwnedCoverUrl
+    }
+  }
+
+  const publicClient = createPublicClient()
+  const { data: library, error } = await publicClient
+    .from('community_library_index')
+    .select('cover_image_url')
+    .eq('session_id', sessionId)
+    .maybeSingle()
+
+  if (error && !isCommunitySchemaError(error)) {
+    throw error
+  }
+
   const typedLibrary = library as { cover_image_url: string | null } | null
 
   if (!typedLibrary?.cover_image_url) {
+    const directPublicCoverPath = await resolvePublicLibraryCoverPath(sessionId)
+    if (!directPublicCoverPath) {
+      return null
+    }
+
+    return signCardAssetPath(directPublicCoverPath, true)
+  }
+
+  const signedPublicCoverUrl = await signCardAssetPath(typedLibrary.cover_image_url, true)
+  if (signedPublicCoverUrl) {
+    return signedPublicCoverUrl
+  }
+
+  const directPublicCoverPath = await resolvePublicLibraryCoverPath(sessionId)
+  if (!directPublicCoverPath) {
     return null
   }
 
-  return signCardAssetPath(typedLibrary.cover_image_url, true)
+  return signCardAssetPath(directPublicCoverPath, true)
 }
